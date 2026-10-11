@@ -1,6 +1,6 @@
 import { isAxiosLike } from './util';
 export const DISCLAIMER = '이로운사람들 서비스 · 정부기관이 아닙니다';
-export const USER_RECORD_NOTICE = '이 기록은 본인이 직접 남긴 것이며, 해당 기관이 확인한 내용이 아닙니다.';
+export const USER_RECORD_NOTICE = '내가 남긴 기록이에요 · 기관 확인 아님';
 export const STAGES = ['관심', '신청 준비', '신청함', '결과 확인', '지급 확인'] as const;
 export const PROVINCES = ['서울특별시','부산광역시','대구광역시','인천광역시','광주광역시','대전광역시','울산광역시','세종특별자치시','경기도','강원특별자치도','충청북도','충청남도','전북특별자치도','전라남도','경상북도','경상남도','제주특별자치도'];
 
