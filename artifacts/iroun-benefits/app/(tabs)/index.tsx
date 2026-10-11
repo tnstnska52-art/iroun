@@ -39,6 +39,7 @@ export default function Home() {
   const reqs = (svc.data?.requests ?? []).filter((x) => x.state !== '회사 지원 종료');
   const openTasks = reqs.reduce((n, x) => n + x.customerTasks.filter((k) => !x.completedTasks.includes(k)).length, 0);
   const unread = (svc.data?.inbox ?? []).filter((x) => !x.read_at).length + (svc.data?.companyUpdates ?? []).filter((x) => !x.read).length;
+  const alertCount = est ? est.items.length : list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0).length;
   const showStat = IS_PREVIEW || HEADLINE_STAT.verified;
   const open = list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0);
   const within7 = (b: { endsAt: string }) => { const d = daysLeft(b.endsAt); return d !== null && d >= 0 && d <= 7; };
@@ -70,11 +71,14 @@ export default function Home() {
           style={({ pressed }) => ({ width: 40, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
           <Feather name="settings" size={23} color={c.foreground} />
         </Pressable>
-        <Pressable testID="nav-inbox" accessibilityRole="button" accessibilityLabel={unread > 0 ? `알림함, 새 알림 ${unread}건` : '알림함'}
-          onPress={() => router.push(acc.isSignedIn ? '/inbox' : '/auth')}
+        <Pressable testID="nav-alerts" accessibilityRole="button" accessibilityLabel={`알림. 지금 신청 가능 ${alertCount}건`} onPress={() => router.push('/alerts' as never)}
           style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
           <Feather name="bell" size={24} color={c.foreground} />
-          {unread > 0 ? <View style={{ position: 'absolute', top: 8, right: 9, width: 10, height: 10, borderRadius: 5, backgroundColor: c.destructive, borderWidth: 1.5, borderColor: c.background }} /> : null}
+          {alertCount > 0 ? (
+            <View style={{ position: 'absolute', top: 3, right: 0, minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, backgroundColor: c.destructive, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: c.background }}>
+              <T v="small" color="#FFFFFF" style={{ fontSize: 11, lineHeight: 14, fontWeight: '800' }}>{alertCount > 99 ? '99+' : alertCount}</T>
+            </View>
+          ) : null}
         </Pressable>
       </View>
 
