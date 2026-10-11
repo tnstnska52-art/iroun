@@ -49,14 +49,17 @@ export default function Home() {
   const nowOpen = open.filter((b) => !within7(b)).slice(0, 5).map((b) => ({ benefit: b, result: '추가 확인 필요' as const }));
   // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 오늘 받기 쉬운 5건을 고른다.
   const picks = todayPicks(est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' })));
-  const closingBlock = closing.length > 0 ? (
+  // 7일 안에 마감되는 것이 없어도 자리는 항상 보여준다(사라진 것처럼 보이지 않게).
+  const closingBlock = (
     <>
       <SectionHead emoji="🚨" motion="pulse" title="마감 7일 전 지원금" />
       <View testID="home-closing" style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
-        {closing.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === closing.length - 1} />)}
+        {closing.length > 0
+          ? closing.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === closing.length - 1} />)
+          : <View style={{ minHeight: 64, justifyContent: 'center' }}><T color={c.mutedForeground}>7일 안에 마감되는 지원금이 없어요</T></View>}
       </View>
     </>
-  ) : null;
+  );
   const shown = est ? (acc.active ? est.items.slice(0, 5) : est.items.slice(0, FREE_COUNT)) : [];
 
   return (
