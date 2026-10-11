@@ -1,0 +1,31 @@
+// 이로운혜택 디자인 토큰: "청람" 신뢰 블루 + 밝은 회색 면
+const colors = {
+  light: {
+    text: '#14213D',
+    tint: '#17408B',
+    background: '#F5F6F8',
+    foreground: '#14213D',
+    card: '#FFFFFF',
+    cardForeground: '#14213D',
+    primary: '#17408B',
+    primaryForeground: '#FFFFFF',
+    primarySoft: '#E6EDF9',
+    secondary: '#ECEFF3',
+    secondaryForeground: '#14213D',
+    muted: '#ECEFF3',
+    mutedForeground: '#4A5568',
+    accent: '#E6EDF9',
+    accentForeground: '#17408B',
+    destructive: '#B42318',
+    destructiveSoft: '#FDECEA',
+    destructiveForeground: '#FFFFFF',
+    success: '#1B6B45',
+    successSoft: '#E5F4EC',
+    warning: '#7A4E00',
+    warningSoft: '#FFF3D6',
+    border: '#D5DAE1',
+    input: '#B8C0CC',
+  },
+  radius: 14,
+};
+export default colors;

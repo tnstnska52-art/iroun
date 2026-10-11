@@ -1,0 +1,128 @@
+import React, { useState } from 'react';
+import { View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useUser } from '@clerk/expo';
+import { useQueryClient } from '@tanstack/react-query';
+import { getGetMeQueryKey, savePreferences, type Preferences } from '@workspace/api-client-react';
+import { useColors } from '@/hooks/useColors';
+import { useAccount, useSignOutFlow } from '@/lib/session';
+import { clearDraft } from '@/lib/draft';
+import { FooterLinks } from '@/components/ui';
+import { useSettings } from '@/lib/settings';
+import { Btn, Card, Disclaimer, ErrorState, ListRow, Loading, Notice, Page, Section, T, Toggle } from '@/components/ui';
+import { apiErrorMessage } from '@/lib/text';
+import { registerNativeNotifications } from '@/lib/native-notifications';
+
+export default function Account() {
+  const c = useColors();
+  const router = useRouter();
+  const qc = useQueryClient();
+  const acc = useAccount();
+  const { user } = useUser();
+  const { largeText, setLargeText } = useSettings();
+  const signOut = useSignOutFlow();
+  const [msg, setMsg] = useState<{ t: 'ok' | 'error'; s: string } | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [outBusy, setOutBusy] = useState(false);
+
+  const setPref = async (patch: Partial<Preferences>) => {
+    if (!acc.me) return;
+    setSaving(true); setMsg(null);
+    // 알림을 끄면 맞춤 알림도 함께 끈다(한 번의 요청으로 처리).
+    const merged = { ...acc.me.preferences, ...patch };
+    if (patch.notifications === false) merged.personalizedAlerts = false;
+    try {
+      let savedMessage='설정을 저장했습니다.';
+      await savePreferences(merged);
+      if(patch.notifications===true&&acc.active){
+        const message=await registerNativeNotifications();
+        savedMessage=message;
+      }
+      if (patch.privacyConsent === false) await clearDraft();
+      await qc.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      setMsg({ t: 'ok', s: savedMessage });
+    } catch (e) { setMsg({ t: 'error', s: apiErrorMessage(e) }); }
+    setSaving(false);
+  };
+
+  const p = acc.me?.profile;
+  const textToggle = (
+    <Toggle testID="large-text-toggle" label="큰 글씨 모드" desc="앱 안의 모든 글자를 더 크게 보여줍니다. 기기 설정의 글자 크기도 함께 반영됩니다." value={largeText} onChange={(v) => { setLargeText(v); if (acc.me) void setPref({ largeText: v }); }} />
+  );
+
+  return (
+    <Page tab title="내 정보" subtitle="개인정보와 설정을 관리합니다.">
+      {!acc.isLoaded || (acc.isSignedIn && acc.loading) ? <Loading rows={2} /> : !acc.isSignedIn ? (
+        <Card tone="soft">
+          <T v="h3">로그인하면 더 많이 쓸 수 있어요</T>
+          <T>저장, 서류 체크, 내 조건 입력은 로그인 후 사용합니다. 혜택 둘러보기는 로그인 없이 가능합니다.</T>
+          <Btn label="로그인" icon="log-in" onPress={() => router.push('/auth')} testID="account-login" />
+          <Btn kind="secondary" label="새로 가입" icon="user-plus" onPress={() => router.push({ pathname: '/auth', params: { mode: 'signup' } })} testID="account-signup" />
+        </Card>
+      ) : acc.error ? <ErrorState message={apiErrorMessage(acc.error)} onRetry={() => acc.refetch()} /> : acc.me ? (
+        <>
+          <Card>
+            <T v="small" color={c.mutedForeground}>로그인한 이메일</T>
+            <T v="h3" selectable>{user?.primaryEmailAddress?.emailAddress ?? '확인 중'}</T>
+            <View style={{ height: 1, backgroundColor: c.border }} />
+            <T v="label">회원 이용권</T>
+            <T color={acc.active ? c.success : c.mutedForeground}>
+              {acc.active ? (acc.me.entitlement.grantActive && !acc.me.entitlement.subscriptionActive ? '무상 이용권 사용 중' : '이용 중') : '이용권 없음 (공지 열람은 무료)'}
+            </T>
+            <Btn kind="secondary" label="이용권 안내·관리" icon="award" onPress={() => router.push('/membership')} testID="account-membership" />
+          </Card>
+
+          <Section title="내 정보">
+            <Card>
+              <T v="label">거주지</T>
+              <T>{p?.personal.province ? `${p.personal.province} ${p.personal.district ?? ''}` : '입력 안 함'}</T>
+              <T v="label">사업장</T>
+              {p && p.businesses.length > 0 ? p.businesses.map((b) => (
+                <T key={b.id}>{b.name || '이름 미입력 사업장'} · {b.province ? `${b.province} ${b.district ?? ''}` : '지역 미입력'}</T>
+              )) : <T>입력 안 함</T>}
+              <Btn label={p && (p.personal.province || p.businesses.length) ? '내 정보 이어서 고치기' : '내 정보 입력하기'} icon="edit-3" onPress={() => router.push('/onboarding')} testID="account-edit-profile" />
+            </Card>
+          </Section>
+
+          <Section title="알림 설정">
+            <Card>
+              <Toggle testID="pref-consent" label="개인정보 수집·이용 동의" desc="내 정보를 서버에 저장하려면 동의가 필요합니다." value={acc.me.preferences.privacyConsent} onChange={(v) => setPref({ privacyConsent: v })} disabled={saving} />
+              <Toggle testID="pref-notifications" label="알림 받기" desc="알림 수신 의사를 저장합니다." value={acc.me.preferences.notifications} onChange={(v) => setPref({ notifications: v })} disabled={saving} />
+              <Toggle testID="pref-personalized" label="맞춤 알림" desc={acc.active ? '내 조건과 맞는 새 지원을 알림 대상으로 표시합니다.' : '회원 이용권이 있을 때만 켤 수 있습니다.'} value={acc.me.preferences.personalizedAlerts && acc.active} onChange={(v) => setPref({ personalizedAlerts: v })} disabled={saving || !acc.active} />
+              <Notice tone="warn" title="실제 푸시 발송은 아직 꺼져 있어요">기기 등록과 서버 발송 코드는 준비되어 있지만 운영자 푸시 자격증명·프로젝트 설정 전에는 알림이 발송되지 않습니다. 실제 기기 수신은 아직 확인하지 않았습니다.</Notice>
+            </Card>
+            {msg ? <Notice tone={msg.t}>{msg.s}</Notice> : null}
+          </Section>
+        </>
+      ) : null}
+
+      <Section title="회사 도움">
+        <ListRow icon="award" label="이용 상태·동의" onPress={() => router.push('/access')} testID="nav-access" />
+        <ListRow icon="target" label="맞춤 공고" onPress={() => router.push('/matches')} testID="nav-matches" />
+        <ListRow icon="clipboard" label="회사 진행" onPress={() => router.push('/company-progress')} testID="nav-company-progress" />
+        <ListRow icon="message-square" label="문의·건의" onPress={() => router.push('/inquiries')} testID="nav-inquiries" />
+        <ListRow icon="bell" label="알림함" onPress={() => router.push('/inbox')} testID="nav-inbox" />
+        {acc.me && acc.me.role !== 'user' && acc.me.role !== 'customer' ? <ListRow icon="briefcase" label="회사 업무" onPress={() => router.push('/office')} testID="nav-office" /> : null}
+      </Section>
+      <Section title="화면 설정">
+        <Card>{textToggle}</Card>
+      </Section>
+
+      <Section title="안내">
+        <ListRow icon="shield" label="개인정보처리방침" onPress={() => router.push({ pathname: '/legal', params: { section: 'privacy' } })} testID="link-privacy" />
+        <ListRow icon="file-text" label="이용약관" onPress={() => router.push({ pathname: '/legal', params: { section: 'terms' } })} testID="link-terms" />
+        <ListRow icon="help-circle" label="고객 지원" onPress={() => router.push({ pathname: '/legal', params: { section: 'support' } })} testID="link-support" />
+        <ListRow icon="info" label="서비스 소개" onPress={() => router.push('/about')} testID="link-about" />
+      </Section>
+
+      {acc.isSignedIn ? (
+        <Section title="계정">
+          <Btn kind="secondary" label="로그아웃" icon="log-out" loading={outBusy} onPress={async () => { setOutBusy(true); await signOut('/'); }} testID="sign-out" />
+          <Btn kind="ghost" label="회원 탈퇴" icon="user-x" onPress={() => router.push('/delete-account')} testID="go-delete-account" />
+        </Section>
+      ) : null}
+      <FooterLinks />
+      <Disclaimer />
+    </Page>
+  );
+}

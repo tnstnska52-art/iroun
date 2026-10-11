@@ -1,0 +1,8 @@
+{
+  "result": "No matches in selected credential patterns",
+  "fileCount": 271,
+  "redactedFiles": 7,
+  "realSecretValuesRead": false,
+  "databaseRead": false,
+  "limits": "Pattern scan, not exhaustive guarantee; original sources untouched."
+}

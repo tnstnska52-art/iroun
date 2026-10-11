@@ -1,0 +1,25 @@
+{
+  "artifacts/api-server/src/lib/benefit-domain.test.ts": {
+    "email": 1
+  },
+  "artifacts/api-server/src/verify-company-browser.ts": {
+    "long-token-literal": 1,
+    "phone-literal": 4
+  },
+  "artifacts/api-server/src/verify-live-auth.ts": {
+    "email": 4
+  },
+  "artifacts/iroun-benefits/app/auth.tsx": {
+    "email": 1
+  },
+  "artifacts/iroun-benefits/scripts/native-build-config.test.cjs": {
+    "credential-token": 1,
+    "long-token-literal": 1
+  },
+  "artifacts/iroun-benefits/server/templates/landing-page.html": {
+    "long-token-literal": 1
+  },
+  "scripts/export-handoff.py": {
+    "email": 1
+  }
+}

@@ -1,0 +1,571 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 1.0.0
+  description: 이로운혜택 서버. 모든 개인 데이터는 인증 주체 기준이며 맞춤 결과는 서버 이용권 검사 후 반환합니다.
+servers:
+  - url: /api
+paths:
+  /service/state:
+    get:
+      operationId: getServiceState
+      responses: { '200': { description: 본인 회사 서비스 현황, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /service/matches:
+    get:
+      operationId: getServiceMatches
+      parameters:
+        - { name: period, in: query, schema: { type: string, enum: [current, past] } }
+        - { name: year, in: query, schema: { type: integer } }
+      responses: { '200': { description: 현재 또는 지난 공고 조건 비교, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /service/trial:
+    post:
+      operationId: startTrial
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceActionInput' } } } }
+      responses: { '200': { description: 72시간 체험 시작, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /service/consents:
+    post:
+      operationId: saveServiceConsent
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceActionInput' } } } }
+      responses: { '200': { description: 동의 이력 저장, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /service/owner-code:
+    post:
+      operationId: createOwnerCode
+      responses: { '200': { description: 본인 계정 연결번호, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /service/requests:
+    post:
+      operationId: createServiceRequest
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceActionInput' } } } }
+      responses: { '200': { description: 회사 접수, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /service/inquiries:
+    post:
+      operationId: createInquiry
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceActionInput' } } } }
+      responses: { '200': { description: 문의 저장, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /service/inbox/{id}/read:
+    post:
+      operationId: readServiceInbox
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses: { '200': { description: 권한 재확인 후 알림 열기, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /office/state:
+    get:
+      operationId: getOfficeState
+      responses: { '200': { description: 허용된 회사 업무, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /office/customers/{id}/matches:
+    get:
+      operationId: getOfficeCustomerMatches
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: period, in: query, schema: { type: string, enum: [current, past] } }
+        - { name: year, in: query, schema: { type: integer } }
+      responses: { '200': { description: 배정 고객 조건 비교, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /office/contracts:
+    post:
+      operationId: saveOfficeContract
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceActionInput' } } } }
+      responses: { '200': { description: 계약 연결 연장 회수, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /office/staff:
+    post:
+      operationId: saveOfficeStaff
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceActionInput' } } } }
+      responses: { '200': { description: 직원 연락처 저장, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /office/settings:
+    put:
+      operationId: saveOfficeSettings
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceActionInput' } } } }
+      responses: { '200': { description: 회사 문의 주소 저장, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /office/requests/{id}:
+    put:
+      operationId: updateOfficeRequest
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceActionInput' } } } }
+      responses: { '200': { description: 담당 배정 및 회사 상태 변경, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /office/inquiries/{id}/reply:
+    post:
+      operationId: replyOfficeInquiry
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceActionInput' } } } }
+      responses: { '200': { description: 고객 답변 저장, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /membership/sync:
+    post:
+      operationId: syncMembership
+      responses:
+        '200':
+          description: 서버에서 조회한 실제 기관 결과
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+  /notifications/device:
+    post:
+      operationId: registerNotificationDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationDeviceInput' }
+      responses:
+        '200':
+          description: 수신 정보 저장, 발송 성공 아님
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+    delete:
+      operationId: deleteNotificationDevices
+      responses:
+        '200':
+          description: 내 기기 수신 정보 삭제
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+  /admin/feeds/bizinfo/run:
+    post:
+      operationId: runOfficialFeed
+      responses:
+        '200':
+          description: 승인 설정 부족으로 차단되거나 제한 페이지의 공고가 검토대기로 저장됨
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  blocked: { type: boolean }
+                  busy: { type: boolean }
+                  staged: { type: integer }
+                  unchanged: { type: integer }
+                  excluded: { type: integer }
+                  pagesFetched: { type: integer }
+                  limited: { type: boolean }
+                  nationwideComplete: { type: boolean, enum: [false] }
+                  automaticallyPublished: { type: boolean, enum: [false] }
+                  reason: { type: string }
+                additionalProperties: false
+  /admin/feeds/public/run:
+    post:
+      operationId: runPublicOfficialFeed
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PublicOfficialFeedRunInput' }
+      responses:
+        '200':
+          description: 미연결 차단 또는 공식 자료 검토대기
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+  /healthz:
+    get:
+      operationId: healthCheck
+      responses:
+        '200':
+          description: 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/HealthStatus' }
+  /benefits:
+    get:
+      operationId: listBenefits
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: kind, in: query, schema: { type: string } }
+        - { name: audience, in: query, schema: { type: string } }
+        - { name: region, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: 검토 후 공개한 공식자료만 반환
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Benefit' } }
+  /benefits/{id}:
+    get:
+      operationId: getBenefit
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200':
+          description: 일반 상세
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Benefit' }
+  /me:
+    get:
+      operationId: getMe
+      responses:
+        '200':
+          description: 로그인 고객 및 서버 이용권
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Account' }
+  /profile:
+    put:
+      operationId: saveProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Profile' }
+      responses:
+        '200':
+          description: 저장된 정보
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Profile' }
+  /recommendations:
+    get:
+      operationId: getRecommendations
+      responses:
+        '200':
+          description: 이용권이 유효한 경우에만 반환. no-store
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Recommendation' }
+        '403':
+          description: 맞춤 이용권 필요
+  /tracking:
+    get:
+      operationId: listTracking
+      responses:
+        '200':
+          description: 본인 저장내역
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Tracking' } }
+  /tracking/{benefitId}:
+    put:
+      operationId: saveTracking
+      parameters:
+        - { name: benefitId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TrackingInput' }
+      responses:
+        '200':
+          description: 본인 기록 저장
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Tracking' }
+    delete:
+      operationId: deleteTracking
+      parameters:
+        - { name: benefitId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/Message' }
+  /preferences:
+    put:
+      operationId: savePreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Preferences' }
+      responses:
+        '200':
+          description: 저장
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Preferences' }
+  /membership:
+    get:
+      operationId: getMembership
+      responses:
+        '200':
+          description: 스토어 준비 상태. 상품 설정 전 가격 없음
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Membership' }
+  /membership/restore:
+    post:
+      operationId: restorePurchases
+      responses:
+        '200': { $ref: '#/components/responses/Message' }
+        '503': { description: 스토어 연결 필요 }
+  /account/deletion:
+    post:
+      operationId: requestDeletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeletionInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Message' }
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      responses:
+        '200':
+          description: 관리자만 접근
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AdminDashboard' }
+  /admin/benefits:
+    post:
+      operationId: createAdminBenefit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Benefit' }
+      responses:
+        '200':
+          description: 검토대기 등록
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Benefit' }
+  /admin/benefits/{id}:
+    put:
+      operationId: updateAdminBenefit
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Benefit' }
+      responses:
+        '200':
+          description: 수정 이력 저장
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Benefit' }
+  /admin/grants/{userId}:
+    put:
+      operationId: updateAdminGrant
+      parameters:
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GrantInput' }
+      responses:
+        '200': { $ref: '#/components/responses/Message' }
+  /admin/deletions/{id}:
+    post:
+      operationId: processAdminDeletion
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/Message' }
+components:
+  responses:
+    Message:
+      description: 결과 안내
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Message' }
+  schemas:
+    PublicOfficialFeedRunInput:
+      type: object
+      required: [source]
+      properties:
+        source: { type: string, enum: [gov24, welfareCentral, welfareLocal] }
+    ServicePayload:
+      type: object
+      properties:
+        pushDelivery:
+          $ref: '#/components/schemas/PushDeliveryStatus'
+      additionalProperties: true
+    PushDeliveryStatus:
+      type: object
+      required: [enabled, state, message]
+      properties:
+        enabled: { type: boolean }
+        state: { type: string, enum: [unavailable, failed, unknown, provider_received, none] }
+        message: { type: string }
+    ServiceActionInput:
+      type: object
+      additionalProperties: true
+    DeletionInput:
+      type: object
+      required: [confirmation]
+      properties:
+        confirmation: { type: string }
+    GrantInput:
+      type: object
+      required: [reason, expiresAt, revoke]
+      properties:
+        reason: { type: string }
+        expiresAt: { type: string }
+        revoke: { type: boolean }
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string }
+    Message:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    Rule:
+      type: object
+      required: [scope, field, operator, value, label]
+      properties:
+        scope: { type: string, enum: [personal, business] }
+        field: { type: string }
+        operator: { type: string, enum: [eq, in, gte, lte, before, after] }
+        value: {}
+        label: { type: string }
+    Benefit:
+      type: object
+      required: [id, title, kind, audience, category, region, agency, sourceUrl, sourceId, summary, support, calculation, checks, documents, startsAt, endsAt, checkedAt, budgetStatus, status, reviewStatus, isTest, rules]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        kind: { type: string, enum: [지원금, 환급금] }
+        audience: { type: string, enum: [사업, 개인, 가구] }
+        category: { type: string }
+        region: { type: string }
+        agency: { type: string }
+        sourceUrl: { type: string }
+        sourceId: { type: string }
+        summary: { type: string }
+        support: { type: string }
+        calculation: { type: string }
+        checks: { type: array, items: { type: string } }
+        documents: { type: array, items: { type: string } }
+        startsAt: { type: string }
+        endsAt: { type: string }
+        checkedAt: { type: string }
+        budgetStatus: { type: string, enum: [확인 필요, 소진, 해당 없음] }
+        status: { type: string, enum: [확인 필요, 접수 중, 마감, 상시 조회] }
+        reviewStatus: { type: string, enum: [검토대기, 공개, 비공개] }
+        isTest: { type: boolean }
+        rules: { type: array, items: { $ref: '#/components/schemas/Rule' } }
+    Business:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        province: { type: string }
+        district: { type: string }
+        entity: { type: string }
+        industry: { type: string }
+        situation: { type: string }
+        openedAt: { type: string }
+        revenue: { type: string }
+        employees: { type: integer }
+    Personal:
+      type: object
+      properties:
+        employment:
+          type: array
+          items: { type: string, enum: [근로자, 사업자, 구직 중, 해당 없음] }
+        birthYear: { type: integer }
+        province: { type: string }
+        district: { type: string }
+        income: { type: string }
+        household: { type: string }
+        children: { type: integer }
+        housing: { type: string }
+    Profile:
+      type: object
+      required: [personal, businesses, step]
+      properties:
+        unknownAnswers: { type: array, items: { type: string } }
+        personal: { $ref: '#/components/schemas/Personal' }
+        businesses: { type: array, items: { $ref: '#/components/schemas/Business' } }
+        step: { type: integer }
+    Preferences:
+      type: object
+      required: [largeText, notifications, privacyConsent, personalizedAlerts]
+      properties:
+        largeText: { type: boolean }
+        notifications: { type: boolean }
+        privacyConsent: { type: boolean }
+        personalizedAlerts: { type: boolean }
+        accountConsent: { type: boolean }
+        termsConsent: { type: boolean }
+    Entitlement:
+      type: object
+      required: [active, subscriptionActive, grantActive]
+      properties:
+        active: { type: boolean }
+        subscriptionActive: { type: boolean }
+        grantActive: { type: boolean }
+        subscriptionUntil: { type: string }
+        grantUntil: { type: string }
+        trialActive: { type: boolean }
+        contractActive: { type: boolean }
+        trialStartedAt: { type: string }
+        trialUntil: { type: string }
+        contractUntil: { type: string }
+    Account:
+      type: object
+      required: [id, role, profile, preferences, entitlement]
+      properties:
+        id: { type: string }
+        role: { type: string }
+        email: { type: string }
+        displayName: { type: string }
+        identityStatus: { type: string }
+        serverNow: { type: string }
+        profile: { $ref: '#/components/schemas/Profile' }
+        preferences: { $ref: '#/components/schemas/Preferences' }
+        entitlement: { $ref: '#/components/schemas/Entitlement' }
+    TrackingInput:
+      type: object
+      required: [saved, stage, checkedDocuments, deadlineReminder]
+      properties:
+        saved: { type: boolean }
+        stage: { type: string, enum: [관심, 신청 준비, 신청함, 결과 확인, 지급 확인] }
+        checkedDocuments: { type: array, items: { type: string } }
+        deadlineReminder: { type: boolean }
+    Tracking:
+      allOf:
+        - { $ref: '#/components/schemas/TrackingInput' }
+        - type: object
+          required: [benefitId, updatedAt, verification]
+          properties:
+            benefitId: { type: string }
+            updatedAt: { type: string }
+            verification: { type: string }
+    Recommendation:
+      type: object
+      required: [benefitId, businessId, result, reasons, unknowns, exclusions]
+      properties:
+        benefitId: { type: string }
+        businessId: { type: string }
+        result: { type: string, enum: [조건 일치, 추가 확인 필요, 대상 제외] }
+        reasons: { type: array, items: { type: string } }
+        unknowns: { type: array, items: { type: string } }
+        exclusions: { type: array, items: { type: string } }
+    Membership:
+      type: object
+      required: [configured, message, entitlement]
+      properties:
+        configured: { type: boolean }
+        mode: { type: string }
+        products:
+          type: object
+          properties:
+            apple: { type: string }
+            google: { type: string }
+        message: { type: string }
+        entitlement: { $ref: '#/components/schemas/Entitlement' }
+    NotificationDeviceInput:
+      type: object
+      required: [token]
+      properties:
+        token: { type: string, maxLength: 250 }
+    AdminDashboard:
+      type: object
+      required: [benefits, users, audit, deletions, connections]
+      properties:
+        benefits: { type: array, items: { $ref: '#/components/schemas/Benefit' } }
+        users: { type: array, items: { $ref: '#/components/schemas/Account' } }
+        audit:
+          type: array
+          items: { type: object, additionalProperties: true }
+        deletions:
+          type: array
+          items: { type: object, additionalProperties: true }
+        connections:
+          type: array
+          items: { type: object, additionalProperties: true }

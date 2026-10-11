@@ -1,0 +1,2 @@
+Excluded categories: git history; secrets/env files; real DB dumps; logs; sessions; uploads; recordings; attached files; prior verification screenshots; node_modules; build output; memory and private tooling.
+Excluded candidate count: 47

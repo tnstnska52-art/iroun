@@ -1,0 +1,12 @@
+import {existsSync,mkdirSync,writeFileSync} from "node:fs";
+import {fileURLToPath} from "node:url";
+import {execFileSync} from "node:child_process";
+const dir=fileURLToPath(new URL("../generated-artifacts/verification/fonts/",import.meta.url));
+if(!existsSync(`${dir}NotoSansKR.ttf`))throw new Error("QA용 공식 Noto Sans KR 글꼴이 없습니다. 한글 화면 검사를 진행하지 않습니다.");
+mkdirSync(`${dir}cache`,{recursive:true});
+const config=`${dir}fontconfig.conf`;
+writeFileSync(config,`<?xml version="1.0"?><!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd"><fontconfig><include ignore_missing="yes">/etc/fonts/fonts.conf</include><dir>${dir}</dir><cachedir>${dir}cache</cachedir></fontconfig>`);
+const env={...process.env,FONTCONFIG_FILE:config};
+execFileSync("fc-cache",["-f",dir],{env});
+if(!execFileSync("fc-list",[":lang=ko"],{env,encoding:"utf8"}).trim())throw new Error("QA 한글 글꼴 등록 실패");
+console.log("QA 한글 글꼴 확인 완료. FONTCONFIG_FILE은 generated-artifacts/verification/fonts/fontconfig.conf를 사용합니다.");
