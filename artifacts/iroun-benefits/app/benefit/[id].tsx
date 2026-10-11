@@ -83,10 +83,10 @@ export default function BenefitDetail() {
   const closed = dd.label === '마감';
   const period = b.startsAt || b.endsAt ? `${b.startsAt ? fmtDate(b.startsAt) : '시작일 확인 필요'} ~ ${b.endsAt ? fmtDate(b.endsAt) : b.status === '상시 조회' ? '상시' : '마감일 공고 없음'}` : b.status === '상시 조회' ? '상시 조회' : '기간 확인 필요';
   const info: [keyof typeof Feather.glyphMap, string, string][] = [
-    ['file-text', '지원형태', b.kind], ['users', '대상', b.audience === '사업' ? '사업자' : b.audience],
-    ['home', '지원기관', b.agency], ['map-pin', '지역', b.region],
-    ['activity', '접수상태', closed ? '마감' : b.status], ['dollar-sign', '지원금액', !unlocked ? '가입 후 확인' : b.maxAmount ? `최대 ${won(b.maxAmount)}` : '공고에서 확인'],
+    ['file-text', '지원형태', b.kind], ['home', '지원기관', b.agency],
+    ['map-pin', '지역', b.region], ['activity', '접수상태', closed ? '마감' : b.status],
   ];
+  const amountText = !unlocked ? '가입 후 확인' : b.maxAmount ? `최대 ${won(b.maxAmount)}` : '공고에서 확인';
   const best = myRecs.find((r) => r.result === '조건 일치') ?? myRecs.find((r) => r.result === '추가 확인 필요');
   // 신청하기: 서버가 최신 조건으로 다시 판단한다. 되면 회사 접수함에 저장되고, 안 되면 이유를 보여준다.
   const apply = (kind: '신청 지원' | '자격 확인') => confirmAsk(kind === '신청 지원' ? '회사에 신청 도움을 요청할까요?' : '담당자에게 자격 확인을 요청할까요?', '담당자가 확인하고 도와드려요.', '요청하기', async () => {
@@ -176,14 +176,25 @@ export default function BenefitDetail() {
             </View>
           </View>
         ))}
-        <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Feather name="calendar" size={20} color={c.primary} />
-          <View style={{ flex: 1 }}>
-            <T v="small" color={c.mutedForeground} style={{ fontSize: 12, lineHeight: 16 }}>신청기간</T>
-            <T v="label">{period}</T>
-          </View>
+      </View>
+
+      <View testID="detail-key" style={{ backgroundColor: c.primarySoft, borderRadius: c.radius + 4, padding: 18, gap: 12 }}>
+        <View style={{ gap: 2 }}>
+          <T v="small" color={c.primary}>지원금액</T>
+          <T v="title" color={c.primary} testID="detail-amount">{amountText}</T>
+        </View>
+        <View style={{ height: 1, backgroundColor: '#C9D8FB' }} />
+        <View style={{ gap: 2 }}>
+          <T v="small" color={c.primary}>신청기간</T>
+          <T v="h3" testID="detail-period">{period}</T>
         </View>
       </View>
+
+      {b.summary ? (
+        <Box title="어떤 지원인가요?">
+          <T testID="detail-summary">{b.summary}</T>
+        </Box>
+      ) : null}
 
       {unlocked ? (
         <>
@@ -220,7 +231,6 @@ export default function BenefitDetail() {
         </Box>
       ) : null}
 
-      {b.summary ? <Box title="개요"><Collapsible text={b.summary} testID="summary-more" /></Box> : null}
       <Box title="지원내용">
         <T>{b.support || '공식 페이지에서 확인'}</T>
         <T v="small" color={c.mutedForeground}>금액은 기관이 정해요</T>
