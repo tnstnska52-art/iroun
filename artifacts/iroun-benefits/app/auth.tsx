@@ -121,7 +121,7 @@ export default function AuthScreen() {
     <Page back title={mode === 'signin' ? '로그인' : '가입하기'} subtitle={mode === 'signin' ? '이메일과 비밀번호를 입력하세요.' : '이메일로 계정을 만듭니다. 인증번호 확인이 필요합니다.'}>
       {reauth ? <Notice tone="warn" title="본인 확인을 위해 다시 로그인해 주세요">보안을 위해 최근 10분 안에 로그인한 기록이 있어야 회원 탈퇴를 진행할 수 있습니다. 로그인하면 탈퇴 화면으로 돌아갑니다.</Notice> : null}
       <Card>
-        <Field testID="email-input" label="이메일" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" textContentType="emailAddress" placeholder="fixture@example.invalid" />
+        <Field testID="email-input" label="이메일" value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" autoComplete="email" textContentType="emailAddress" placeholder="name@example.com" />
         <Field testID="password-input" label="비밀번호" hint={mode === 'signup' ? '8자 이상, 문자와 숫자를 섞어 주세요.' : undefined} value={pw} onChangeText={setPw} secureTextEntry autoCapitalize="none" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} textContentType={mode === 'signup' ? 'newPassword' : 'password'} />
         {mode === 'signup' ? <Field testID="password2-input" label="비밀번호 확인" value={pw2} onChangeText={setPw2} secureTextEntry autoCapitalize="none" /> : null}
         {mode === 'signup' ? <>

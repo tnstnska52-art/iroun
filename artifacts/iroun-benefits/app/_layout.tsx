@@ -26,8 +26,12 @@ import { T } from '@/components/ui';
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
+// Replit 밖(로컬 PC·사내망)에서는 EXPO_PUBLIC_API_URL에 전체 주소(http 포함)를 넣는다.
+// 값이 없으면 기존처럼 EXPO_PUBLIC_DOMAIN 앞에 https://를 붙인다.
+const apiUrl = process.env.EXPO_PUBLIC_API_URL;
 const domain = process.env.EXPO_PUBLIC_DOMAIN;
-if (domain) setBaseUrl(`https://${domain}`);
+if (apiUrl && /^https?:\/\//.test(apiUrl)) setBaseUrl(apiUrl);
+else if (domain) setBaseUrl(`https://${domain}`);
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 const proxyUrl = process.env.EXPO_PUBLIC_CLERK_PROXY_URL || undefined;
