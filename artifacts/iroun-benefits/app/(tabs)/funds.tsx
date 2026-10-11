@@ -32,8 +32,8 @@ export default function Funds() {
         <Pressable testID="fund-start" accessibilityRole="button" accessibilityLabel="정책자금 예상 한도와 금리 진단받기" onPress={() => router.push('/fund-check' as never)}
           style={({ pressed }) => ({ backgroundColor: c.primary, borderRadius: c.radius + 6, paddingVertical: 24, paddingHorizontal: 22, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.9 : 1 })}>
           <View style={{ flex: 1, gap: 4 }}>
-            <T color="#DCE6FF" style={{ fontWeight: '500' }}>내 사업자로 가능한 정책자금</T>
-            <T color="#FFFFFF" style={{ fontSize: 24, lineHeight: 32, fontWeight: '700', letterSpacing: -0.3 }}>예상 한도·금리 진단받기</T>
+            <T v="title" color="#FFFFFF" style={{ fontSize: 21, lineHeight: 30 }}>내 사업자로 가능한 정책자금</T>
+            <T v="title" color="#FFFFFF" style={{ fontSize: 21, lineHeight: 30 }}>예상 한도·금리 진단받기</T>
           </View>
           <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
             <Feather name="arrow-right" size={26} color={c.primary} />
