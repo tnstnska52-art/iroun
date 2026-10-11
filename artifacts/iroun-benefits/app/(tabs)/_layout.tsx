@@ -11,6 +11,7 @@ import { useUnreadReplies } from '@/lib/replies';
 const TABS = [
   { name: 'index', label: '홈', sf: 'house', feather: 'home' },
   { name: 'benefits', label: '지원금', sf: 'list.bullet.rectangle', feather: 'list' },
+  { name: 'funds', label: '정책자금', sf: 'wonsign.circle', feather: 'dollar-sign' },
   { name: 'consult', label: '상담', sf: 'bubble.left', feather: 'message-circle' },
   { name: 'account', label: '내 정보', sf: 'person', feather: 'user' },
 ] as const;

@@ -2980,3 +2980,16 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 /** 공고 원문 자동 정리(관리자). POST /admin/extract — 손으로 추가한 호출 */
 export const extractAdminNotice = async (body: { title: string; text: string }, options?: Parameters<typeof customFetch>[1]): Promise<import('./api.schemas').NoticeExtraction> =>
   customFetch<import('./api.schemas').NoticeExtraction>('/api/admin/extract', { ...options, method: 'POST', headers: { 'Content-Type': 'application/json', ...options?.headers }, body: JSON.stringify(body) });
+
+/** 정책자금 진단 요청·조회 — 손으로 추가한 호출 */
+export interface FundLeadInput {
+  requestKey: string; consent: true; entity: '개인' | '법인'; openedYear: number; openedMonth: number; industry: string; province: string; district: string;
+  revenue: { year: number; band: string }[]; creditKcb: string; creditNice: string; loans: { lender: string; amount: string }[];
+  issues: ('연체 이력' | '보증사고 이력' | '세금 체납')[]; premises: '임차' | '자가'; premisesValue: string; home: '임차' | '자가'; homeValue: string;
+  businessName: string; name: string; phone: string;
+}
+export interface FundLeadRow { id: string; user_id: string | null; phone: string; name: string; business_name: string; answers: Omit<FundLeadInput, 'requestKey' | 'consent' | 'businessName' | 'name' | 'phone'>; state: string; memo: string; created_at: string; updated_at: string }
+const jsonPost = (body: unknown, options?: Parameters<typeof customFetch>[1]) => ({ ...options, method: 'POST' as const, headers: { 'Content-Type': 'application/json', ...options?.headers }, body: JSON.stringify(body) });
+export const requestFundDiagnosis = (body: FundLeadInput, options?: Parameters<typeof customFetch>[1]) => customFetch<{ id: string; message: string }>('/api/fund/diagnosis', jsonPost(body, options));
+export const getFundLeads = (options?: Parameters<typeof customFetch>[1]) => customFetch<{ leads: FundLeadRow[] }>('/api/office/fund-leads', { ...options, method: 'GET' });
+export const updateFundLead = (id: string, body: { state: string; memo: string }, options?: Parameters<typeof customFetch>[1]) => customFetch<{ message: string }>(`/api/office/fund-leads/${encodeURIComponent(id)}`, jsonPost(body, options));

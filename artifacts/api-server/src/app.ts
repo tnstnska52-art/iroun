@@ -8,6 +8,7 @@ import { publishableKeyFromHost } from "@clerk/shared/keys";
 import { clerkProxyMiddleware, CLERK_PROXY_PATH, getClerkProxyHost } from "./middlewares/clerkProxyMiddleware";
 import { benefitsRouter } from "./routes/benefits";
 import { companyRouter } from "./routes/company";
+import { fundsRouter } from "./routes/funds";
 
 const app: Express = express();
 
@@ -40,6 +41,7 @@ app.use(clerkMiddleware(req=>({
 
 app.use("/api", router);
 // Company router keeps /service and /office prefixes; public endpoints stay public.
+app.use("/api", (req,res,next)=>/^\/(fund\/|office\/fund-leads)/.test(req.path)?fundsRouter(req,res,next):next());
 app.use("/api", (req,res,next)=>/^\/(service|office)(\/|$)/.test(req.path)?companyRouter(req,res,next):next());
 app.use("/api", benefitsRouter);
 

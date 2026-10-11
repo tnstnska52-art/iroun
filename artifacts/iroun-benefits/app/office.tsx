@@ -4,6 +4,7 @@ import { getGetOfficeStateQueryKey } from '@workspace/api-client-react';
 import { Chip, Notice, Page, Wrap } from '@/components/ui';
 import { Pending, AuthGate, QueryProblem,NotGovernment } from '@/components/service-ui';
 import { OfficeContact } from '@/components/office/OfficeContact';
+import { OfficeFunds } from '@/components/office/OfficeFunds';
 import { OfficeCustomers } from '@/components/office/OfficeCustomers';
 import { OfficeContracts } from '@/components/office/OfficeContracts';
 import { OfficeInquiries } from '@/components/office/OfficeInquiries';
@@ -11,7 +12,7 @@ import { OfficeRequests } from '@/components/office/OfficeRequests';
 import { OfficeStaff } from '@/components/office/OfficeStaff';
 import { useOfficeView } from '@/lib/service';
 
-type Tab = 'requests' | 'customers' | 'contracts' | 'staff' | 'contact' | 'inquiries';
+type Tab = 'requests' | 'customers' | 'contracts' | 'staff' | 'contact' | 'inquiries' | 'funds';
 
 function Body() {
   const qc = useQueryClient();
@@ -21,7 +22,7 @@ function Body() {
   if (error) return <QueryProblem error={error} next="/office" onRetry={() => refetch()} forbidden="회사 업무 화면은 관리자와 직원만 볼 수 있습니다." />;
   if (isLoading || !data) return <Pending onRetry={() => refetch()} />;
   const refresh = () => qc.invalidateQueries({ queryKey: getGetOfficeStateQueryKey() });
-  const tabs: [Tab, string][] = [['requests', '접수'], ['customers', '고객'], ...(data.admin ? [['contracts', '계약'], ['staff', '직원']] as [Tab, string][] : []), ['contact', '연락처'], ['inquiries', '문의']];
+  const tabs: [Tab, string][] = [['requests', '접수'], ['customers', '고객'], ...(data.admin ? [['contracts', '계약'], ['staff', '직원']] as [Tab, string][] : []), ['funds', '정책자금'], ['contact', '연락처'], ['inquiries', '문의']];
   const cur = tabs.some((t) => t[0] === tab) ? tab : 'requests';
   const p = { o: data, refresh };
   return (
@@ -34,6 +35,7 @@ function Body() {
       {cur === 'staff' ? <OfficeStaff {...p} /> : null}
       {cur === 'contact' ? <OfficeContact {...p} /> : null}
       {cur === 'inquiries' ? <OfficeInquiries {...p} /> : null}
+      {cur === 'funds' ? <OfficeFunds /> : null}
     </>
   );
 }

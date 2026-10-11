@@ -226,6 +226,7 @@ function officeAccess(id: string) {
   return a;
 }
 
+const fundLeads: { id: string; user_id: string | null; phone: string; name: string; business_name: string; answers: Record<string, unknown>; state: string; memo: string; request_key: string; created_at: string; updated_at: string }[] = [];
 /* ---------- 라우팅 ---------- */
 type Body = Record<string, unknown>;
 function route(method: string, path: string, query: URLSearchParams, body: Body, me: string | null): unknown {
@@ -249,8 +250,21 @@ function route(method: string, path: string, query: URLSearchParams, body: Body,
   if (M('GET', /^\/membership$/)) return { configured: false, mode: 'disabled', products: { apple: '', google: '' }, message: '스토어 상품·월요금·구매 검증 연결 전입니다. 현재 구매할 수 없습니다.', entitlement: me ? account(me).entitlement : { active: false, subscriptionActive: false, grantActive: false } };
   if (M('POST', /^\/membership\/(restore|sync)$/)) throw fail('스토어 상품·검증 제공자·웹훅 설정이 필요합니다. 구매 및 복원 완료로 처리하지 않았습니다.', 503);
 
+  if (M('POST', /^\/fund\/diagnosis$/)) {
+    const { requestKey, consent, businessName, name, phone, ...answers } = body as Record<string, unknown>;
+    if (consent !== true || !businessName || !name || !/^01[016789]-?\d{3,4}-?\d{4}$/.test(String(phone))) throw fail('입력 내용을 확인해 주세요.');
+    const again = fundLeads.find((l) => l.request_key === requestKey);
+    if (again) return { id: again.id, message: '담당자에게 전달했어요.' };
+    const lead = { id: newId('fund'), user_id: me, phone: String(phone).replace(/\D/g, ''), name: String(name), business_name: String(businessName), answers, state: '접수됨', memo: '', request_key: String(requestKey), created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    fundLeads.unshift(lead); return { id: lead.id, message: '담당자에게 전달했어요.' };
+  }
   const id = need(me);
   const u = users.get(id)!;
+  if (M('GET', /^\/office\/fund-leads$/)) { officeAccess(id); return { leads: fundLeads }; }
+  if ((x = M('POST', /^\/office\/fund-leads\/([^/]+)$/))) {
+    officeAccess(id); const l = fundLeads.find((k) => k.id === x![1]); if (!l) throw fail('요청을 찾을 수 없습니다.', 404);
+    l.state = String(body.state); l.memo = String(body.memo ?? ''); l.updated_at = new Date().toISOString(); return { message: '저장했습니다.' };
+  }
   if (M('GET', /^\/me$/)) return account(id);
   if (M('PUT', /^\/profile$/)) {
     if (!account(id).preferences.privacyConsent) throw fail('먼저 개인정보 수집·이용에 동의해 주세요.');
