@@ -5,7 +5,6 @@ import { getListBenefitsQueryKey, useListBenefits } from '@workspace/api-client-
 import { Feather } from '@expo/vector-icons';
 import { useUnreadReplies } from '@/lib/replies';
 import { TodayPicks } from '@/components/TodayPicks';
-import { RotatingRows } from '@/components/RotatingRows';
 import { todayPicks } from '@/lib/picks';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
@@ -46,8 +45,8 @@ export default function Home() {
   const open = list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0);
   const within7 = (b: { endsAt: string }) => { const d = daysLeft(b.endsAt); return d !== null && d >= 0 && d <= 7; };
   // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 마감 7일 안쪽을 보여준다.
-  const closing = (est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }))).filter((x) => within7(x.benefit)).sort((x, y) => (daysLeft(x.benefit.endsAt) ?? 0) - (daysLeft(y.benefit.endsAt) ?? 0)).slice(0, 10);
-  const nowOpen = open.filter((b) => !within7(b)).slice(0, 10).map((b) => ({ benefit: b, result: '추가 확인 필요' as const }));
+  const closing = (est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }))).filter((x) => within7(x.benefit)).sort((x, y) => (daysLeft(x.benefit.endsAt) ?? 0) - (daysLeft(y.benefit.endsAt) ?? 0)).slice(0, 5);
+  const nowOpen = open.filter((b) => !within7(b)).slice(0, 5).map((b) => ({ benefit: b, result: '추가 확인 필요' as const }));
   // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 오늘 받기 쉬운 5건을 고른다.
   const picks = todayPicks(est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' })));
   // 7일 안에 마감되는 것이 없어도 자리는 항상 보여준다(사라진 것처럼 보이지 않게).
@@ -56,7 +55,7 @@ export default function Home() {
       <SectionHead emoji="🚨" motion="pulse" title="마감 7일 전 지원금" />
       <View testID="home-closing" style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
         {closing.length > 0
-          ? <RotatingRows items={closing} visible={2} interval={4500} delay={2200} testID="home-closing-rows" />
+          ? closing.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === closing.length - 1} />)
           : <View style={{ minHeight: 64, justifyContent: 'center' }}><T color={c.mutedForeground}>7일 안에 마감되는 지원금이 없어요</T></View>}
       </View>
     </>
@@ -111,7 +110,7 @@ export default function Home() {
             <>
               <SectionHead emoji="👉" motion="wiggle" title="지금 신청 가능한 지원금" onMore={() => router.push('/benefits')} testID="home-easy-more" />
               <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
-                <RotatingRows items={nowOpen} visible={3} interval={4500} testID="home-open-rows" />
+                {nowOpen.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === nowOpen.length - 1} />)}
               </View>
             </>
           ) : null}
@@ -147,7 +146,7 @@ export default function Home() {
           <TodayPicks items={picks} />
           <SectionHead emoji="👉" motion="wiggle" title="지금 신청 가능한 지원금" onMore={() => router.push('/benefits')} testID="home-list-more" />
           <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
-            <RotatingRows items={acc.active ? est.items : shown} visible={3} interval={4500} testID="home-open-rows" />
+            {shown.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === shown.length - 1 && est.items.length <= shown.length} />)}
             {est.items.length > shown.length ? (
               <Pressable testID="home-list-all" accessibilityRole="button" onPress={() => router.push(acc.active ? '/benefits' : join)} style={{ minHeight: 52, alignItems: 'center', justifyContent: 'center' }}>
                 <T v="label" color={c.primary}>{acc.active ? `전체 ${est.items.length}건 보기` : `${est.items.length - shown.length}건 더 보기`}</T>
