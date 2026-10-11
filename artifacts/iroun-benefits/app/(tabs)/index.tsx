@@ -63,6 +63,10 @@ export default function Home() {
           <Feather name="check" size={19} color={c.primaryForeground} />
         </View>
         <T v="h2" style={{ flex: 1, fontWeight: '800' }}>이로운사람들</T>
+        <Pressable testID="nav-me" accessibilityRole="button" accessibilityLabel="내 정보" onPress={() => router.push('/account' as never)}
+          style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+          <Feather name="user" size={24} color={c.foreground} />
+        </Pressable>
         <Pressable testID="nav-alerts" accessibilityRole="button" accessibilityLabel={`알림. 지금 신청 가능 ${alertCount}건`} onPress={() => router.push('/alerts' as never)}
           style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
           <Feather name="bell" size={24} color={c.foreground} />

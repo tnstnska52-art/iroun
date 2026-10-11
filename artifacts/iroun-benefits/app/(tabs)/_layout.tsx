@@ -12,11 +12,11 @@ const TABS = [
   { name: 'index', label: '홈', sf: 'house', feather: 'home' },
   { name: 'benefits', label: '지원금', sf: 'list.bullet.rectangle', feather: 'list' },
   { name: 'funds', label: '정책자금', sf: 'wonsign.circle', feather: 'dollar-sign' },
+  { name: 'refunds', label: '환급금', sf: 'arrow.uturn.backward.circle', feather: 'rotate-ccw' },
   { name: 'consult', label: '상담', sf: 'bubble.left', feather: 'message-circle' },
-  { name: 'account', label: '내 정보', sf: 'person', feather: 'user' },
 ] as const;
 /** 탭에는 보이지 않지만 기존 주소(/refunds, /progress) 호환을 위해 남겨 둔 화면 */
-const HIDDEN = ['refunds', 'progress', 'mine'] as const;
+const HIDDEN = ['progress', 'mine', 'account'] as const;
 
 function NativeTabLayout() {
   const unread = useUnreadReplies().count;

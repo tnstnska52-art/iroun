@@ -54,7 +54,7 @@ export function AccountView({ settings }: { settings: boolean }) {
   );
 
   return (
-    <Page {...(settings ? { back: true } : { tab: true })} title={settings ? '환경설정' : '내 정보'}>
+    <Page back title={settings ? '환경설정' : '내 정보'}>
       {!acc.isLoaded || (acc.isSignedIn && acc.loading) ? <Loading rows={2} /> : !acc.isSignedIn ? (
         <Card tone="soft">
           <T v="h3">가입하면 전체 지원금을 볼 수 있어요</T>
