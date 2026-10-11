@@ -39,7 +39,6 @@ export default function Home() {
   const lastYear = new Date(Date.now() + 9 * 3600000).getUTCFullYear() - 1;
   const past = profile ? missed(list, profile, lastYear) : null;
   const reqs = (svc.data?.requests ?? []).filter((x) => x.state !== '회사 지원 종료');
-  const openTasks = reqs.reduce((n, x) => n + x.customerTasks.filter((k) => !x.completedTasks.includes(k)).length, 0);
   const unread = (svc.data?.inbox ?? []).filter((x) => !x.read_at).length + (svc.data?.companyUpdates ?? []).filter((x) => !x.read).length;
   const alertCount = est ? est.items.length : list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0).length;
   const showStat = IS_PREVIEW || HEADLINE_STAT.verified;
@@ -130,16 +129,6 @@ export default function Home() {
               <Emoji char="💬" motion="wiggle" />
               <T v="h3" style={{ flex: 1 }}>답변이 도착했어요</T>
               <Feather name="chevron-right" size={22} color={c.mutedForeground} />
-            </Pressable>
-          ) : null}
-          {openTasks > 0 ? (
-            <Pressable testID="home-tasks" accessibilityRole="button" accessibilityLabel={`내가 할 일 ${openTasks}건`} onPress={() => router.push('/company-progress')}
-              style={({ pressed }) => ({ backgroundColor: c.primary, borderRadius: c.radius + 6, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.9 : 1 })}>
-              <View style={{ flex: 1, gap: 2 }}>
-                <T v="label" color="#DCE6FF">지금 할 일</T>
-                <T v="h2" color="#FFFFFF">서류 {openTasks}가지 준비</T>
-              </View>
-              <Feather name="chevron-right" size={24} color="#FFFFFF" />
             </Pressable>
           ) : null}
 

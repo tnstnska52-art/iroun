@@ -107,6 +107,8 @@ export default function BenefitDetail() {
   });
   // 고객이 할 일을 순서대로. 공고 자료에 있는 내용만으로 만들고, 없는 내용은 공식 원문 확인으로 안내한다.
   const conditions = [...b.rules.map((r) => r.label), ...b.checks];
+  // 회사 신청 도움은 계약 고객만 요청할 수 있다.
+  const contract = !!acc.me?.entitlement.contractActive;
   const steps: { title: string; body: string }[] = closed ? [
     { title: '마감됐어요', body: '지금은 신청할 수 없어요' },
     { title: '다른 지원금 보기', body: '지원금 탭에서 확인하세요' },
@@ -114,14 +116,15 @@ export default function BenefitDetail() {
     { title: '대상 확인', body: conditions.length ? `${conditions.slice(0, 2).join('\n')}${conditions.length > 2 ? `\n외 ${conditions.length - 2}가지` : ''}` : '공식 페이지에서 확인' },
     { title: '서류 준비', body: b.documents.length ? b.documents.join('\n') : '공식 페이지에서 확인' },
     { title: b.endsAt ? `${fmtDate(b.endsAt)}까지 신청` : '신청하기', body: `아래 '공식 신청 페이지' 버튼${b.budgetStatus === '확인 필요' ? '\n예산이 먼저 끝날 수 있어요' : ''}` },
-    { title: '어려우면 도움 요청', body: "아래 '회사에 신청 도움 요청' 버튼" },
+    ...(contract ? [{ title: '어려우면 도움 요청', body: "아래 '회사에 신청 도움 요청' 버튼" }] : []),
     { title: '결과 확인', body: `${b.agency}에서 알려줘요` },
   ];
 
   return (
     <Page
       footer={<>
-        {!closed ? <Btn kind="secondary" label={acc.active ? '회사에 신청 도움 요청' : unlocked ? '가입하고 신청 도움 받기' : '무료로 전체 보기'} icon="send" loading={applying} onPress={() => (acc.active ? apply('신청 지원') : router.push((expiredMember ? '/inquiries' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never))} testID="detail-company-help" /> : null}
+        {!closed && contract ? <Btn kind="secondary" label="회사에 신청 도움 요청" icon="send" loading={applying} onPress={() => apply('신청 지원')} testID="detail-company-help" /> : null}
+        {!closed && !acc.active ? <Btn kind="secondary" label={expiredMember ? '계속 이용하기' : '무료로 전체 보기'} onPress={() => router.push((expiredMember ? '/membership' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-join" /> : null}
         <Btn label="공식 신청 페이지" icon="external-link" onPress={() => Linking.openURL(b.sourceUrl)} testID="open-source" hint="브라우저에서 공식 페이지가 열립니다" />
       </>}
     >
@@ -158,7 +161,7 @@ export default function BenefitDetail() {
           <T v="small">{applied.body}</T>
           {applied.reasons.map((x, i) => <T key={i} v="small">• {x}</T>)}
           {applied.ok ? <Btn kind="secondary" label="접수 내역 보기" onPress={() => router.push('/company-progress')} testID="apply-progress" /> : null}
-          {!applied.ok && applied.canAsk ? <Btn kind="secondary" label="담당자에게 자격 확인 요청" loading={applying} onPress={() => apply('자격 확인')} testID="apply-ask" /> : null}
+          {!applied.ok && applied.canAsk && contract ? <Btn kind="secondary" label="담당자에게 자격 확인 요청" loading={applying} onPress={() => apply('자격 확인')} testID="apply-ask" /> : null}
           {!applied.ok ? <Btn kind="ghost" label="정보 수정" onPress={() => router.push('/onboarding')} testID="apply-fix" /> : null}
         </View>
       ) : null}
@@ -253,18 +256,7 @@ export default function BenefitDetail() {
       </Box>
 
       <Box title="필요 서류">
-        {b.documents.length === 0 ? <T>공식 출처에서 확인해 주세요.</T> : b.documents.map((d) => {
-          const on = base.checkedDocuments.includes(d);
-          return acc.isSignedIn ? (
-            <Pressable key={d} testID={`doc-${d}`} accessibilityRole="checkbox" accessibilityLabel={d} accessibilityState={{ checked: on }} aria-checked={on} disabled={busy}
-              onPress={() => save({ checkedDocuments: on ? base.checkedDocuments.filter((x) => x !== d) : [...base.checkedDocuments, d] }, on ? '체크를 해제했어요.' : '준비한 서류로 저장했어요.')}
-              style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Feather name={on ? 'check-square' : 'square'} size={22} color={on ? c.primary : c.mutedForeground} />
-              <T style={{ flex: 1 }}>{d}</T>
-            </Pressable>
-          ) : <T key={d}>• {d}</T>;
-        })}
-        {b.documents.length > 0 ? <T v="small" color={c.mutedForeground}>{acc.isSignedIn ? '준비한 서류는 눌러서 체크' : '가입하면 체크할 수 있어요'}</T> : null}
+        {b.documents.length === 0 ? <T>공식 페이지에서 확인</T> : b.documents.map((d) => <T key={d}>• {d}</T>)}
       </Box>
 
       <Box title="확인할 사항">
@@ -279,11 +271,7 @@ export default function BenefitDetail() {
       {b.calculation ? <Box title="금액 산정"><Collapsible text={b.calculation} testID="calc-more" /></Box> : null}
 
       {acc.isSignedIn ? (
-        <Box title="내 기록">
-          <T v="small" color={c.mutedForeground}>{USER_RECORD_NOTICE}</T>
-          <Wrap>{STAGES.map((s) => <Chip key={s} label={s} selected={base.stage === s && !!cur} onPress={() => save({ stage: s }, `"${s}" 단계로 저장했어요.`)} testID={`stage-${s}`} />)}</Wrap>
-          <Toggle testID="reminder-toggle" label="마감 알림 받기" desc={!base.deadlineReminder && !acc.me?.preferences.notifications ? '내 정보 > 환경설정에서 알림을 먼저 켜 주세요' : '휴대폰 알림은 준비 중이에요'} value={base.deadlineReminder} onChange={(v) => save({ deadlineReminder: v }, v ? '마감 알림을 저장했어요.' : '마감 알림을 해제했어요.')} disabled={busy || (!base.deadlineReminder && !acc.me?.preferences.notifications)} />
-        </Box>
+        <Btn kind="secondary" icon="bookmark" label={base.saved ? '저장됨 · 눌러서 해제' : '저장하기'} loading={busy} onPress={() => save({ saved: !base.saved }, base.saved ? '저장을 해제했어요.' : '저장했어요.')} testID="save-button" />
       ) : null}
 
       <Box title="공식 출처">

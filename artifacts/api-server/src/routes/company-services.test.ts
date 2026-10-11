@@ -23,7 +23,11 @@ const post=(path:string,body:any,user=owner)=>request(app()).post(path).set("x-t
 const put=(path:string,body:any,user=admin)=>request(app()).put(path).set("x-test-user",user).send(body);
 const trial=()=>post("/service/trial",{});
 const apply=(kind="신청 지원",extra:any={})=>post("/service/requests",{benefitId:bId,businessId:"biz",kind,confirmed:true,...extra});
-async function gift(user=owner){await pool.query("INSERT INTO iroun_grants(user_id,expires_at,reason,granted_by) VALUES($1,now()+interval '1 day','시험용', $2) ON CONFLICT(user_id) DO UPDATE SET expires_at=excluded.expires_at,revoked_at=NULL",[user,admin]);}
+// 회사 신청 도움은 계약 고객만 요청할 수 있으므로, 접수 시험에서는 계약 기록을 함께 만든다.
+async function signed(user=owner){await pool.query("INSERT INTO iroun_contracts(id,user_id,starts_at,ends_at,reason,evidence,actor) VALUES($1,$2,now()-interval '1 day',now()+interval '30 days','시험 계약','시험',$3)",[randomUUID(),user,admin]);}
+// 이용 종료 시험: 이용권과 계약을 함께 회수한다.
+async function revokeAll(user=owner){await pool.query("UPDATE iroun_grants SET revoked_at=now() WHERE user_id=$1",[user]);await pool.query("UPDATE iroun_contracts SET revoked_at=now() WHERE user_id=$1",[user]);}
+async function gift(user=owner){await signed(user);await pool.query("INSERT INTO iroun_grants(user_id,expires_at,reason,granted_by) VALUES($1,now()+interval '1 day','시험용', $2) ON CONFLICT(user_id) DO UPDATE SET expires_at=excluded.expires_at,revoked_at=NULL",[user,admin]);}
 async function code(user=owner){return (await post("/service/owner-code",{},user)).body.code;}
 async function contract(extra:any={}){return post("/office/contracts",{accountCode:await code(),startsAt:"2026-01-01T00:00:00+09:00",endsAt:"2099-01-01T00:00:00+09:00",reason:"시험 계약 기록",evidence:"시험 본인 계정 연결",...extra},admin);}
 async function employee(id=s1){return post("/office/staff",{userId:id,name:"시험 직원",phone:"",kakao:"",enabled:true},admin);}
@@ -145,6 +149,7 @@ describe("신규 회사 접수·담당자·문의·알림",()=>{
  it("예산소진·공식 종료는 마감",()=>{expect(finished({...base,budgetStatus:"소진"})).toBe(true);expect(finished({...base,status:"마감"})).toBe(true);});
  it("과거 비교는 당시 나이와 확인필요 표시",()=>{const r=historicalMatch({...base,startsAt:"2020-01-01",rules:[{scope:"personal",field:"age",operator:"gte",value:65,label:"연령"}]},profile)[0];expect(r.referenceYear).toBe(2020);expect(r.result).toBe("추가 확인 필요");});
  it("무료 신청지원 요청 403",async()=>expect((await apply()).status).toBe(403));
+ it("체험 회원은 신청지원 요청 불가(계약 고객만)",async()=>{await trial();const r=await apply();expect(r.status).toBe(403);expect(r.body.error).toContain("계약 고객");await signed();expect((await apply()).status).toBe(200);});
  it("조건일치·고객확인→회사 실제접수",async()=>{await gift();const r=await apply();expect(r.status).toBe(200);const state=(await get("/service/state")).body;expect(state.requests[0].state).toBe("회사 접수");expect(state.requests[0].snapshot.warning).toContain("기관");});
  it("불일치 이유 반환·자격문의 가능",async()=>{await gift();b.rules=[{...base.rules[0],value:"제조업"}];const r=await apply();expect(r.status).toBe(409);expect(r.body.detail.exclusions[0]).toContain("업종");expect((await apply("자격 확인")).status).toBe(200);});
  it("미확인 조건은 불가 아닌 자격문의",async()=>{await gift();b.checks=["중복수혜 확인 필요"];expect((await apply()).status).toBe(409);expect((await apply("자격 확인")).status).toBe(200);});
@@ -171,7 +176,7 @@ describe("신규 회사 접수·담당자·문의·알림",()=>{
  it("체험 만료 뒤 문의·권리행사 유지",async()=>{await post("/service/inquiries",{title:"삭제 문의",body:"개인정보 권리",requestKey:"qa-rights-123"});expect((await get("/service/state")).body.inquiries).toHaveLength(1);});
  it("관리자 답변·처리상태 실제 저장",async()=>{const q=await post("/service/inquiries",{title:"시험",body:"문의",requestKey:"qa-reply-123"});expect((await post(`/office/inquiries/${q.body.id}/reply`,{body:"확인 후 안내합니다.",state:"답변 완료"},admin)).status).toBe(200);expect((await get("/service/state")).body.inquiries[0].replies).toHaveLength(1);});
  it("다른 직원은 문의답변 불가",async()=>{await assigned();const q=await post("/service/inquiries",{title:"시험",body:"문의",requestKey:"qa-reply-123"});expect((await post(`/office/inquiries/${q.body.id}/reply`,{body:"시험",state:"확인 중"},s2)).status).toBe(403);});
- it("앱내 알림중복 방지·만료후 숨김·구링크차단",async()=>{await gift();const a=(await get("/service/state")).body.inbox;expect(a).toHaveLength(1);expect((await get("/service/state")).body.inbox).toHaveLength(1);await pool.query("UPDATE iroun_grants SET revoked_at=now() WHERE user_id=$1",[owner]);expect((await get("/service/state")).body.inbox).toHaveLength(0);expect((await post(`/service/inbox/${a[0].id}/read`,{})).status).toBe(403);});
+ it("앱내 알림중복 방지·만료후 숨김·구링크차단",async()=>{await gift();const a=(await get("/service/state")).body.inbox;expect(a).toHaveLength(1);expect((await get("/service/state")).body.inbox).toHaveLength(1);await revokeAll();expect((await get("/service/state")).body.inbox).toHaveLength(0);expect((await post(`/service/inbox/${a[0].id}/read`,{})).status).toBe(403);});
  it("알림거절과 공고마감은 알림함 제외",async()=>{await gift();await pool.query("UPDATE iroun_accounts SET preferences=preferences||'{\"notifications\":false}' WHERE id=$1",[owner]);expect((await get("/service/state")).body.inbox).toHaveLength(0);});
  it("푸시 전송 실패 상태는 본인만 보고 동의 철회 후 숨김",async()=>{
   await gift(owner);await gift(other);
@@ -183,9 +188,9 @@ describe("신규 회사 접수·담당자·문의·알림",()=>{
   await pool.query("UPDATE iroun_accounts SET preferences=preferences||'{\"notifications\":false}' WHERE id=$1",[owner]);
   expect((await get("/service/state",owner)).body.pushDelivery.state).toBe("unavailable");
  });
- it("회수 후 새 개인판정 차단·본인 접수 준비기록 유지",async()=>{const id=await assigned();await pool.query("UPDATE iroun_grants SET revoked_at=now() WHERE user_id=$1",[owner]);const r=(await get("/service/state")).body.requests[0];expect(r.snapshot).toBeNull();expect(r.customerTasks).toEqual(["서류 준비"]);expect(r.benefitTitle).toBeTruthy();expect(r.contact).toBeTruthy();expect((await get("/service/matches")).status).toBe(403);expect((await get("/service/state",other)).body.requests).toEqual([]);});
+ it("회수 후 새 개인판정 차단·본인 접수 준비기록 유지",async()=>{const id=await assigned();await revokeAll();const r=(await get("/service/state")).body.requests[0];expect(r.snapshot).toBeNull();expect(r.customerTasks).toEqual(["서류 준비"]);expect(r.benefitTitle).toBeTruthy();expect(r.contact).toBeTruthy();expect((await get("/service/matches")).status).toBe(403);expect((await get("/service/state",other)).body.requests).toEqual([]);});
  it("회사 알림은 동의거절·만료 후 유지·읽음 중복방지·타인차단",async()=>{
-  const id=await assigned();await pool.query("UPDATE iroun_grants SET revoked_at=now() WHERE user_id=$1",[owner]);
+  const id=await assigned();await revokeAll();
   await pool.query("UPDATE iroun_accounts SET preferences=preferences||'{\"notifications\":false}'::jsonb WHERE id=$1",[owner]);
   expect((await get("/service/state")).body.companyUpdates[0].read).toBe(false);
   expect((await post(`/service/inbox/company:${id}/read`,{},other)).status).toBe(404);

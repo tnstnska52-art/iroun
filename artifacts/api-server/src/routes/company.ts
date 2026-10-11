@@ -164,6 +164,8 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
   const result=await transaction(async c=>{
    const a=await lockOwner(c,uid(req));
    if(!(await hasAccess(c,a.id)))throw fail("유효 체험·계약 또는 기존 이용권이 필요합니다.",403);
+   // 회사 신청 도움은 계약 고객만 요청할 수 있다. 체험·무료 회원은 공고와 신청 순서만 본다.
+   if(!(await c.query("SELECT 1 FROM iroun_contracts WHERE user_id=$1 AND revoked_at IS NULL AND starts_at<=now() AND ends_at>now()",[a.id])).rowCount)throw fail("회사 신청 도움은 계약 고객만 요청할 수 있습니다.",403);
    const {rows:[record]}=await c.query("SELECT data FROM iroun_benefits WHERE id=$1 FOR SHARE",[b.id]);
    const latest=options.notices?b:record?.data as Benefit;
    if(!latest||!publicBenefit(latest))throw fail("공고가 비공개로 변경되었습니다.",409);

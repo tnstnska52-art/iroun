@@ -343,6 +343,7 @@ function route(method: string, path: string, query: URLSearchParams, body: Body,
     const benefitId = String(body.benefitId ?? ''), businessId = String(body.businessId ?? ''), kind = body.kind === '자격 확인' ? '자격 확인' : '신청 지원';
     const b = notices().find((n) => n.id === benefitId); if (!b) throw fail('공개된 공식 공고를 찾을 수 없습니다.', 404);
     const a = account(id); if (!a.entitlement.active) throw fail('유효 체험·계약 또는 기존 이용권이 필요합니다.', 403);
+    if (!a.entitlement.contractActive) throw fail('회사 신청 도움은 계약 고객만 요청할 수 있습니다.', 403);
     if (finished(b)) throw fail('마감된 공고는 신청 지원 접수를 할 수 없습니다. 문의 화면을 이용해 주세요.', 409);
     const decision = matchBenefit(b, a.profile, new Date()).find((m) => m.businessId === businessId);
     if (!decision) throw fail('현재 등록된 사업장을 선택해 주세요.', 409);
