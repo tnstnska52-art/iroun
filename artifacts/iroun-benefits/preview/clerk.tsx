@@ -82,12 +82,13 @@ export function useAuth() {
 export function useUser() {
   const id = useSyncExternalStore(subscribe, snapshot, snapshot);
   const u = previewUser(id);
-  return { isLoaded: true, isSignedIn: !!u, user: u ? { id: u.id, primaryEmailAddress: { emailAddress: u.email } } : null };
+  return { isLoaded: true, isSignedIn: !!u, user: u ? { id: u.id, firstName: u.name ?? null, primaryPhoneNumber: { phoneNumber: u.email }, primaryEmailAddress: null as { emailAddress: string } | null } : null };
 }
 
 type Result = { error: { message: string; errors?: { message: string; longMessage?: string; code?: string }[] } | null };
 const ok: Result = { error: null };
-const bad = (message: string): Result => ({ error: { message, errors: [{ message, longMessage: message, code: 'preview' }] } });
+const bad = (message: string, code = 'preview'): Result => ({ error: { message, errors: [{ message, longMessage: message, code }] } });
+const local = (e164: string) => { const d = e164.replace(/\D/g, '').replace(/^82/, '0'); return d.length === 11 ? `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}` : d; };
 
 export function useSignIn() {
   const [, force] = useState(0);
@@ -98,38 +99,39 @@ export function useSignIn() {
       // 화면 코드가 호출 직후 status를 읽으므로 같은 객체에서 최신 값을 돌려준다.
       get status() { return ref.current.status; },
       supportedSecondFactors: [] as { strategy: string }[],
-      password: async ({ emailAddress, password }: { emailAddress: string; password: string }): Promise<Result> => {
+      password: async ({ phoneNumber, password }: { phoneNumber: string; password: string }): Promise<Result> => {
         if (!password) return bad('비밀번호를 입력해 주세요.');
-        const known = ['free', 'trial', 'contract', 'expired', 'staff', 'admin'].find((k) => emailAddress.toLowerCase().startsWith(k + '@'));
-        ref.current.pending = known ? `demo-${known}` : ensureUser(`new-${emailAddress.toLowerCase()}`, emailAddress).id;
+        // 미리보기: 어떤 번호든 로그인된다. 준비된 인물은 위쪽 "사용자 바꾸기"에서 고른다.
+        ref.current.pending = ensureUser(`new-${phoneNumber}`, local(phoneNumber)).id;
         ref.current.status = 'complete'; force((n) => n + 1);
         return ok;
       },
       finalize: async ({ navigate }: { navigate: () => void }) => { setUser(ref.current.pending); navigate(); },
-      mfa: { sendEmailCode: async (): Promise<Result> => ok, verifyEmailCode: async (_: { code: string }): Promise<Result> => ok },
+      mfa: { sendPhoneCode: async (): Promise<Result> => ok, verifyPhoneCode: async (_: { code: string }): Promise<Result> => ok },
     },
   };
 }
 
 export function useSignUp() {
   const [, force] = useState(0);
-  const ref = React.useRef<{ status: string | null; email: string }>({ status: null, email: '' });
+  const ref = React.useRef<{ status: string | null; phone: string; name: string }>({ status: null, phone: '', name: '' });
   return {
     fetchStatus: 'idle' as const,
     signUp: {
       get status() { return ref.current.status; },
-      password: async ({ emailAddress, password }: { emailAddress: string; password: string }): Promise<Result> => {
-        if (password.length < 8) return bad('비밀번호는 8자 이상으로 입력해 주세요.');
-        ref.current.email = emailAddress; return ok;
+      password: async ({ phoneNumber, password, firstName }: { phoneNumber: string; password: string; firstName?: string; unsafeMetadata?: unknown }): Promise<Result> => {
+        if (password.length < 8) return bad('비밀번호는 8자 이상으로 입력해 주세요.', 'form_password_length_too_short');
+        ref.current.phone = phoneNumber; ref.current.name = firstName ?? ''; return ok;
       },
       verifications: {
-        sendEmailCode: async (): Promise<Result> => ok,
-        verifyEmailCode: async ({ code }: { code: string }): Promise<Result> => {
-          if (!code) return bad('인증번호를 입력해 주세요.');
+        sendPhoneCode: async (): Promise<Result> => ok,
+        // 미리보기: 실제 문자는 보내지 않는다. 숫자 6자리면 통과한다.
+        verifyPhoneCode: async ({ code }: { code: string }): Promise<Result> => {
+          if (!/^\d{6}$/.test(code)) return bad('인증번호 6자리를 입력해 주세요.', 'form_code_incorrect');
           ref.current.status = 'complete'; force((n) => n + 1); return ok;
         },
       },
-      finalize: async ({ navigate }: { navigate: () => void }) => { setUser(ensureUser(`new-${ref.current.email.toLowerCase()}`, ref.current.email).id); navigate(); },
+      finalize: async ({ navigate }: { navigate: () => void }) => { setUser(ensureUser(`new-${ref.current.phone}`, local(ref.current.phone), ref.current.name).id); navigate(); },
     },
   };
 }

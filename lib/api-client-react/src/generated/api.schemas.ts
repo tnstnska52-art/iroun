@@ -156,6 +156,8 @@ export interface Benefit {
   reviewStatus: BenefitReviewStatus;
   isTest: boolean;
   rules: Rule[];
+  /** 공고 원문에 적힌 최대 지원금액(원). 원문에 없으면 생략 */
+  maxAmount?: number;
 }
 
 export interface Business {

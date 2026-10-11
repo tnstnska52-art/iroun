@@ -24,26 +24,35 @@ const SAMPLES: Benefit[] = [
     summary: '화면 확인용 예시 공고입니다. 점포 환경 개선과 홍보물 제작 비용 일부를 지원하는 형태의 사업입니다.',
     support: '점포당 공급가액의 일부를 지원하는 형태입니다. 금액과 비율은 실제 공고문에서 확인해야 합니다.',
     calculation: '예시 자료라 금액을 제시하지 않습니다.', documents: ['사업자등록증명', '소상공인확인서', '사업계획서'],
-    startsAt: ymdIn(-20), endsAt: ymdIn(12),
+    startsAt: ymdIn(-20), endsAt: ymdIn(12), maxAmount: 3000000,
     rules: [{ scope: 'business', field: 'province', operator: 'eq', value: '경기', label: '사업장 소재지(경기도)' }, { scope: 'business', field: 'employees', operator: 'lte', value: 4, label: '상시 근로자 5인 미만' }] }),
   sample({ id: 'ex-seoul-youth', title: '[예시] 서울시 청년 자격증 응시료 지원', audience: '개인', category: '교육', region: '서울', agency: '서울특별시',
     sourceUrl: 'https://www.seoul.go.kr/', summary: '화면 확인용 예시 공고입니다. 청년의 어학·자격시험 응시료를 지원하는 형태의 사업입니다.',
     support: '응시료 실비를 연 1회 지원하는 형태입니다.', calculation: '예시 자료라 금액을 제시하지 않습니다.',
-    documents: ['응시 확인서', '주민등록초본'], startsAt: ymdIn(-40), endsAt: ymdIn(3),
+    documents: ['응시 확인서', '주민등록초본'], startsAt: ymdIn(-40), endsAt: ymdIn(3), maxAmount: 100000,
     rules: [{ scope: 'personal', field: 'age', operator: 'lte', value: 39, label: '만 39세 이하' }] }),
   sample({ id: 'ex-busan-export', title: '[예시] 부산 수출 초보기업 해외마케팅 지원', audience: '사업', category: '수출', region: '부산', agency: '부산경제진흥원',
     summary: '화면 확인용 예시 공고입니다. 지역이 다른 경우의 안내 문구를 확인하기 위한 자료입니다.',
     support: '해외 전시회 참가와 홍보물 번역을 지원하는 형태입니다.', calculation: '예시 자료라 금액을 제시하지 않습니다.',
-    documents: ['사업자등록증명', '수출실적증명'], startsAt: ymdIn(-10), endsAt: ymdIn(25),
+    documents: ['사업자등록증명', '수출실적증명'], startsAt: ymdIn(-10), endsAt: ymdIn(25), maxAmount: 10000000,
     rules: [{ scope: 'business', field: 'province', operator: 'eq', value: '부산', label: '사업장 소재지(부산)' }] }),
   sample({ id: 'ex-energy-voucher', title: '[예시] 에너지 비용 부담 완화 바우처', audience: '가구', category: '생활', region: '전국', agency: '산업통상자원부',
     sourceUrl: 'https://www.gov.kr/', summary: '화면 확인용 예시 공고입니다. 상시 접수이며 예산 소진 시 종료되는 형태입니다.',
     support: '전기·가스 요금 차감 바우처 형태입니다.', calculation: '예시 자료라 금액을 제시하지 않습니다.',
-    documents: ['주민등록등본'], checks: ['가구원 구성과 소득 기준'], status: '접수 중', budgetStatus: '확인 필요' }),
+    documents: ['주민등록등본'], checks: ['가구원 구성과 소득 기준'], status: '접수 중', budgetStatus: '확인 필요', maxAmount: 300000 }),
+  sample({ id: 'ex-hire-support', title: '[예시] 소상공인 신규 고용 인건비 지원', audience: '사업', category: '고용', region: '전국', agency: '고용노동부',
+    sourceUrl: 'https://www.moel.go.kr/', summary: '화면 확인용 예시 공고입니다. 직원을 새로 채용한 소상공인에게 인건비 일부를 지원하는 형태입니다.',
+    support: '신규 채용 1인당 월 일정액을 최대 12개월 지원하는 형태입니다.', calculation: '예시 자료입니다. 실제 금액은 공고문 기준입니다.',
+    documents: ['사업자등록증명', '근로계약서', '4대보험 가입자 명부'], checks: ['채용일과 고용 유지 기간'], startsAt: ymdIn(-30), endsAt: ymdIn(40), maxAmount: 7200000,
+    rules: [{ scope: 'business', field: 'employees', operator: 'lte', value: 9, label: '상시 근로자 10인 미만' }] }),
+  sample({ id: 'ex-livelihood', title: '[예시] 민생회복 지원금 (전 국민)', audience: '개인', category: '생활', region: '전국', agency: '행정안전부',
+    sourceUrl: 'https://www.gov.kr/', summary: '화면 확인용 예시 공고입니다. 사업자 여부와 관계없이 국민 누구나 신청하는 형태의 지원금입니다.',
+    support: '1인당 정액을 지역화폐·카드 포인트로 지급하는 형태입니다.', calculation: '예시 자료입니다. 실제 금액은 공고문 기준입니다.',
+    documents: ['본인 확인 수단'], startsAt: ymdIn(-5), endsAt: ymdIn(50), maxAmount: 250000 }),
   sample({ id: 'ex-closed-rent', title: '[예시] 소상공인 임차료 부담 경감 (마감)', audience: '사업', category: '경영', region: '경기도', agency: '경기도',
     summary: '화면 확인용 예시 공고입니다. 지난 공고 화면을 확인하기 위한 자료입니다.',
     support: '임차료 일부를 지원했던 형태입니다.', calculation: '예시 자료라 금액을 제시하지 않습니다.',
-    documents: ['임대차계약서', '사업자등록증명'], startsAt: '2026-02-02', endsAt: '2026-03-13', status: '마감',
+    documents: ['임대차계약서', '사업자등록증명'], startsAt: '2026-02-02', endsAt: '2026-03-13', status: '마감', maxAmount: 2000000,
     rules: [{ scope: 'business', field: 'province', operator: 'eq', value: '경기', label: '사업장 소재지(경기도)' }] }),
 ];
 const benefits: Benefit[] = [...(official as Benefit[]), ...SAMPLES];
@@ -61,7 +70,7 @@ function historicalMatch(b: Benefit, p: Profile) {
 /* ---------- 계정(가상 인물) ---------- */
 interface Prefs { largeText: boolean; notifications: boolean; privacyConsent: boolean; personalizedAlerts: boolean; accountConsent?: boolean; termsConsent?: boolean }
 interface User {
-  id: string; email: string; role: 'customer' | 'staff' | 'admin'; profile: Profile; preferences: Prefs;
+  id: string; /** 화면에 보이는 로그인 번호 */ email: string; name?: string; role: 'customer' | 'staff' | 'admin'; profile: Profile; preferences: Prefs;
   trial?: { startedAt: string; endsAt: string }; contract?: { id: string; startsAt: string; endsAt: string; reason: string; evidence: string; revokedAt?: string | null };
   grant?: { expiresAt: string; revoked: boolean; reason: string };
   consents: { kind: string; version: string; content: string; accepted: boolean; recorded_at: string }[];
@@ -88,12 +97,12 @@ function seedUsers() {
   users.clear();
   const consented: Prefs = { largeText: false, notifications: true, privacyConsent: true, personalizedAlerts: true, accountConsent: true, termsConsent: true };
   for (const u of [
-    mk({ id: 'demo-free', email: 'free@example.com' }),
-    mk({ id: 'demo-trial', email: 'trial@example.com', profile: filledProfile(), preferences: { ...consented }, consents: serviceConsent(-21 * HOUR), trial: { startedAt: isoIn(-20 * HOUR), endsAt: isoIn(52 * HOUR) } }),
-    mk({ id: 'demo-contract', email: 'contract@example.com', profile: filledProfile(), preferences: { ...consented }, consents: serviceConsent(-40 * DAY), contract: { id: 'contract-0001', startsAt: isoIn(-30 * DAY), endsAt: isoIn(335 * DAY), reason: '연간 지원금 패키지 계약', evidence: '계약서 2026-0912호' } }),
-    mk({ id: 'demo-expired', email: 'expired@example.com', profile: filledProfile(), preferences: { ...consented, personalizedAlerts: false }, consents: serviceConsent(-10 * DAY), trial: { startedAt: isoIn(-9 * DAY), endsAt: isoIn(-6 * DAY) } }),
-    mk({ id: 'demo-staff', email: 'staff@example.com', role: 'staff', preferences: { ...consented, personalizedAlerts: false } }),
-    mk({ id: 'demo-admin', email: 'admin@example.com', role: 'admin', preferences: { ...consented, personalizedAlerts: false } }),
+    mk({ id: 'demo-free', email: '010-1000-0001', name: '김무료' }),
+    mk({ id: 'demo-trial', email: '010-1000-0002', name: '이체험', profile: filledProfile(), preferences: { ...consented }, consents: serviceConsent(-21 * HOUR), trial: { startedAt: isoIn(-20 * HOUR), endsAt: isoIn(52 * HOUR) } }),
+    mk({ id: 'demo-contract', email: '010-1000-0003', name: '박계약', profile: filledProfile(), preferences: { ...consented }, consents: serviceConsent(-40 * DAY), contract: { id: 'contract-0001', startsAt: isoIn(-30 * DAY), endsAt: isoIn(335 * DAY), reason: '연간 지원금 패키지 계약', evidence: '계약서 2026-0912호' } }),
+    mk({ id: 'demo-expired', email: '010-1000-0004', name: '최종료', profile: filledProfile(), preferences: { ...consented, personalizedAlerts: false }, consents: serviceConsent(-10 * DAY), trial: { startedAt: isoIn(-9 * DAY), endsAt: isoIn(-6 * DAY) } }),
+    mk({ id: 'demo-staff', email: '010-1000-0005', name: '김서연', role: 'staff', preferences: { ...consented, personalizedAlerts: false } }),
+    mk({ id: 'demo-admin', email: '010-1000-0006', name: '관리자', role: 'admin', preferences: { ...consented, personalizedAlerts: false } }),
   ]) users.set(u.id, u);
 }
 
@@ -141,7 +150,7 @@ resetPreview();
 
 /* ---------- 계정 계산 (서버 account()와 같은 규칙) ---------- */
 export function previewUser(id: string | null) { return id ? users.get(id) : undefined; }
-export function ensureUser(id: string, email: string) { if (!users.has(id)) users.set(id, mk({ id, email })); return users.get(id)!; }
+export function ensureUser(id: string, email: string, name?: string) { if (!users.has(id)) users.set(id, mk({ id, email, name })); return users.get(id)!; }
 class HttpError extends Error { constructor(public status: number, message: string, public detail?: unknown) { super(message); } }
 const fail = (message: string, status = 400, detail?: unknown) => new HttpError(status, message, detail);
 function account(id: string) {

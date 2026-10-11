@@ -53,6 +53,8 @@ export const benefitSchema = z.object({
   status: z.enum(["확인 필요", "접수 중", "마감", "상시 조회"]),
   reviewStatus: z.enum(["검토대기", "공개", "비공개"]), isTest: z.boolean(),
   rules: z.array(ruleSchema).max(100),
+  // 공고 원문에 적힌 최대 지원금액(원). 원문에 없으면 비워 둔다. 0원이나 추정값을 넣지 않는다.
+  maxAmount: z.number().int().positive().max(100_000_000_000).optional(),
 }).strict();
 export type Benefit = z.infer<typeof benefitSchema>;
 export type Profile = z.infer<typeof profileSchema>;

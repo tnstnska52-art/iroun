@@ -62,8 +62,8 @@ export default function Account() {
       ) : acc.error ? <ErrorState message={apiErrorMessage(acc.error)} onRetry={() => acc.refetch()} /> : acc.me ? (
         <>
           <Card>
-            <T v="small" color={c.mutedForeground}>로그인한 이메일</T>
-            <T v="h3" selectable>{user?.primaryEmailAddress?.emailAddress ?? '확인 중'}</T>
+            <T v="small" color={c.mutedForeground}>{user?.firstName ? `${user.firstName}님의 정보` : '로그인한 계정'}</T>
+            <T v="h3" selectable>{user?.primaryPhoneNumber?.phoneNumber ?? user?.primaryEmailAddress?.emailAddress ?? '확인 중'}</T>
             <View style={{ height: 1, backgroundColor: c.border }} />
             <T v="label">회원 이용권</T>
             <T color={acc.active ? c.success : c.mutedForeground}>

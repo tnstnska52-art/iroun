@@ -43,9 +43,12 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
  const notices=options.notices??(async()=> (await pool.query("SELECT data FROM iroun_benefits")).rows.map(r=>r.data as Benefit).filter(publicBenefit));
  const identity=options.identity??(async(id:string)=>{
   const u=await clerkClient.users.getUser(id);
+  // 휴대폰 인증 가입이 기본이다. 예전 이메일 가입 계정은 기존 방식(이메일) 그대로 중복을 확인한다.
   const e=u.emailAddresses.find(e=>e.id===u.primaryEmailAddressId&&e.verification?.status==="verified");
-  if(!e)throw fail("이메일 인증 후 체험을 시작해 주세요.",403);
-  return e.emailAddress.trim().toLowerCase();
+  if(e)return e.emailAddress.trim().toLowerCase();
+  const p=u.phoneNumbers.find(p=>p.id===u.primaryPhoneNumberId&&p.verification?.status==="verified");
+  if(!p)throw fail("휴대폰 인증 후 체험을 시작해 주세요.",403);
+  return "phone:"+p.phoneNumber.replace(/\D/g,"");
  });
  router.use(async(req,res,next)=>{
   try{if(!getAuth(req).userId)throw fail("로그인 후 이용해 주세요.",401);res.set("Cache-Control","private, no-store");await account(uid(req));next();}catch(e){next(e);}
@@ -140,7 +143,7 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
    const latestConsent=(await c.query("SELECT accepted,version FROM iroun_consents WHERE user_id=$1 AND kind='service' ORDER BY id DESC LIMIT 1",[a.id])).rows[0];
    if(!latest.preferences.privacyConsent||latestConsent?.accepted!==true||latestConsent?.version!==CONSENT_VERSION||(!latest.profile.step&&!latest.profile.personal.province&&!latest.profile.businesses.length))throw fail("최신 서비스 동의와 최소 정보 입력을 다시 확인해 주세요.",409);
    if((await c.query("SELECT user_id FROM iroun_trials WHERE user_id=$1",[a.id])).rowCount)throw fail("이미 체험을 시작한 계정입니다. 다시 시작하거나 연장할 수 없습니다.",409);
-   if(!(await c.query("INSERT INTO iroun_trial_ledger(identity_hash) VALUES($1) ON CONFLICT DO NOTHING RETURNING identity_hash",[digest])).rowCount)throw fail("이 인증 이메일은 이미 무료체험을 사용했습니다.",409);
+   if(!(await c.query("INSERT INTO iroun_trial_ledger(identity_hash) VALUES($1) ON CONFLICT DO NOTHING RETURNING identity_hash",[digest])).rowCount)throw fail("이 번호(또는 이메일)는 이미 무료체험을 사용했습니다.",409);
    await c.query("INSERT INTO iroun_trials(user_id,ends_at) VALUES($1,now()+interval '72 hours')",[a.id]);
    await audit(a.id,"trial.start",a.id,{durationHours:72},c);
   });

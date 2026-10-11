@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { useRouter, useFocusEffect, type Href } from 'expo-router';
 import {
@@ -17,6 +17,7 @@ import { daysLeft, endTime, fmtDate } from '@/lib/util';
 import { remaining, useServiceStateView } from '@/lib/service';
 import { useRecent } from '@/lib/recent';
 import { profileCompletion } from '@/lib/profile';
+import { HEADLINE_STAT, IS_PREVIEW, estimate, useDraftProfile, won } from '@/lib/estimate';
 
 /** 입력한 만큼 차오르는 물결. 장식이며 금액·확률을 뜻하지 않는다. */
 function Wave({ pct }: { pct: number }) {
@@ -54,9 +55,12 @@ export default function Home() {
 
   const refetchRecs = recs.refetch;
   const refetchMe = acc.refetch;
+  const [focusCount, setFocusCount] = useState(0);
   useFocusEffect(useCallback(() => {
+    setFocusCount((n) => n + 1);
     if (acc.isSignedIn) { refetchMe(); if (acc.active) refetchRecs(); }
   }, [acc.isSignedIn, acc.active, refetchMe, refetchRecs]));
+  const draft = useDraftProfile(acc.me?.id ?? null, focusCount);
 
   const svc = useServiceStateView();
   const recentIds = useRecent();
@@ -72,6 +76,7 @@ export default function Home() {
   const recent = recentIds.map((id) => byId.get(id)).filter((b): b is Benefit => !!b);
   const profile = acc.me?.profile;
   const done = profileCompletion(profile);
+  const draftDone = profileCompletion(draft);
   const upcoming = list
     .filter((b) => { const d = daysLeft(b.endsAt); return d !== null && d >= 0; })
     .sort((a, b) => (endTime(a.endsAt) ?? 0) - (endTime(b.endsAt) ?? 0));
@@ -81,13 +86,18 @@ export default function Home() {
   const ongoing = list.filter((b) => b.status === '접수 중').length;
   const open = list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0);
 
-  // 위 요약 카드: 실제 건수만 보여준다. 금액 합계나 예상액은 만들지 않는다.
+  // 예상 지원금: 서버에 저장한 정보가 있으면 그것으로, 없으면 이 기기에 임시 저장한 입력으로 계산한다.
+  const basis = done.answered > 0 ? profile : draftDone.answered > 0 ? draft : null;
+  const est = basis ? estimate(list, basis) : null;
+  const headline = IS_PREVIEW || HEADLINE_STAT.verified ? HEADLINE_STAT.text : '받을 수 있는 지원금, 놓치고 있지 않나요?';
   const summary: { big: string; sub: string; go: Href; strip: string; stripGo: Href; testID: string } =
-    !acc.isSignedIn ? { big: `신청 가능 ${open.length}건`, sub: '로그인 없이 볼 수 있는 공고', go: '/benefits', strip: '로그인하고 내게 맞는 공고 확인하기', stripGo: '/auth', testID: 'home-browse' }
-    : !acc.active ? { big: `신청 가능 ${open.length}건`, sub: ent && svc.data?.trialUsed ? '맞춤 이용이 끝났어요. 접수한 내역은 계속 볼 수 있어요.' : '무료로 볼 수 있는 공고', go: '/benefits', strip: svc.data?.trialUsed ? '이용 상태 확인하기' : '3일 무료체험으로 맞춤 공고 확인하기', stripGo: '/access', testID: 'home-all-primary' }
-    : { big: recs.isLoading ? '확인하는 중' : `조건 일치 ${matchedIds.length}건`, sub: recs.isLoading ? '잠시만 기다려 주세요' : `추가 확인 필요 ${needIds.length}건 · 내 입력정보 기준`, go: '/matches', strip: done.pct < 100 ? '정보를 더 채우고 맞춤 공고 늘리기' : '맞춤 공고 전체 보기', stripGo: done.pct < 100 ? '/onboarding' : '/matches', testID: 'home-personalized' };
+    est ? { big: est.total > 0 ? `예상 지원금 최대 ${won(est.total)}` : `맞을 수 있는 공고 ${est.items.length}건`, sub: `내 조건에 맞을 수 있는 공고 ${est.items.length}건 기준`, go: acc.active ? '/matches' : '/benefits',
+        strip: !acc.isSignedIn ? '로그인하고 내 정보 저장하기' : (done.pct < 100 ? '정보를 더 채우고 정확도 높이기' : acc.active ? '맞는 이유 자세히 보기' : '3일 무료체험으로 맞는 이유 확인하기'),
+        stripGo: !acc.isSignedIn ? '/auth' : done.pct < 100 ? '/onboarding' : acc.active ? '/matches' : '/access', testID: 'home-personalized' }
+    : { big: `신청 가능 ${open.length}건`, sub: acc.isSignedIn ? '사업자가 받을 수 있는 공고' : '로그인 없이 볼 수 있는 공고', go: '/benefits', strip: '내 사업자 예상지원금 확인하기', stripGo: '/onboarding', testID: acc.isSignedIn ? 'home-all-primary' : 'home-browse' };
 
-  const picks = (acc.active ? [...matchedIds, ...needIds].map((id) => byId.get(id)).filter((b): b is Benefit => !!b && b.status !== '마감') : open).slice(0, 8);
+  const picks = (est ? est.items.map((x) => x.benefit) : open).slice(0, 8);
+  const resultOf = new Map((est?.items ?? []).map((x) => [x.benefit.id, x.result]));
   const featured = upcoming[0];
   const quick: { icon: keyof typeof Feather.glyphMap; label: string; go: Href; testID: string }[] = [
     { icon: 'target', label: '맞춤공고', go: '/matches', testID: 'nav-matches' },
@@ -130,6 +140,7 @@ export default function Home() {
           <Feather name="chevron-right" size={18} color={c.mutedForeground} />
         </Pressable>
       </View>
+      {est ? <T v="small" color={c.mutedForeground} style={{ paddingHorizontal: 4 }}>{est.total > 0 ? '공고에 적힌 최대 금액을 더한 예시예요. ' : ''}실제 지급액은 심사·예산·중복수혜에 따라 달라요.{est.noAmount > 0 ? ` 금액이 공고에 없는 ${est.noAmount}건은 합계에서 뺐어요.` : ''}</T> : null}
       {acc.active && until ? <T v="small" color={c.mutedForeground} style={{ paddingHorizontal: 4 }}>{ent?.trialActive ? '무료체험' : '이용 기간'} {fmtDate(until)}까지{acc.me ? ` · ${remaining(until, acc.me.serverNow ?? new Date().toISOString())}` : ''}</T> : null}
 
       {/* 회사가 요청한 할 일: 있을 때만 */}
@@ -151,25 +162,27 @@ export default function Home() {
         <View testID="home-profile-card" style={{ backgroundColor: c.card, borderRadius: c.radius + 2, overflow: 'hidden', minHeight: 232 }}>
           <Wave pct={done.pct} />
           <View style={{ padding: 16, gap: 4 }}>
-            <T v="title" style={{ fontSize: 20 }}>내 정보 입력 {done.pct}%</T>
-            <T v="small" color={c.mutedForeground}>{done.pct === 0 ? '맞는 혜택을 찾도록 정확히 알려주세요.' : `나머지 ${100 - done.pct}%를 채우면 더 정확히 찾아드려요.`}</T>
+            <T v="title" style={{ fontSize: 20 }}>{done.pct === 0 && !est ? headline : `내 정보 입력 ${done.pct}%`}</T>
+            <T v="small" color={c.mutedForeground}>{done.pct === 0 ? '조건 몇 가지만 고르면 내 사업장 예상지원금을 보여드려요.' : `나머지 ${100 - done.pct}%를 채우면 더 정확히 찾아드려요.`}</T>
+            {done.pct === 0 && !est && IS_PREVIEW && !HEADLINE_STAT.verified ? <T v="small" color={c.warning} style={{ fontSize: 12 }}>예시 문구 · 수치 근거 확인 전이라 실제 앱에는 아직 나오지 않아요</T> : null}
           </View>
           <View style={{ flex: 1 }} />
           <View style={{ padding: 16 }}>
-            <Btn label={done.pct === 0 ? '내 정보 채우기' : '이어서 입력'} onPress={() => router.push('/onboarding')} testID="home-start-onboarding" />
+            <Btn label={done.pct === 0 ? '내 사업자 예상지원금 확인하기' : '이어서 입력'} onPress={() => router.push('/onboarding')} testID="home-start-onboarding" />
           </View>
         </View>
       ) : null}
       {!acc.isSignedIn ? (
         <View style={{ backgroundColor: c.card, borderRadius: c.radius + 2, overflow: 'hidden', minHeight: 200 }}>
-          <Wave pct={8} />
+          <Wave pct={est ? draftDone.pct : 8} />
           <View style={{ padding: 16, gap: 4 }}>
-            <T v="title" style={{ fontSize: 20 }}>내게 맞는 혜택 찾기</T>
-            <T v="small" color={c.mutedForeground}>한 번에 한 질문씩. 모르면 나중에 입력해도 돼요.</T>
+            <T v="title" style={{ fontSize: 20 }}>{est ? `내 정보 입력 ${draftDone.pct}%` : headline}</T>
+            <T v="small" color={c.mutedForeground}>{est ? '로그인하면 입력한 정보를 저장하고 이어갈 수 있어요.' : '조건 몇 가지만 고르면 내 사업장 예상지원금을 보여드려요.'}</T>
+            {!est && IS_PREVIEW && !HEADLINE_STAT.verified ? <T v="small" color={c.warning} style={{ fontSize: 12 }}>예시 문구 · 수치 근거 확인 전이라 실제 앱에는 아직 나오지 않아요</T> : null}
           </View>
           <View style={{ flex: 1 }} />
           <View style={{ padding: 16 }}>
-            <Btn label="로그인하고 시작" onPress={() => router.push('/auth')} testID="home-login" />
+            <Btn label={est ? '로그인하고 저장하기' : '내 사업자 예상지원금 확인하기'} onPress={() => router.push(est ? '/auth' : '/onboarding')} testID={est ? 'home-login' : 'home-estimate-start'} />
           </View>
         </View>
       ) : null}
@@ -192,7 +205,7 @@ export default function Home() {
       {/* 가로로 넘기는 추천 */}
       {picks.length > 0 ? (
         <>
-          <SectionHead title={acc.active ? '내 조건으로 확인한 공고' : '지금 신청할 수 있는 공고'} onMore={() => router.push(acc.active ? '/matches' : '/benefits')} testID="home-picks-more" />
+          <SectionHead title={est ? '내 조건으로 찾은 공고' : '지금 신청할 수 있는 공고'} onMore={() => router.push(est && acc.active ? '/matches' : '/benefits')} testID="home-picks-more" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
             {picks.map((b) => (
               <Pressable key={b.id} testID={`home-pick-${b.id}`} accessibilityRole="button" accessibilityLabel={`${b.title}. 자세히 보기`}
@@ -200,7 +213,7 @@ export default function Home() {
                 style={({ pressed }) => ({ width: 136, height: 128, borderRadius: 14, overflow: 'hidden', opacity: pressed ? 0.85 : 1 })}>
                 <LinearGradient colors={['#4B6CB7', '#3A4E7A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
                   <T v="label" color="#fff" numberOfLines={3}>{b.title}</T>
-                  <T v="small" color="#DCE6FF" style={{ fontWeight: '700' }}>{acc.active && matchedIds.includes(b.id) ? '조건 일치' : acc.active ? '추가 확인' : dday(b).label}</T>
+                  <T v="small" color="#DCE6FF" style={{ fontWeight: '700' }}>{b.maxAmount ? `최대 ${won(b.maxAmount)}` : resultOf.get(b.id) === '조건 일치' ? '조건 일치' : resultOf.has(b.id) ? '추가 확인' : dday(b).label}</T>
                 </LinearGradient>
               </Pressable>
             ))}
@@ -226,6 +239,22 @@ export default function Home() {
         <>
           <SectionHead title="최근 본 공고" />
           {recent.slice(0, 3).map((x) => <BenefitCard key={x.id} b={x} />)}
+        </>
+      ) : null}
+
+      {est && est.items.length > 0 ? (
+        <>
+          <SectionHead title={`받을 수 있는지 확인할 공고 ${est.items.length}건`} />
+          {est.items.slice(0, 6).map((x) => (
+            <BenefitCard key={x.benefit.id} b={x.benefit} extra={
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 52 }}>
+                <View style={{ backgroundColor: x.result === '조건 일치' ? c.successSoft : c.warningSoft, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                  <T v="small" color={x.result === '조건 일치' ? c.success : c.warning} style={{ fontWeight: '700', fontSize: 12, lineHeight: 16 }}>{x.result === '조건 일치' ? '조건 일치' : '추가 확인 필요'}</T>
+                </View>
+                <T v="small" color={c.mutedForeground}>{x.benefit.maxAmount ? `공고상 최대 ${won(x.benefit.maxAmount)}` : '금액은 공고에서 확인'}</T>
+              </View>
+            } />
+          ))}
         </>
       ) : null}
 

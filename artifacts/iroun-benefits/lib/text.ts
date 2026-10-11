@@ -23,17 +23,17 @@ export function isNetworkError(e: unknown): boolean {
 }
 
 const CLERK: Record<string, string> = {
-  form_identifier_not_found: '가입된 이메일을 찾을 수 없습니다. 이메일을 확인하거나 새로 가입해 주세요.',
+  form_identifier_not_found: '가입된 번호를 찾을 수 없어요. 번호를 확인하거나 새로 가입해 주세요.',
   form_password_incorrect: '비밀번호가 맞지 않습니다. 다시 입력해 주세요.',
   form_password_pwned: '이 비밀번호는 유출 이력이 있어 사용할 수 없습니다. 다른 비밀번호를 정해 주세요.',
   form_password_length_too_short: '비밀번호가 너무 짧습니다. 8자 이상으로 입력해 주세요.',
   form_password_not_strong_enough: '비밀번호가 쉬워 보입니다. 숫자와 문자를 섞어 주세요.',
-  form_identifier_exists: '이미 가입된 이메일입니다. 로그인해 주세요.',
-  form_code_incorrect: '인증번호가 맞지 않습니다. 메일에서 다시 확인해 주세요.',
+  form_identifier_exists: '이미 가입된 번호예요. 로그인해 주세요.',
+  form_code_incorrect: '인증번호가 맞지 않아요. 문자를 다시 확인해 주세요.',
   verification_expired: '인증번호 유효시간이 지났습니다. 새 인증번호를 받아 주세요.',
   verification_failed: '인증에 실패했습니다. 새 인증번호를 받아 주세요.',
   too_many_requests: '시도 횟수가 많습니다. 잠시 후 다시 시도해 주세요.',
-  form_param_format_invalid: '입력 형식이 올바르지 않습니다. 이메일 주소를 확인해 주세요.',
+  form_param_format_invalid: '입력 형식이 올바르지 않습니다. 휴대폰 번호를 확인해 주세요.',
   form_param_nil: '필수 항목이 비어 있습니다.',
   network_error: '인터넷 연결을 확인해 주세요.',
 };

@@ -427,6 +427,7 @@ components:
         summary: { type: string }
         support: { type: string }
         calculation: { type: string }
+        maxAmount: { type: integer, description: 공고 원문에 적힌 최대 지원금액(원). 원문에 없으면 생략 }
         checks: { type: array, items: { type: string } }
         documents: { type: array, items: { type: string } }
         startsAt: { type: string }

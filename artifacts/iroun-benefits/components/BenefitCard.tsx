@@ -41,7 +41,7 @@ export function BenefitCard({ b, extra }: { b: Benefit; extra?: React.ReactNode 
         <View style={{ flex: 1, gap: 2 }}>
           <T v="h3" numberOfLines={1}>{b.title}</T>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <T v="small" color={c.mutedForeground} numberOfLines={1} style={{ flexShrink: 1 }}>{b.agency}</T>
+            <T v="small" color={c.mutedForeground} numberOfLines={1} style={{ flexShrink: 1 }}>{b.agency} · {b.audience === '사업' ? '사업자' : b.audience === '가구' ? '가구' : '누구나'}</T>
             <T v="small" color={dd.urgent ? c.destructive : c.primary} style={{ fontWeight: '700', flexShrink: 0 }}>{dd.label}</T>
           </View>
         </View>

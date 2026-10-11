@@ -97,9 +97,10 @@ export default function BenefitsScreen() {
 
   const SORTS: [Sort, string][] = [...(account.active ? [['recommended', '맞춤 순'] as [Sort, string]] : []), ['latest', '최신 순'], ['deadline', '마감 임박']];
   const sortLabel = SORTS.find(([k]) => k === f.sort)?.[1] ?? '최신 순';
-  const SEG: [string | undefined, string][] = [[undefined, '전체'], ['사업', '사업자'], ['개인', '개인'], ['가구', '가구']];
-  const heading = f.period === 'past' ? '지난 공고' : f.period === 'all' ? '전체 공고' : '신청 가능한 공고';
-  const extraCount = chips.filter(([l]) => !l.startsWith('대상:')).length + (f.period !== 'current' ? 1 : 0);
+  // 사업자도 개인·가구 대상 지원(민생지원금 등)을 받을 수 있으므로 대상으로 나누지 않고 한 목록에 모두 보여준다.
+  const SEG: [string | undefined, string][] = [[undefined, '전체'], ['지원금', '지원금'], ['환급금', '환급금']];
+  const heading = f.period === 'past' ? '지난 공고' : f.period === 'all' ? '전체 공고' : '사업자가 신청할 수 있는 공고';
+  const extraCount = chips.filter(([l]) => !l.startsWith('종류:')).length + (f.period !== 'current' ? 1 : 0);
 
   return (
     <Page tab flush>
@@ -121,7 +122,7 @@ export default function BenefitsScreen() {
                 <Feather name="bell" size={14} color={c.destructive} />
                 <T v="small" color={c.destructive} style={{ fontWeight: '700' }}>정보를 입력하면 내게 맞는 공고를 골라드려요</T>
               </Pressable>
-            ) : <T v="small" color={c.mutedForeground}>공식 출처를 확인한 공고만 보여드려요</T>}
+            ) : <T v="small" color={c.mutedForeground}>사업자가 받을 수 있는 공고를 모두 모았어요</T>}
           </View>
           <Feather name="file-text" size={64} color="#C4D4F2" />
         </View>
@@ -148,9 +149,9 @@ export default function BenefitsScreen() {
           </View>
           <View accessibilityRole="tablist" style={{ flex: 1, flexDirection: 'row', backgroundColor: '#E5E8EB', borderRadius: 8, padding: 3 }}>
             {SEG.map(([k, l]) => {
-              const on = f.audience === k;
+              const on = f.kind === k;
               return (
-                <Pressable key={l} testID={`aud-${k ?? '전체'}`} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => set({ audience: k })}
+                <Pressable key={l} testID={`kind-${k ?? '전체'}`} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => set({ kind: k })}
                   style={{ flex: 1, minHeight: 34, alignItems: 'center', justifyContent: 'center', borderRadius: 6, backgroundColor: on ? c.card : 'transparent' }}>
                   <T v="small" color={on ? c.foreground : c.mutedForeground} style={{ fontWeight: on ? '700' : '500', fontSize: 13 }}>{l}</T>
                 </Pressable>
@@ -171,8 +172,8 @@ export default function BenefitsScreen() {
               <Chip label="지난 공고" selected={f.period === 'past'} onPress={() => set({ period: 'past' })} testID="period-past" />
               <Chip label="전체" selected={f.period === 'all'} onPress={() => set({ period: 'all' })} testID="period-all" />
             </Wrap>
-            <T v="label">종류</T>
-            <Wrap>{KINDS.map((k) => <Chip key={k} label={k} selected={f.kind === k} onPress={() => toggle('kind', k)} testID={`kind-${k}`} />)}</Wrap>
+            <T v="label">신청 대상으로 좁혀 보기</T>
+            <Wrap>{[['사업', '사업자 전용'], ['개인', '개인 누구나'], ['가구', '가구 단위']].map(([k, l]) => <Chip key={k} label={l} selected={f.audience === k} onPress={() => toggle('audience', k)} testID={`aud-${k}`} />)}</Wrap>
             <Field label="지역" value={f.region} onChangeText={(s) => set({ region: s })} placeholder="예: 경기도, 수원시" />
             {categories.length > 0 ? (
               <>

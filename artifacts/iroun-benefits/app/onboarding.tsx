@@ -201,14 +201,14 @@ export default function Onboarding() {
     if (await persist(p)) setProfile(p);
   });
   const finish = async () => {
-    if (!acc.isSignedIn) { if (!(await saveDraft({ profile: { ...profile, step: DONE }, consent }, uid))) { setSync({ t: 'error', s: '이 기기에 저장하지 못해 로그인 화면으로 이동할 수 없습니다. 저장 공간을 확인해 주세요.' }); return; }
-    router.push({ pathname: '/auth', params: { next: '/onboarding' } }); return; }
+    if (!acc.isSignedIn) { if (!(await saveDraft({ profile: { ...profile, step: DONE }, consent }, uid))) { setSync({ t: 'error', s: '이 기기에 저장하지 못했어요. 저장 공간을 확인해 주세요.' }); return; }
+    router.replace('/'); return; }
     setBusy(true);
     const p = { ...profile, step: DONE };
     setProfile(p);
     const ok = await persist(p, true);
     setBusy(false);
-    if (ok) setIdx(DONE);
+    if (ok) router.replace('/');
   };
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
@@ -251,7 +251,7 @@ export default function Onboarding() {
         ))}
         <Btn testID="add-business" label="사업장 추가하기" icon="plus" kind="secondary" onPress={addBiz} />
         {syncNote}
-        <Btn testID="wizard-finish" label={acc.isSignedIn ? '입력 완료' : '로그인하고 저장하기'} loading={busy} onPress={finish} />
+        <Btn testID="wizard-finish" label="예상 지원금 확인하기" loading={busy} onPress={finish} />
         <Btn kind="ghost" label="이전 질문" onPress={goBack} />
       </Sheet>
     );

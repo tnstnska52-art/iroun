@@ -13,6 +13,7 @@ import { useAccount } from '@/lib/session';
 import { Badge, Box, Btn, Chip, Disclaimer, ErrorState, Loading, Notice, Page, T, Toggle, Wrap } from '@/components/ui';
 import { STAGES, USER_RECORD_NOTICE, apiErrorMessage } from '@/lib/text';
 import { fmtDate } from '@/lib/util';
+import { won } from '@/lib/estimate';
 import { Collapsible, dday } from '@/components/BenefitCard';
 
 export default function BenefitDetail() {
@@ -72,9 +73,21 @@ export default function BenefitDetail() {
   const info: [keyof typeof Feather.glyphMap, string, string][] = [
     ['file-text', '지원형태', b.kind], ['users', '대상', b.audience === '사업' ? '사업자' : b.audience],
     ['home', '지원기관', b.agency], ['map-pin', '지역', b.region],
-    ['activity', '접수상태', closed ? '마감' : b.status], ['pie-chart', '예산', b.budgetStatus],
+    ['activity', '접수상태', closed ? '마감' : b.status], ['dollar-sign', '지원금액', b.maxAmount ? `최대 ${won(b.maxAmount)}` : '공고에서 확인'],
   ];
   const best = myRecs.find((r) => r.result === '조건 일치') ?? myRecs.find((r) => r.result === '추가 확인 필요');
+  // 고객이 할 일을 순서대로. 공고 자료에 있는 내용만으로 만들고, 없는 내용은 공식 원문 확인으로 안내한다.
+  const conditions = [...b.rules.map((r) => r.label), ...b.checks];
+  const steps: { title: string; body: string }[] = closed ? [
+    { title: '마감된 공고예요', body: '지금은 신청할 수 없어요. 다시 열리는지는 기관 공지에서 확인해 주세요.' },
+    { title: '비슷한 공고 찾아보기', body: '전체혜택에서 지금 신청할 수 있는 공고를 확인해 보세요.' },
+  ] : [
+    { title: '내가 대상인지 확인하기', body: conditions.length ? `${conditions.slice(0, 3).join(', ')}${conditions.length > 3 ? ` 외 ${conditions.length - 3}가지` : ''}을(를) 확인해 주세요.${best ? ` 내 입력정보 기준: ${best.result}.` : ''}` : '세부 자격은 공식 신청 페이지에서 확인해 주세요.' },
+    { title: '서류 준비하기', body: b.documents.length ? `${b.documents.join(', ')}. 아래 '필요 서류'에서 준비한 것을 체크해 두세요.` : '필요한 서류는 공식 신청 페이지에서 확인해 주세요.' },
+    { title: b.endsAt ? `${fmtDate(b.endsAt)}까지 신청하기` : '공식 신청 페이지에서 신청하기', body: `아래 '공식 신청 페이지' 버튼을 눌러 ${b.agency}에 직접 신청해요.${b.budgetStatus === '확인 필요' ? ' 예산이 먼저 소진될 수 있으니 서두르는 편이 좋아요.' : ''}` },
+    { title: '혼자 하기 어려우면 회사에 도움 요청', body: acc.active ? '담당자가 자격 확인과 서류 준비를 도와드려요. 회사 접수는 정부기관 신청 완료가 아니에요.' : '맞춤 이용 중이면 담당자가 자격 확인과 서류 준비를 도와드려요.' },
+    { title: '결과 확인하고 기록하기', body: `선정·지급 결과는 ${b.agency}에서 알려줘요.${acc.isSignedIn ? " 아래 '내 기록'에 진행 단계를 남겨 두세요." : ''}` },
+  ];
 
   return (
     <Page
@@ -129,6 +142,20 @@ export default function BenefitDetail() {
           </View>
         </View>
       </View>
+
+      <Box title="이렇게 진행하세요">
+        {steps.map((st, i) => (
+          <View key={i} testID={`step-${i + 1}`} style={{ flexDirection: 'row', gap: 10, paddingVertical: 4 }}>
+            <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: c.primary, alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>
+              <T v="small" color="#fff" style={{ fontWeight: '800' }}>{i + 1}</T>
+            </View>
+            <View style={{ flex: 1, gap: 2 }}>
+              <T v="label">{st.title}</T>
+              <T v="small" color={c.mutedForeground}>{st.body}</T>
+            </View>
+          </View>
+        ))}
+      </Box>
 
       {b.summary ? <Box title="개요"><Collapsible text={b.summary} testID="summary-more" /></Box> : null}
       <Box title="지원내용">
