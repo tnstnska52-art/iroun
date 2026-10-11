@@ -6,7 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { useUnreadReplies } from '@/lib/replies';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
-import { Btn, CountUp, Disclaimer, Emoji, ErrorState, FooterLinks, Loading, Page, SectionHead, T } from '@/components/ui';
+import { BigMoney, Btn, CountUp, Disclaimer, Emoji, ErrorState, FooterLinks, Loading, Page, SectionHead, T } from '@/components/ui';
 import { GrantRow, Total, useJoinHref } from '@/components/GrantList';
 import { apiErrorMessage } from '@/lib/text';
 import { daysLeft, fmtDate } from '@/lib/util';
@@ -79,7 +79,7 @@ export default function Home() {
           {/* 조건을 고르기 전: 평균 숫자와 눈에 띄는 버튼 */}
           <View testID="home-headline" style={{ backgroundColor: c.card, borderRadius: c.radius + 6, padding: 22, gap: 6 }}>
             <T v="label" color={c.mutedForeground}>{showStat ? HEADLINE_STAT.label : expired ? '맞춤 이용이 끝났어요' : '받을 수 있는 지원금, 놓치고 있지 않나요?'}</T>
-            {showStat ? <CountUp to={HEADLINE_STAT.manwon} color={c.destructive} style={{ fontSize: 44, lineHeight: 54 }} format={(n) => `${n.toLocaleString('ko-KR')}만원`} /> : null}
+            {showStat ? <BigMoney manwon={HEADLINE_STAT.manwon} color={c.destructive} /> : null}
             {showStat && IS_PREVIEW && !HEADLINE_STAT.verified ? <T v="small" color={c.mutedForeground} style={{ fontSize: 11, lineHeight: 15 }}>미리보기 전용 · 근거 확인 전</T> : null}
             {expired ? <T v="small" color={c.mutedForeground}>접수 내역은 계속 볼 수 있어요</T> : null}
           </View>

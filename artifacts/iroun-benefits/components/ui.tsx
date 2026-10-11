@@ -407,6 +407,16 @@ export function CountUp({ to, duration = 900, format, style, color }: { to: numb
   return <T v="hero" color={color} style={style} accessibilityRole="text">{format ? format(n) : n.toLocaleString('ko-KR')}</T>;
 }
 
+/** 큰 금액: 숫자는 또렷하게, 단위(만원)는 한 단계 작게. */
+export function BigMoney({ manwon, color, testID }: { manwon: number; color?: string; testID?: string }) {
+  return (
+    <View testID={testID} accessible accessibilityRole="text" accessibilityLabel={`${manwon.toLocaleString('ko-KR')}만원`} style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
+      <CountUp to={manwon} color={color} style={{ fontSize: 40, lineHeight: 50, fontWeight: '700', letterSpacing: -0.5 }} />
+      <T color={color} style={{ fontSize: 22, lineHeight: 30, fontWeight: '700' }}>만원</T>
+    </View>
+  );
+}
+
 /** 제목 왼쪽에 움직이는 그림 문자가 붙는 섹션 머리 */
 export function SectionHead({ emoji, motion, title, onMore, testID }: { emoji?: string; motion?: 'bounce' | 'wiggle' | 'pulse'; title: string; onMore?: () => void; testID?: string }) {
   const c = useColors();

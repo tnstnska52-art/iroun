@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
-import { Btn, CountUp, T } from '@/components/ui';
+import { BigMoney, Btn, T } from '@/components/ui';
 import { FREE_COUNT, won, type EstimateItem } from '@/lib/estimate';
 import { useAccount } from '@/lib/session';
 import { dday } from '@/components/BenefitCard';
@@ -73,7 +73,7 @@ export function Total({ label, count, total, tone = 'blue', note, onPress, testI
     <Pressable testID={testID} accessibilityRole={onPress ? 'button' : 'summary'} disabled={!onPress} onPress={onPress}
       style={({ pressed }) => ({ backgroundColor: tone === 'red' ? c.destructiveSoft : c.card, borderRadius: c.radius + 6, padding: 22, gap: 2, opacity: pressed ? 0.9 : 1 })}>
       <T v="h3" color={tone === 'red' ? c.destructive : c.foreground}>{label} {count}건</T>
-      {total > 0 ? <CountUp key={`${label}${total}`} to={Math.floor(total / 10000)} color={color} style={{ fontSize: 44, lineHeight: 54 }} format={(n) => `${n.toLocaleString('ko-KR')}만원`} /> : null}
+      {total > 0 ? <BigMoney key={`${label}${total}`} manwon={Math.floor(total / 10000)} color={color} /> : null}
       <T v="small" color={tone === 'red' ? c.destructive : c.mutedForeground}>{note ?? (total > 0 ? '공고 기준 최대 금액' : '금액은 공고에서 확인')}</T>
       {children}
     </Pressable>
