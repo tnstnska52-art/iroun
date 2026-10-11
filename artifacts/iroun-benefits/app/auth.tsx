@@ -159,7 +159,7 @@ export default function AuthScreen() {
         <Field testID="password-input" label="비밀번호" hint={mode === 'signup' ? '8자 이상' : undefined} value={pw} onChangeText={setPw} secureTextEntry autoCapitalize="none" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} textContentType={mode === 'signup' ? 'newPassword' : 'password'} error={mode === 'signup' && pw.length > 0 && !pwOk ? `8자 이상으로 입력해 주세요. (지금 ${pw.length}자)` : undefined} />
         {mode === 'signup' ? <Field testID="password2-input" label="비밀번호 확인" value={pw2} onChangeText={setPw2} secureTextEntry autoCapitalize="none" /> : null}
         {mode === 'signup' ? <>
-          <Toggle testID="consent-account" label="개인정보 수집·이용 동의" desc="이름, 번호, 통신사 · 탈퇴하면 삭제" value={accountConsent} onChange={setAccountConsent} />
+          <Toggle testID="consent-account" label="개인정보 수집·이용 동의" desc="이름, 번호, 통신사, 사업장 조건 · 탈퇴하면 삭제" value={accountConsent} onChange={setAccountConsent} />
           <Toggle testID="consent-terms" label="이용약관 동의" value={termsConsent} onChange={setTermsConsent} />
         </> : null}
         {err ? <Notice tone="error">{err}</Notice> : null}

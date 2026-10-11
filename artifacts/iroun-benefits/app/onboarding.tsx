@@ -77,7 +77,8 @@ export default function Onboarding() {
       const srv = acc.me;
       const useDraft = !!d && !(d.serverSaved && srv);
       let p = useDraft ? d!.profile : (srv ? srv.profile : EMPTY);
-      const cs = d ? d.consent : srv ? !!srv.preferences.privacyConsent : true;
+      // 개인정보 동의는 회원가입 때 받는다. 여기서는 묻지 않고 바로 업종부터 고른다.
+      const cs = true;
       setProfile(p); setConsent(cs);
       setIdx(cs ? Math.min(Math.max(p.step, 1), HUB) : 0);
       if(cs && d?.cursor && (useDraft || p.step === d.profile.step)) {
@@ -230,6 +231,12 @@ export default function Onboarding() {
     if (ok) router.replace('/');
   };
 
+  const autoStart = useRef(false);
+  useEffect(() => {
+    if (!ready || biz || idx !== 0 || searching || autoStart.current) return;
+    autoStart.current = true; void startAfterConsent();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, biz, idx, searching]);
   const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
   if (!ready) return <Sheet title="내 정보" onClose={close}><Loading rows={2} /></Sheet>;
   const total = PERSONAL_Q.length + 1;
@@ -241,6 +248,7 @@ export default function Onboarding() {
 
   if (searching) return <Searching onDone={() => router.replace('/result' as never)} />;
 
+  if (!biz && idx === 0 && !sync) return <Sheet title="내 사업자 지원금은 얼마일까?" onClose={close}><Loading rows={2} /></Sheet>;
   if (!biz && idx === 0) {
     return (
       <Sheet title="내 사업자 지원금은 얼마일까?" hint="조건만 고르면 돼요. 1분이면 끝나요." step="시작하기" onClose={close} toast={toast}>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import { useQueryClient } from '@tanstack/react-query';
 import { getGetMeQueryKey, savePreferences, type Preferences } from '@workspace/api-client-react';
@@ -16,6 +16,7 @@ import { registerNativeNotifications } from '@/lib/native-notifications';
 export default function Account() {
   const c = useColors();
   const router = useRouter();
+  const settings = useLocalSearchParams<{ view?: string }>().view === 'settings';
   const qc = useQueryClient();
   const acc = useAccount();
   const { user } = useUser();
@@ -51,7 +52,7 @@ export default function Account() {
   );
 
   return (
-    <Page tab title="더보기">
+    <Page back title={settings ? '환경설정' : '내 정보'}>
       {!acc.isLoaded || (acc.isSignedIn && acc.loading) ? <Loading rows={2} /> : !acc.isSignedIn ? (
         <Card tone="soft">
           <T v="h3">가입하면 전체 지원금을 볼 수 있어요</T>
@@ -60,6 +61,7 @@ export default function Account() {
         </Card>
       ) : acc.error ? <ErrorState message={apiErrorMessage(acc.error)} onRetry={() => acc.refetch()} /> : acc.me ? (
         <>
+          {!settings ? <>
           <Card>
             <T v="small" color={c.mutedForeground}>{user?.firstName ? `${user.firstName}님의 정보` : '로그인한 계정'}</T>
             <T v="h3" selectable>{user?.primaryPhoneNumber?.phoneNumber ?? user?.primaryEmailAddress?.emailAddress ?? '확인 중'}</T>
@@ -71,36 +73,37 @@ export default function Account() {
             <Btn kind="secondary" label="이용권 안내·관리" icon="award" onPress={() => router.push('/membership')} testID="account-membership" />
           </Card>
 
-          <Section title="내 정보">
+          <Section title="내 사업장">
             <Card>
-              <T v="label">내 사업장 조건</T>
+              <T v="label">고른 조건</T>
               {p && p.businesses.length > 0 ? p.businesses.map((b) => (
                 <T key={b.id}>{[b.industry, b.province && `${b.province} ${b.district ?? ''}`.trim(), b.openedYear && (b.openedYear <= 2009 ? '2009년 이전 개업' : `${b.openedYear}년 개업`), b.revenue, b.employeeBand && `직원 ${b.employeeBand}`, b.premises].filter(Boolean).join(' · ') || '고른 조건 없음'}</T>
               )) : <T>아직 고르지 않았어요</T>}
               <Btn label={p && p.businesses.length ? '조건 다시 고르기' : '내 사업자 지원금은 얼마일까?'} icon="edit-3" onPress={() => router.push('/onboarding')} testID="account-edit-profile" />
             </Card>
           </Section>
+          </> : null}
 
-          <Section title="알림 설정">
+          {settings ? <Section title="알림 설정">
             <Card>
-              <Toggle testID="pref-consent" label="개인정보 수집·이용 동의" desc="조건 저장에 필요해요" value={acc.me.preferences.privacyConsent} onChange={(v) => setPref({ privacyConsent: v })} disabled={saving} />
               <Toggle testID="pref-notifications" label="알림 받기" value={acc.me.preferences.notifications} onChange={(v) => setPref({ notifications: v })} disabled={saving} />
               <Toggle testID="pref-personalized" label="맞춤 알림" desc={acc.active ? '내 조건에 맞는 새 공고' : '이용 중에만 켤 수 있어요'} value={acc.me.preferences.personalizedAlerts && acc.active} onChange={(v) => setPref({ personalizedAlerts: v })} disabled={saving || !acc.active} />
               <T v="small" color={c.mutedForeground}>휴대폰 알림은 준비 중이에요</T>
             </Card>
             {msg ? <Notice tone={msg.t}>{msg.s}</Notice> : null}
-          </Section>
+          </Section> : null}
         </>
       ) : null}
 
-      <Section title="회사 도움">
+      {!settings ? <Section title="내 이용">
         <ListRow icon="award" label="이용 상태·동의" onPress={() => router.push('/access')} testID="nav-access" />
         <ListRow icon="target" label="맞춤 공고" onPress={() => router.push('/matches')} testID="nav-matches" />
         <ListRow icon="clipboard" label="회사 진행" onPress={() => router.push('/company-progress')} testID="nav-company-progress" />
         <ListRow icon="bookmark" label="저장한 공고·내 기록" onPress={() => router.push('/mine')} testID="nav-mine" />
         <ListRow icon="bell" label="알림함" onPress={() => router.push('/inbox')} testID="nav-inbox" />
         {acc.me && acc.me.role !== 'user' && acc.me.role !== 'customer' ? <ListRow icon="briefcase" label="회사 업무" onPress={() => router.push('/office')} testID="nav-office" /> : null}
-      </Section>
+      </Section> : null}
+      {settings ? <>
       <Section title="화면 설정">
         <Card>{textToggle}</Card>
       </Section>
@@ -118,6 +121,7 @@ export default function Account() {
           <Btn kind="ghost" label="회원 탈퇴" icon="user-x" onPress={() => router.push('/delete-account')} testID="go-delete-account" />
         </Section>
       ) : null}
+      </> : null}
       <FooterLinks />
       <Disclaimer />
     </Page>

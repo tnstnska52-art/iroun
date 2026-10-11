@@ -282,7 +282,7 @@ export default function BenefitDetail() {
         <Box title="내 기록">
           <T v="small" color={c.mutedForeground}>{USER_RECORD_NOTICE}</T>
           <Wrap>{STAGES.map((s) => <Chip key={s} label={s} selected={base.stage === s && !!cur} onPress={() => save({ stage: s }, `"${s}" 단계로 저장했어요.`)} testID={`stage-${s}`} />)}</Wrap>
-          <Toggle testID="reminder-toggle" label="마감 알림 받기" desc={!base.deadlineReminder && !acc.me?.preferences.notifications ? '더보기에서 알림을 먼저 켜 주세요' : '휴대폰 알림은 준비 중이에요'} value={base.deadlineReminder} onChange={(v) => save({ deadlineReminder: v }, v ? '마감 알림을 저장했어요.' : '마감 알림을 해제했어요.')} disabled={busy || (!base.deadlineReminder && !acc.me?.preferences.notifications)} />
+          <Toggle testID="reminder-toggle" label="마감 알림 받기" desc={!base.deadlineReminder && !acc.me?.preferences.notifications ? '환경설정에서 알림을 먼저 켜 주세요' : '휴대폰 알림은 준비 중이에요'} value={base.deadlineReminder} onChange={(v) => save({ deadlineReminder: v }, v ? '마감 알림을 저장했어요.' : '마감 알림을 해제했어요.')} disabled={busy || (!base.deadlineReminder && !acc.me?.preferences.notifications)} />
         </Box>
       ) : null}
 

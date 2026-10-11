@@ -41,8 +41,18 @@ export default function Home() {
   const unread = (svc.data?.inbox ?? []).filter((x) => !x.read_at).length + (svc.data?.companyUpdates ?? []).filter((x) => !x.read).length;
   const showStat = IS_PREVIEW || HEADLINE_STAT.verified;
   const open = list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0);
-  const easy = open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const, level: difficulty(b) })).filter((x) => x.level <= 2).sort((x, y) => x.level - y.level).slice(0, 3);
-  const closing = (est?.items ?? []).filter((x) => { const d = daysLeft(x.benefit.endsAt); return d !== null && d >= 0 && d <= 30; }).slice(0, 3);
+  const within7 = (b: { endsAt: string }) => { const d = daysLeft(b.endsAt); return d !== null && d >= 0 && d <= 7; };
+  // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 마감 7일 안쪽을 보여준다.
+  const closing = (est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }))).filter((x) => within7(x.benefit)).sort((x, y) => (daysLeft(x.benefit.endsAt) ?? 0) - (daysLeft(y.benefit.endsAt) ?? 0)).slice(0, 5);
+  const nowOpen = open.filter((b) => !within7(b)).slice(0, 5).map((b) => ({ benefit: b, result: '추가 확인 필요' as const }));
+  const closingBlock = closing.length > 0 ? (
+    <>
+      <SectionHead emoji="🚨" motion="pulse" title="마감 7일 전 지원금" />
+      <View testID="home-closing" style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
+        {closing.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === closing.length - 1} />)}
+      </View>
+    </>
+  ) : null;
   const shown = est ? (acc.active ? est.items.slice(0, 5) : est.items.slice(0, FREE_COUNT)) : [];
 
   return (
@@ -52,6 +62,14 @@ export default function Home() {
           <Feather name="check" size={19} color={c.primaryForeground} />
         </View>
         <T v="h2" style={{ flex: 1, fontWeight: '800' }}>이로운사람들</T>
+        <Pressable testID="nav-me" accessibilityRole="button" accessibilityLabel="내 정보 보기" onPress={() => router.push('/account' as never)}
+          style={({ pressed }) => ({ width: 40, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+          <Feather name="user" size={24} color={c.foreground} />
+        </Pressable>
+        <Pressable testID="nav-settings" accessibilityRole="button" accessibilityLabel="환경설정" onPress={() => router.push({ pathname: '/account', params: { view: 'settings' } } as never)}
+          style={({ pressed }) => ({ width: 40, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
+          <Feather name="settings" size={23} color={c.foreground} />
+        </Pressable>
         <Pressable testID="nav-inbox" accessibilityRole="button" accessibilityLabel={unread > 0 ? `알림함, 새 알림 ${unread}건` : '알림함'}
           onPress={() => router.push(acc.isSignedIn ? '/inbox' : '/auth')}
           style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
@@ -81,14 +99,15 @@ export default function Home() {
               </View>
             </Pressable>
           ) : <Btn label="계속 이용하기" onPress={() => router.push('/membership' as never)} testID="home-continue" />}
-          {easy.length > 0 ? (
+          {nowOpen.length > 0 ? (
             <>
-              <SectionHead emoji="🔥" motion="pulse" title="신청이 쉬운 지원금" onMore={() => router.push('/benefits')} testID="home-easy-more" />
+              <SectionHead emoji="👉" motion="wiggle" title="지금 신청 가능한 지원금" onMore={() => router.push('/benefits')} testID="home-easy-more" />
               <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
-                {easy.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === easy.length - 1} />)}
+                {nowOpen.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === nowOpen.length - 1} />)}
               </View>
             </>
           ) : null}
+          {closingBlock}
         </>
       ) : (
         <>
@@ -120,14 +139,14 @@ export default function Home() {
           ) : null}
 
           {acc.active && acc.me && !acc.me.preferences.notifications ? (
-            <Pressable testID="home-alert-off" accessibilityRole="button" onPress={() => router.push('/account')} style={{ backgroundColor: c.warningSoft, borderRadius: c.radius, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Pressable testID="home-alert-off" accessibilityRole="button" onPress={() => router.push({ pathname: '/account', params: { view: 'settings' } } as never)} style={{ backgroundColor: c.warningSoft, borderRadius: c.radius, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Feather name="bell-off" size={18} color={c.warning} />
               <T v="small" color={c.warning} style={{ flex: 1, fontWeight: '700' }}>알림이 꺼져 있어요</T>
               <T v="small" color={c.warning} style={{ fontWeight: '800' }}>켜기</T>
             </Pressable>
           ) : null}
 
-          <SectionHead emoji="👉" motion="wiggle" title="받을 수 있는 지원금" onMore={() => router.push('/benefits')} testID="home-list-more" />
+          <SectionHead emoji="👉" motion="wiggle" title="지금 신청 가능한 지원금" onMore={() => router.push('/benefits')} testID="home-list-more" />
           <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
             {shown.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === shown.length - 1 && est.items.length <= shown.length} />)}
             {est.items.length > shown.length ? (
@@ -143,14 +162,7 @@ export default function Home() {
             </>
           ) : null}
 
-          {acc.active && closing.length > 0 ? (
-            <>
-              <SectionHead emoji="🚨" motion="pulse" title="곧 마감되는 지원금" />
-              <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
-                {closing.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === closing.length - 1} />)}
-              </View>
-            </>
-          ) : null}
+          {closingBlock}
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
             <Emoji char="✏️" size={15} motion="wiggle" />
             <Pressable testID="home-redo" accessibilityRole="button" onPress={() => router.push('/onboarding')} style={{ minHeight: 44, justifyContent: 'center' }}>
