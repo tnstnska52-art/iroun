@@ -17,6 +17,7 @@ import { daysLeft, endTime, fmtDate } from '@/lib/util';
 import { remaining, useMatchesView, useServiceStateView } from '@/lib/service';
 import { useRecent } from '@/lib/recent';
 import { profileCompletion } from '@/lib/profile';
+import { difficulty, difficultyLabel } from '@/lib/difficulty';
 import { HEADLINE_STAT, IS_PREVIEW, estimate, useDraftProfile, won } from '@/lib/estimate';
 
 /** 입력한 만큼 차오르는 물결. 장식이며 금액·확률을 뜻하지 않는다. */
@@ -97,13 +98,15 @@ export default function Home() {
   const headline = IS_PREVIEW || HEADLINE_STAT.verified ? HEADLINE_STAT.text : '받을 수 있는 지원금, 놓치고 있지 않나요?';
   const summary: { big: string; sub: string; go: Href; strip: string; stripGo: Href; testID: string } =
     est && showAmount ? { big: est.total > 0 ? `예상 수령액 최대 ${won(est.total)}` : `내게 맞는 공고 ${est.items.length}건`, sub: `지금 신청할 수 있는 공고 ${est.items.length}건 기준`, go: '/matches',
-        strip: done.pct < 100 ? '정보를 더 채우고 정확도 높이기' : '맞는 이유와 신청 방법 보기', stripGo: done.pct < 100 ? '/onboarding' : '/matches', testID: 'home-personalized' }
-    : est ? { big: `내 조건에 맞는 공고 ${est.items.length}건`, sub: '지원금·환급금을 모두 찾았어요', go: trialGo, strip: '예상 수령액 보기 · 3일 무료', stripGo: trialGo, testID: 'home-see-amount' }
+        strip: done.pct < 100 ? '정보를 더 채우고 정확도 높이기' : '필요 서류와 신청 방법 보기', stripGo: done.pct < 100 ? '/onboarding' : '/matches', testID: 'home-personalized' }
+    : est ? { big: est.total > 0 ? `예상 수령액 최대 ${won(est.total)}` : `예상 지원사업 ${est.items.length}건`, sub: `고객님의 예상 지원사업 ${est.items.length}건`, go: trialGo, strip: acc.isSignedIn ? '3일 무료로 즉시 확인해보세요' : '회원가입만 하고 즉시 확인해보세요', stripGo: trialGo, testID: 'home-see-amount' }
     : expired ? { big: `신청 가능 ${open.length}건`, sub: '맞춤 이용이 끝났어요. 접수한 내역은 계속 볼 수 있어요.', go: '/benefits', strip: '계속 이용하려면 회사에 문의하기', stripGo: '/inquiries', testID: 'home-all-primary' }
-    : { big: `신청 가능 ${open.length}건`, sub: '사업자가 받을 수 있는 지원금·환급금', go: '/benefits', strip: '내 조건에 맞는 공고 찾기', stripGo: '/onboarding', testID: acc.isSignedIn ? 'home-all-primary' : 'home-browse' };
+    : { big: `신청 가능 ${open.length}건`, sub: '사업자가 받을 수 있는 지원금·환급금', go: '/benefits', strip: '내 사업자 예상지원금 확인하기', stripGo: '/onboarding', testID: acc.isSignedIn ? 'home-all-primary' : 'home-browse' };
 
   const picks = (est ? est.items.map((x) => x.benefit) : open).slice(0, 8);
   const resultOf = new Map((est?.items ?? []).map((x) => [x.benefit.id, x.result]));
+  // 추천 공고: 신청 난이도 1~2만. 내 조건으로 찾은 공고가 있으면 그 안에서 고른다.
+  const easy = (est ? est.items.map((x) => x.benefit) : open).map((b2) => ({ b: b2, level: difficulty(b2) })).filter((x) => x.level <= 2).sort((x, y) => x.level - y.level);
   const pastItems = (past.data?.items ?? []).filter((x) => x.matches.some((m) => !(m.referenceExclusions?.length)));
   const pastTotal = pastItems.reduce((n, x) => n + (x.benefit.maxAmount ?? 0), 0);
   const featured = upcoming[0];
@@ -148,7 +151,7 @@ export default function Home() {
           <Feather name="chevron-right" size={18} color={c.mutedForeground} />
         </Pressable>
       </View>
-      {est && showAmount ? <T v="small" color={c.mutedForeground} style={{ paddingHorizontal: 4 }}>{est.total > 0 ? '공고에 적힌 최대 금액을 더한 값이에요. ' : ''}실제 지급액은 심사·예산·중복수혜에 따라 달라요.{est.noAmount > 0 ? ` 금액이 공고에 없는 ${est.noAmount}건은 합계에서 뺐어요.` : ''}</T> : null}
+      {est ? <T v="small" color={c.mutedForeground} style={{ paddingHorizontal: 4 }}>{est.total > 0 ? '공고에 적힌 최대 금액을 더한 값이에요. ' : ''}실제 지급액은 심사·예산·중복수혜에 따라 달라요.{est.noAmount > 0 ? ` 금액이 공고에 없는 ${est.noAmount}건은 합계에서 뺐어요.` : ''}</T> : null}
       {acc.active && acc.me && !acc.me.preferences.notifications ? (
         <Pressable testID="home-alert-off" accessibilityRole="button" onPress={() => router.push('/account')} style={{ backgroundColor: c.warningSoft, borderRadius: c.radius, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Feather name="bell-off" size={18} color={c.warning} />
@@ -178,12 +181,12 @@ export default function Home() {
           <Wave pct={est && !acc.active ? 55 : done.pct} />
           <View style={{ padding: 16, gap: 4 }}>
             <T v="title" style={{ fontSize: 20 }}>{!est ? headline : !acc.active ? '내 사업장 예상 수령액은?' : `내 정보 입력 ${done.pct}%`}</T>
-            <T v="small" color={c.mutedForeground}>{!est ? '업종·지역·매출 등 5가지만 고르면 맞는 지원금과 환급금을 모두 찾아드려요.' : !acc.active ? `맞는 공고 ${est.items.length}건을 찾았어요. 3일 동안 무료로 금액과 신청 방법을 볼 수 있어요.` : `나머지 ${100 - done.pct}%를 채우면 더 정확히 찾아드려요.`}</T>
+            <T v="small" color={c.mutedForeground}>{!est ? '업종·지역·매출만 고르면 맞는 지원금과 환급금을 모두 찾아드려요.' : !acc.active ? `예상 지원사업 ${est.items.length}건을 찾았어요. 3일 동안 무료로 사업별 금액, 필요 서류, 신청 순서를 볼 수 있어요.` : `나머지 ${100 - done.pct}%를 채우면 더 정확히 찾아드려요.`}</T>
             {!est && IS_PREVIEW && !HEADLINE_STAT.verified ? <T v="small" color={c.warning} style={{ fontSize: 12 }}>예시 문구 · 수치 근거 확인 전이라 실제 앱에는 아직 나오지 않아요</T> : null}
           </View>
           <View style={{ flex: 1 }} />
           <View style={{ padding: 16 }}>
-            <Btn label={!est ? '내 조건에 맞는 지원금 찾기' : !acc.active ? '예상 수령액 보기' : '이어서 입력'} onPress={() => router.push(!est || acc.active ? '/onboarding' : trialGo)} testID="home-start-onboarding" />
+            <Btn label={!est ? '내 사업자 예상지원금 확인하기' : !acc.active ? '3일 무료로 확인하기' : '이어서 입력'} onPress={() => router.push(!est || acc.active ? '/onboarding' : trialGo)} testID="home-start-onboarding" />
           </View>
         </View>
       ) : null}
@@ -192,12 +195,12 @@ export default function Home() {
           <Wave pct={est ? 55 : 8} />
           <View style={{ padding: 16, gap: 4 }}>
             <T v="title" style={{ fontSize: 20 }}>{est ? '내 사업장 예상 수령액은?' : headline}</T>
-            <T v="small" color={c.mutedForeground}>{est ? `맞는 공고 ${est.items.length}건을 찾았어요. 가입하면 3일 동안 무료로 금액과 신청 방법을 볼 수 있어요.` : '업종·지역·매출 등 5가지만 고르면 맞는 지원금과 환급금을 모두 찾아드려요.'}</T>
+            <T v="small" color={c.mutedForeground}>{est ? `예상 지원사업 ${est.items.length}건을 찾았어요. 회원가입하면 사업별 금액, 필요 서류, 신청 순서를 바로 볼 수 있어요.` : '업종·지역·매출만 고르면 맞는 지원금과 환급금을 모두 찾아드려요.'}</T>
             {!est && IS_PREVIEW && !HEADLINE_STAT.verified ? <T v="small" color={c.warning} style={{ fontSize: 12 }}>예시 문구 · 수치 근거 확인 전이라 실제 앱에는 아직 나오지 않아요</T> : null}
           </View>
           <View style={{ flex: 1 }} />
           <View style={{ padding: 16 }}>
-            <Btn label={est ? '예상 수령액 보기' : '내 조건에 맞는 지원금 찾기'} onPress={() => router.push(est ? trialGo : '/onboarding')} testID={est ? 'home-login' : 'home-estimate-start'} />
+            <Btn label={est ? '회원가입하고 확인하기' : '내 사업자 예상지원금 확인하기'} onPress={() => router.push(est ? trialGo : '/onboarding')} testID={est ? 'home-login' : 'home-estimate-start'} />
           </View>
         </View>
       ) : null}
@@ -250,10 +253,20 @@ export default function Home() {
       </View>
       {acc.isSignedIn ? <T v="small" color={c.mutedForeground} style={{ paddingHorizontal: 4 }}>저장한 공고 {savedCount}건{svc.data ? ` · 회사에 접수한 건 ${reqs.length}건` : ''}</T> : null}
 
-      {recent.length > 0 ? (
+      {easy.length > 0 ? (
         <>
-          <SectionHead title="최근 본 공고" />
-          {recent.slice(0, 3).map((x) => <BenefitCard key={x.id} b={x} />)}
+          <SectionHead title="추천 공고 · 신청이 쉬운 순" />
+          {easy.slice(0, 4).map((x) => (
+            <BenefitCard key={x.b.id} b={x.b} extra={
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 52 }}>
+                <View style={{ flexDirection: 'row', gap: 3 }}>
+                  {[1, 2, 3, 4, 5].map((n) => <View key={n} style={{ width: 14, height: 6, borderRadius: 3, backgroundColor: n <= x.level ? c.primary : c.border }} />)}
+                </View>
+                <T v="small" color={c.primary} style={{ fontWeight: '700' }}>난이도 {x.level} · {difficultyLabel(x.level)}</T>
+              </View>
+            } />
+          ))}
+          <T v="small" color={c.mutedForeground} style={{ paddingHorizontal: 4 }}>준비 서류와 조건 수로 계산한 신청 난이도예요. 난이도 1~2만 추천해요.</T>
         </>
       ) : null}
 
@@ -266,7 +279,7 @@ export default function Home() {
                 <View style={{ backgroundColor: x.result === '조건 일치' ? c.successSoft : c.warningSoft, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
                   <T v="small" color={x.result === '조건 일치' ? c.success : c.warning} style={{ fontWeight: '700', fontSize: 12, lineHeight: 16 }}>{x.result === '조건 일치' ? '조건 일치' : '추가 확인 필요'}</T>
                 </View>
-                <T v="small" color={c.mutedForeground}>{!showAmount ? '금액은 무료체험에서 확인' : x.benefit.maxAmount ? `공고상 최대 ${won(x.benefit.maxAmount)}` : '금액은 공고에서 확인'}</T>
+                <T v="small" color={c.mutedForeground}>{!showAmount ? '금액·서류는 가입 후 확인' : x.benefit.maxAmount ? `공고상 최대 ${won(x.benefit.maxAmount)}` : '금액은 공고에서 확인'}</T>
               </View>
             } />
           ))}

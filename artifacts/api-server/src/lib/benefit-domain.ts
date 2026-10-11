@@ -55,6 +55,8 @@ export const benefitSchema = z.object({
   rules: z.array(ruleSchema).max(100),
   // 공고 원문에 적힌 최대 지원금액(원). 원문에 없으면 비워 둔다. 0원이나 추정값을 넣지 않는다.
   maxAmount: z.number().int().positive().max(100_000_000_000).optional(),
+  // 신청 난이도 1(쉬움)~5(어려움). 운영자가 직접 정하면 이 값을 쓰고, 비우면 서류·조건 수로 계산한다.
+  difficulty: z.number().int().min(1).max(5).optional(),
 }).strict();
 export type Benefit = z.infer<typeof benefitSchema>;
 export type Profile = z.infer<typeof profileSchema>;

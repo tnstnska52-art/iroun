@@ -93,8 +93,8 @@ const consentTexts = {
 };
 const emptyProfile = (): Profile => ({ personal: {}, businesses: [], step: 0 });
 const filledProfile = (): Profile => ({
-  personal: { birthYear: 1964, province: '경기도', district: '수원시 팔달구', income: '중위소득 100% 이하', household: '2인', children: 0, housing: '자가', employment: ['사업자'] },
-  businesses: [{ id: 'biz-1', name: '행복한 밥상', province: '경기도', district: '수원시 팔달구', entity: '개인사업자', industry: '음식점', openedAt: '2015-03-02', revenue: '1억~3억 원', employees: 2, situation: '운영 중' }],
+  personal: { birthYear: 1964, province: '경기도' },
+  businesses: [{ id: 'biz-1', name: '행복한 밥상', province: '경기도', district: '수원시', entity: '개인사업자', industry: '음식점', openedAt: '2015-03-02', revenue: '1억~3억 원', employees: 2 }],
   step: 10,
 });
 const serviceConsent = (at: number) => [{ kind: 'service', version: CONSENT_VERSION, content: consentTexts.service, accepted: true, recorded_at: isoIn(at) }];

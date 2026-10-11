@@ -10,6 +10,7 @@ import {
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
+import { useServiceStateView } from '@/lib/service';
 import { Badge, Box, Btn, Chip, Disclaimer, ErrorState, Loading, Notice, Page, T, Toggle, Wrap } from '@/components/ui';
 import { STAGES, USER_RECORD_NOTICE, apiErrorMessage } from '@/lib/text';
 import { fmtDate } from '@/lib/util';
@@ -24,6 +25,7 @@ export default function BenefitDetail() {
   const router = useRouter();
   const qc = useQueryClient();
   const acc = useAccount();
+  const svc = useServiceStateView();
   const q = useGetBenefit(id ?? '', { query: { queryKey: getGetBenefitQueryKey(id ?? ''), enabled: !!id } });
   const recs = useGetRecommendations({ query: { queryKey: getGetRecommendationsQueryKey(), enabled: acc.active } });
   const tracks = useListTracking({ query: { queryKey: getListTrackingQueryKey(), enabled: acc.isSignedIn } });
@@ -72,12 +74,13 @@ export default function BenefitDetail() {
   const tone = (r: string) => (r === '조건 일치' ? 'ok' : r === '추가 확인 필요' ? 'warn' : 'muted');
 
   const dd = dday(b);
+  const expiredMember = acc.isSignedIn && !acc.active && !!svc.data?.trialUsed;
   const closed = dd.label === '마감';
   const period = b.startsAt || b.endsAt ? `${b.startsAt ? fmtDate(b.startsAt) : '시작일 확인 필요'} ~ ${b.endsAt ? fmtDate(b.endsAt) : b.status === '상시 조회' ? '상시' : '마감일 공고 없음'}` : b.status === '상시 조회' ? '상시 조회' : '기간 확인 필요';
   const info: [keyof typeof Feather.glyphMap, string, string][] = [
     ['file-text', '지원형태', b.kind], ['users', '대상', b.audience === '사업' ? '사업자' : b.audience],
     ['home', '지원기관', b.agency], ['map-pin', '지역', b.region],
-    ['activity', '접수상태', closed ? '마감' : b.status], ['dollar-sign', '지원금액', b.maxAmount ? `최대 ${won(b.maxAmount)}` : '공고에서 확인'],
+    ['activity', '접수상태', closed ? '마감' : b.status], ['dollar-sign', '지원금액', !acc.active ? '가입 후 확인' : b.maxAmount ? `최대 ${won(b.maxAmount)}` : '공고에서 확인'],
   ];
   const best = myRecs.find((r) => r.result === '조건 일치') ?? myRecs.find((r) => r.result === '추가 확인 필요');
   // 신청하기: 서버가 최신 조건으로 다시 판단한다. 되면 회사 접수함에 저장되고, 안 되면 이유를 보여준다.
@@ -113,7 +116,7 @@ export default function BenefitDetail() {
   return (
     <Page
       footer={<>
-        {!closed ? <Btn kind="secondary" label={acc.active ? '회사에 신청 도움 요청' : '내 조건으로 신청 가능한지 보기'} icon="send" loading={applying} onPress={() => (acc.active ? apply('신청 지원') : router.push((acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never))} testID="detail-company-help" /> : null}
+        {!closed ? <Btn kind="secondary" label={acc.active ? '회사에 신청 도움 요청' : acc.isSignedIn ? '3일 무료로 신청 방법 보기' : '회원가입하고 신청 방법 보기'} icon="send" loading={applying} onPress={() => (acc.active ? apply('신청 지원') : router.push((expiredMember ? '/inquiries' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never))} testID="detail-company-help" /> : null}
         <Btn label="공식 신청 페이지" icon="external-link" onPress={() => Linking.openURL(b.sourceUrl)} testID="open-source" hint="브라우저에서 공식 페이지가 열립니다" />
       </>}
     >
@@ -174,6 +177,8 @@ export default function BenefitDetail() {
         </View>
       </View>
 
+      {acc.active ? (
+        <>
       <Box title="이렇게 진행하세요">
         {steps.map((st, i) => (
           <View key={i} testID={`step-${i + 1}`} style={{ flexDirection: 'row', gap: 10, paddingVertical: 4 }}>
@@ -188,12 +193,34 @@ export default function BenefitDetail() {
         ))}
       </Box>
 
+        </>
+      ) : !closed ? (
+        <Box title="이렇게 진행하세요">
+          {steps.slice(0, 5).map((st, i) => (
+            <View key={i} style={{ flexDirection: 'row', gap: 10, paddingVertical: 4, alignItems: 'center' }}>
+              <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: i === 0 ? c.primary : c.border, alignItems: 'center', justifyContent: 'center' }}>
+                <T v="small" color={i === 0 ? '#fff' : c.mutedForeground} style={{ fontWeight: '800' }}>{i + 1}</T>
+              </View>
+              {i === 0 ? <T v="label" style={{ flex: 1 }}>{st.title}</T> : <View style={{ flex: 1, height: 12, borderRadius: 6, backgroundColor: c.secondary, maxWidth: 120 + ((i * 37) % 90) }} />}
+              {i > 0 ? <Feather name="lock" size={14} color={c.mutedForeground} /> : null}
+            </View>
+          ))}
+          <View testID="detail-locked" style={{ backgroundColor: c.primarySoft, borderRadius: 10, padding: 14, gap: 8, marginTop: 4 }}>
+            <T v="label" color={c.primary}>필요 서류 {b.documents.length > 0 ? `${b.documents.length}가지와 ` : ''}신청 순서는 {expiredMember ? '맞춤 이용 중에' : '회원가입하면'} 볼 수 있어요</T>
+            <T v="small">무엇을 준비하고 어디에 어떻게 신청하는지 1번부터 순서대로 정리해 드려요.</T>
+            <Btn label={expiredMember ? '계속 이용 문의하기' : acc.isSignedIn ? '3일 무료로 전체 보기' : '회원가입하고 전체 보기'} onPress={() => router.push((expiredMember ? '/inquiries' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-access" />
+          </View>
+        </Box>
+      ) : null}
+
       {b.summary ? <Box title="개요"><Collapsible text={b.summary} testID="summary-more" /></Box> : null}
       <Box title="지원내용">
         <T>{b.support || '공식 출처에서 확인해 주세요.'}</T>
         <T v="small" color={c.mutedForeground}>현금·현물 여부와 금액은 기관이 정해요. 이 앱은 금액을 계산하지 않습니다.</T>
       </Box>
 
+      {acc.active ? (
+        <>
       <Box title="내 조건과 비교">
         {acc.active ? (
           recs.isLoading ? <Loading rows={1} /> : recs.error ? <ErrorState message={apiErrorMessage(recs.error)} onRetry={() => recs.refetch()} /> : myRecs.length === 0 ? (
@@ -241,6 +268,9 @@ export default function BenefitDetail() {
         {b.checks.map((x, i) => <T key={i}>• {x}</T>)}
         {b.rules.map((r, i) => <T key={`rule${i}`}>• {r.label} ({r.scope === 'business' ? '사업장' : '개인·가구'})</T>)}
       </Box>
+
+        </>
+      ) : null}
 
       {b.calculation ? <Box title="금액 산정"><Collapsible text={b.calculation} testID="calc-more" /></Box> : null}
 

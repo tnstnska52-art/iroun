@@ -1,7 +1,7 @@
 import type { Profile } from '@workspace/api-client-react';
 
-const PERSONAL = ['birthYear', 'province', 'district', 'income', 'household', 'children', 'housing', 'employment'] as const;
-const BUSINESS = ['name', 'province', 'district', 'entity', 'industry', 'openedAt', 'revenue', 'employees', 'situation'] as const;
+const PERSONAL = ['birthYear', 'province'] as const;
+const BUSINESS = ['industry', 'province', 'district', 'revenue', 'employees', 'entity', 'name', 'openedAt'] as const;
 const has = (v: unknown) => (Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== '');
 
 /**
@@ -13,8 +13,7 @@ export function profileCompletion(p?: Profile | null): { pct: number; answered: 
   const personal = p.personal as Record<string, unknown>;
   let answered = PERSONAL.filter((k) => has(personal[k])).length;
   let total = PERSONAL.length;
-  const isBiz = p.businesses.length > 0 || (Array.isArray(personal.employment) && (personal.employment as string[]).includes('사업자'));
-  if (isBiz) {
+  {
     total += BUSINESS.length;
     const b = (p.businesses[0] ?? {}) as unknown as Record<string, unknown>;
     answered += BUSINESS.filter((k) => has(b[k])).length;

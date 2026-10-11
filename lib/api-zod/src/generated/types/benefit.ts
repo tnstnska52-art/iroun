@@ -37,4 +37,6 @@ export interface Benefit {
   rules: Rule[];
   /** 공고 원문에 적힌 최대 지원금액(원). 원문에 없으면 생략 */
   maxAmount?: number;
+  /** 신청 난이도 1(쉬움)~5(어려움). 생략하면 서류·조건 수로 계산 */
+  difficulty?: number;
 }
