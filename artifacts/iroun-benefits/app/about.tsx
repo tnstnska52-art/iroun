@@ -5,7 +5,7 @@ import { Btn, Card, Disclaimer, FooterLinks, Page, T } from '@/components/ui';
 export default function About() {
   const router = useRouter();
   return (
-    <Page back title="이로운혜택 소개" subtitle="사업자이면서 시민·가구로도 받을 수 있는 지원을 모아 보여드립니다.">
+    <Page back title="이로운사람들 소개" subtitle="사업자이면서 시민·가구로도 받을 수 있는 지원을 모아 보여드립니다.">
       <Card>
         <T v="h3">무엇을 하나요</T>
         <T>정부·지자체 등이 공개한 지원금과 환급금을 공식 출처와 함께 모아, 사업자·개인·가구 대상별로 찾아볼 수 있게 합니다.</T>

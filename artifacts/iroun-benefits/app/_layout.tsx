@@ -126,7 +126,7 @@ export default function RootLayout() {
 }
 function Startup(){
   return <View style={{flex:1,backgroundColor:'#f8fafc',padding:24,justifyContent:'center',alignItems:'center',gap:20}}>
-    <Text style={{fontSize:28,fontWeight:'700',color:'#155eef'}} accessibilityRole="header">이로운혜택</Text>
+    <Text style={{fontSize:28,fontWeight:'700',color:'#155eef'}} accessibilityRole="header">이로운사람들</Text>
     <ActivityIndicator size="large" color="#155eef" accessibilityLabel="화면 준비 중" />
     <Text style={{fontSize:20,lineHeight:30,color:'#334155',textAlign:'center'}}>화면을 준비하고 있습니다.{'\n'}시간이 오래 걸리면 인터넷 연결을 확인해 주세요.</Text>
   </View>;

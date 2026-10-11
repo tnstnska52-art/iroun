@@ -51,7 +51,7 @@ export default function Home() {
         <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: c.primary, alignItems: 'center', justifyContent: 'center' }}>
           <Feather name="check" size={19} color={c.primaryForeground} />
         </View>
-        <T v="h2" style={{ flex: 1, fontWeight: '800' }}>이로운혜택</T>
+        <T v="h2" style={{ flex: 1, fontWeight: '800' }}>이로운사람들</T>
         <Pressable testID="nav-inbox" accessibilityRole="button" accessibilityLabel={unread > 0 ? `알림함, 새 알림 ${unread}건` : '알림함'}
           onPress={() => router.push(acc.isSignedIn ? '/inbox' : '/auth')}
           style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>

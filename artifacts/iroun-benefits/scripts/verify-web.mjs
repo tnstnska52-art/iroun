@@ -16,7 +16,7 @@ async function visit(path,text) {
 async function check(name,fn){await fn();results.push(name);console.log("PASS",name);}
 try{
   await check("무료 홈: 일반 안내와 실제 공고",async()=>{
-    await visit("/","이로운혜택");
+    await visit("/","이로운사람들");
     await page.getByText("소담스퀘어",{exact:false}).first().waitFor({timeout:45000});
     assert(!(await page.locator("body").innerText()).includes("예상 환급액"));
   });
@@ -48,7 +48,7 @@ try{
   await check("큰 글씨 320·375px 공개 화면 가로 잘림 검사",async()=>{
     for(const width of [320,375]){
       await page.setViewportSize({width,height:812});
-      for(const [path,text] of [["/","이로운혜택"],["/benefits","혜택 찾기"],["/benefit/nts-earned-income","근로장려금 제도 안내"],["/account","내 정보"],["/legal","개인정보처리방침"]]){
+      for(const [path,text] of [["/","이로운사람들"],["/benefits","혜택 찾기"],["/benefit/nts-earned-income","근로장려금 제도 안내"],["/account","내 정보"],["/legal","개인정보처리방침"]]){
         await visit(path,text);await page.waitForTimeout(700);
         const overflow=await page.evaluate(()=>{
           const w=innerWidth;

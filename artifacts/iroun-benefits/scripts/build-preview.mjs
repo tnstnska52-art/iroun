@@ -22,7 +22,7 @@ for (const f of files.filter((x) => x.includes('/assets/'))) {
   inlined++; bytes += size;
 }
 
-const page = `<title>이로운혜택 미리보기</title>
+const page = `<title>이로운사람들 미리보기</title>
 <style>
   :root { --frame: #F2F4F7; --ink: #191F28; color-scheme: light; }
   html, body { height: 100%; }
