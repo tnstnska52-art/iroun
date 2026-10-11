@@ -196,6 +196,11 @@ export default function BenefitDetail() {
         </Box>
       ) : null}
 
+      <Box title="지원내용">
+        <T>{b.support || '공식 페이지에서 확인'}</T>
+        <T v="small" color={c.mutedForeground}>금액은 기관이 정해요</T>
+      </Box>
+
       {unlocked ? (
         <>
       <Box title="이렇게 진행하세요">
@@ -231,13 +236,18 @@ export default function BenefitDetail() {
         </Box>
       ) : null}
 
-      <Box title="지원내용">
-        <T>{b.support || '공식 페이지에서 확인'}</T>
-        <T v="small" color={c.mutedForeground}>금액은 기관이 정해요</T>
-      </Box>
-
       {unlocked ? (
         <>
+      <Box title="필요 서류">
+        {b.documents.length === 0 ? <T>공식 페이지에서 확인</T> : b.documents.map((d) => <T key={d}>• {d}</T>)}
+      </Box>
+
+      <Box title="확인할 사항">
+        {b.checks.length === 0 && b.rules.length === 0 ? <T>공식 출처에서 확인해 주세요.</T> : null}
+        {b.checks.map((x, i) => <T key={i}>• {x}</T>)}
+        {b.rules.map((r, i) => <T key={`rule${i}`}>• {r.label} ({r.scope === 'business' ? '사업장' : '개인·가구'})</T>)}
+      </Box>
+
       <Box title="내 조건과 비교">
         {acc.active ? (
           recs.isLoading ? <Loading rows={1} /> : recs.error ? <ErrorState message={apiErrorMessage(recs.error)} onRetry={() => recs.refetch()} /> : myRecs.length === 0 ? (
@@ -263,16 +273,6 @@ export default function BenefitDetail() {
           </>
         )}
         <T v="small" color={c.mutedForeground}>최종 선정은 기관이 정해요</T>
-      </Box>
-
-      <Box title="필요 서류">
-        {b.documents.length === 0 ? <T>공식 페이지에서 확인</T> : b.documents.map((d) => <T key={d}>• {d}</T>)}
-      </Box>
-
-      <Box title="확인할 사항">
-        {b.checks.length === 0 && b.rules.length === 0 ? <T>공식 출처에서 확인해 주세요.</T> : null}
-        {b.checks.map((x, i) => <T key={i}>• {x}</T>)}
-        {b.rules.map((r, i) => <T key={`rule${i}`}>• {r.label} ({r.scope === 'business' ? '사업장' : '개인·가구'})</T>)}
       </Box>
 
         </>

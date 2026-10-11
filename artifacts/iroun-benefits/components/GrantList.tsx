@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
-import { BigMoney, Btn, T } from '@/components/ui';
+import { BigMoney, Btn, CountUp, Lively, T } from '@/components/ui';
 import { FREE_COUNT, won, type EstimateItem } from '@/lib/estimate';
 import { useAccount } from '@/lib/session';
 import { dday } from '@/components/BenefitCard';
@@ -72,7 +72,14 @@ export function Total({ label, count, total, tone = 'blue', note, onPress, testI
   return (
     <Pressable testID={testID} accessibilityRole={onPress ? 'button' : 'summary'} disabled={!onPress} onPress={onPress}
       style={({ pressed }) => ({ backgroundColor: tone === 'red' ? c.destructiveSoft : c.card, borderRadius: c.radius + 6, padding: 22, gap: 2, opacity: pressed ? 0.9 : 1 })}>
-      <T v="h3" color={tone === 'red' ? c.destructive : c.foreground}>{label} {count}건</T>
+      <View accessible accessibilityRole="text" accessibilityLabel={`${label} ${count}건`} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <T v="h3" color={tone === 'red' ? c.destructive : c.foreground}>{label}</T>
+        <Lively>
+          <View style={{ backgroundColor: color, borderRadius: 14, paddingHorizontal: 10, minHeight: 28, justifyContent: 'center' }}>
+            <CountUp key={`${label}${count}`} to={count} duration={700} color="#FFFFFF" style={{ fontSize: 16, lineHeight: 22, fontWeight: '800' }} format={(n) => `${n}건`} />
+          </View>
+        </Lively>
+      </View>
       {total > 0 ? <BigMoney key={`${label}${total}`} manwon={Math.floor(total / 10000)} color={color} /> : null}
       <T v="small" color={tone === 'red' ? c.destructive : c.mutedForeground}>{note ?? (total > 0 ? '공고 기준 최대 금액' : '금액은 공고에서 확인')}</T>
       {children}

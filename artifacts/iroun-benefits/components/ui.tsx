@@ -408,12 +408,32 @@ export function CountUp({ to, duration = 900, format, style, color }: { to: numb
 }
 
 /** 큰 금액: 숫자는 또렷하게, 단위(만원)는 한 단계 작게. */
+/** 생동감: 처음에 톡 튀어나오고, 그 뒤로 천천히 숨 쉬듯 커졌다 작아진다. */
+export function Lively({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  const v = React.useRef(new Animated.Value(0.85)).current;
+  React.useEffect(() => {
+    const native = Platform.OS !== 'web';
+    const pulse = Animated.loop(Animated.sequence([
+      Animated.delay(1600),
+      Animated.timing(v, { toValue: 1.06, duration: 260, easing: Easing.out(Easing.quad), useNativeDriver: native }),
+      Animated.timing(v, { toValue: 1, duration: 320, easing: Easing.inOut(Easing.quad), useNativeDriver: native }),
+    ]));
+    const pop = Animated.sequence([Animated.delay(delay), Animated.spring(v, { toValue: 1, friction: 4, tension: 140, useNativeDriver: native })]);
+    pop.start(() => pulse.start());
+    return () => { pop.stop(); pulse.stop(); };
+  }, [v, delay]);
+  return <Animated.View style={{ alignSelf: 'flex-start', transform: [{ scale: v }] }}>{children}</Animated.View>;
+}
+
+/** 큰 금액: 숫자는 또렷하게, 단위(만원)는 한 단계 작게. */
 export function BigMoney({ manwon, color, testID }: { manwon: number; color?: string; testID?: string }) {
   return (
-    <View testID={testID} accessible accessibilityRole="text" accessibilityLabel={`${manwon.toLocaleString('ko-KR')}만원`} style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
-      <CountUp to={manwon} color={color} style={{ fontSize: 40, lineHeight: 50, fontWeight: '700', letterSpacing: -0.5 }} />
-      <T color={color} style={{ fontSize: 22, lineHeight: 30, fontWeight: '700' }}>만원</T>
-    </View>
+    <Lively delay={120}>
+      <View testID={testID} accessible accessibilityRole="text" accessibilityLabel={`${manwon.toLocaleString('ko-KR')}만원`} style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
+        <CountUp to={manwon} color={color} style={{ fontSize: 40, lineHeight: 50, fontWeight: '700', letterSpacing: -0.5 }} />
+        <T color={color} style={{ fontSize: 22, lineHeight: 30, fontWeight: '700' }}>만원</T>
+      </View>
+    </Lively>
   );
 }
 
