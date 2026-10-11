@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Animated, Pressable, View } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getListBenefitsQueryKey, useListBenefits } from '@workspace/api-client-react';
 import { Feather } from '@expo/vector-icons';
@@ -8,7 +8,7 @@ import { TodayPicks } from '@/components/TodayPicks';
 import { todayPicks } from '@/lib/picks';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
-import { BigMoney, Btn, CountUp, Disclaimer, Emoji, ErrorState, FooterLinks, Loading, Page, SectionHead, T } from '@/components/ui';
+import { BigMoney, Btn, CountUp, Disclaimer, Emoji, ErrorState, FooterLinks, Loading, Page, SectionHead, T, useBeat } from '@/components/ui';
 import { GrantRow, Total, useJoinHref } from '@/components/GrantList';
 import { apiErrorMessage } from '@/lib/text';
 import { daysLeft, fmtDate } from '@/lib/util';
@@ -20,6 +20,7 @@ export default function Home() {
   const c = useColors();
   const router = useRouter();
   const acc = useAccount();
+  const beat = useBeat();
   const newReplies = useUnreadReplies().count;
   const join = useJoinHref();
   const benefits = useListBenefits(undefined, { query: { queryKey: getListBenefitsQueryKey() } });
@@ -94,16 +95,18 @@ export default function Home() {
             {expired ? <T v="small" color={c.mutedForeground}>접수 내역은 계속 볼 수 있어요</T> : null}
           </View>
           {!expired ? (
-            <Pressable testID="home-estimate-start" accessibilityRole="button" accessibilityLabel="내 사업자 지원금은 얼마일까? 조건 고르기" onPress={() => router.push('/onboarding')}
-              style={({ pressed }) => ({ backgroundColor: c.primary, borderRadius: c.radius + 6, paddingVertical: 24, paddingHorizontal: 22, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] })}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <T v="title" color="#FFFFFF">내 사업자 지원금은{'\n'}얼마일까?</T>
-                <T v="small" color="#DCE6FF">1분이면 끝나요</T>
-              </View>
-              <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
-                <Feather name="arrow-right" size={26} color={c.primary} />
-              </View>
-            </Pressable>
+            <Animated.View style={{ borderRadius: c.radius + 6, transform: [{ scale: beat.interpolate({ inputRange: [0, 1], outputRange: [1, 1.035] }) }], shadowColor: c.primary, shadowOffset: { width: 0, height: 8 }, shadowRadius: 18, shadowOpacity: beat.interpolate({ inputRange: [0, 1], outputRange: [0.12, 0.42] }), elevation: 6 }}>
+              <Pressable testID="home-estimate-start" accessibilityRole="button" accessibilityLabel="내 사업자 지원금은 얼마일까? 조건 고르기" onPress={() => router.push('/onboarding')}
+                style={({ pressed }) => ({ backgroundColor: c.primary, borderRadius: c.radius + 6, paddingVertical: 24, paddingHorizontal: 22, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.9 : 1 })}>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <T v="title" color="#FFFFFF">내 사업자 지원금은{'\n'}얼마일까?</T>
+                  <T v="small" color="#DCE6FF">1분이면 끝나요</T>
+                </View>
+                <Animated.View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', transform: [{ translateX: beat.interpolate({ inputRange: [0, 1], outputRange: [0, 7] }) }] }}>
+                  <Feather name="arrow-right" size={26} color={c.primary} />
+                </Animated.View>
+              </Pressable>
+            </Animated.View>
           ) : <Btn label="계속 이용하기" onPress={() => router.push('/membership' as never)} testID="home-continue" />}
           <TodayPicks items={picks} />
           {nowOpen.length > 0 ? (

@@ -408,6 +408,25 @@ export function CountUp({ to, duration = 900, format, style, color }: { to: numb
 }
 
 /** 큰 금액: 숫자는 또렷하게, 단위(만원)는 한 단계 작게. */
+/**
+ * 눌러 달라고 손짓하는 움직임. 0→1→0 을 되풀이하는 값 하나를 돌려주고,
+ * 쓰는 쪽에서 크기·위치·밝기에 나눠 쓴다(버튼 전체와 화살표가 같은 박자로 움직인다).
+ */
+export function useBeat(period = 1900) {
+  const v = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    const native = Platform.OS !== 'web';
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(v, { toValue: 1, duration: 520, easing: Easing.out(Easing.quad), useNativeDriver: native }),
+      Animated.timing(v, { toValue: 0, duration: 520, easing: Easing.in(Easing.quad), useNativeDriver: native }),
+      Animated.delay(Math.max(0, period - 1040)),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [v, period]);
+  return v;
+}
+
 /** 생동감: 처음에 톡 튀어나오고, 그 뒤로 천천히 숨 쉬듯 커졌다 작아진다. */
 export function Lively({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
   const v = React.useRef(new Animated.Value(0.85)).current;
