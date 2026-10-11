@@ -50,7 +50,7 @@ export default function Membership() {
       await qc.invalidateQueries({ queryKey: getGetMeQueryKey() });
       setMsg({ t: 'ok', s: r.message });
     } catch (e) {
-      if (errStatus(e) === 503) setMsg({ t: 'warn', s: '스토어 결제 연동 설정이 아직 끝나지 않아 구매 복원을 할 수 없습니다. 복원에 성공한 것이 아닙니다. 설정이 끝나면 다시 시도해 주세요.' });
+      if (errStatus(e) === 503) setMsg({ t: 'warn', s: '구독이 아직 준비 중이라 복원할 수 없어요.' });
       else setMsg({ t: 'error', s: apiErrorMessage(e) });
     }
     setBusy(false);
@@ -58,24 +58,32 @@ export default function Membership() {
   const ent = m.data?.entitlement ?? acc.me?.entitlement;
 
   return (
-    <Page back title="회원 이용권" subtitle="맞춤 확인과 알림 설정은 회원 이용권으로 제공됩니다.">
+    <Page back title={ent?.active ? '이용 중이에요' : '계속 이용하기'}>
       <Card>
-        <T v="h3">이용권으로 할 수 있는 일</T>
-        <T>• 내 사업장·가구 정보와 지원 조건을 비교해 사유 보기</T>
-        <T>• 맞춤 알림 수신 의사 저장</T>
-        <T v="small" color={c.mutedForeground}>지원 공지 열람, 환급금 안내, 저장·서류 체크는 이용권 없이도 쓸 수 있습니다.</T>
+        <T v="h3">{ent?.active ? '지금 모두 볼 수 있어요' : '구독하면 다시 볼 수 있어요'}</T>
+        <T>• 지원금 전체 목록과 금액</T>
+        <T>• 놓친 지원금</T>
+        <T>• 신청 순서와 새 공고 알림</T>
       </Card>
 
-      <Section title="요금">
-        {acc.isSignedIn && m.isLoading ? <Loading rows={1} /> : acc.isSignedIn && m.error ? <ErrorState message={apiErrorMessage(m.error)} onRetry={() => m.refetch()} /> : (
-          <Card>
-            {m.data?.configured ? <Notice tone="ok" title="스토어 결제 연동됨">{m.data.message}</Notice> : <Notice tone="warn" title="결제 준비 중">{m.data?.message || '스토어 구독 연동이 아직 준비되지 않았습니다.'} 요금은 출시 전 확인 중이며, 현재는 구매할 수 없습니다.</Notice>}
-            {monthly?<T v="h3">월 {monthly.product.priceString}</T>:null}
-            {storeError?<Notice tone="warn">{storeError}</Notice>:null}
-            <Btn label={monthly?'스토어에서 월구독 시작':'구독 시작 (미연결)'} disabled={!monthly||busy} loading={busy} onPress={purchase} icon="lock" testID="purchase-disabled" hint="실제 스토어 상품·가격이 확인되기 전에는 구매할 수 없습니다" />
-          </Card>
-        )}
-      </Section>
+      {ent?.active ? null : (
+        <Section title="구독">
+          {acc.isSignedIn && m.isLoading ? <Loading rows={1} /> : acc.isSignedIn && m.error ? <ErrorState message={apiErrorMessage(m.error)} onRetry={() => m.refetch()} /> : monthly ? (
+            <Card>
+              <T v="title">월 {monthly.product.priceString}</T>
+              <T v="small" color={c.mutedForeground}>언제든 스토어에서 해지할 수 있어요</T>
+              <Btn label="구독 시작" disabled={busy} loading={busy} onPress={purchase} testID="purchase" />
+            </Card>
+          ) : (
+            <Card>
+              <T v="h3">구독은 준비 중이에요</T>
+              <T v="small" color={c.mutedForeground}>먼저 쓰고 싶으면 문의를 남겨 주세요</T>
+              {storeError ? <T v="small" color={c.warning}>{storeError}</T> : null}
+              <Btn label="문의 남기기" icon="message-circle" onPress={() => router.push('/consult' as never)} testID="membership-ask" />
+            </Card>
+          )}
+        </Section>
+      )}
 
       <Section title="내 이용 상태">
         {!acc.isSignedIn ? (
@@ -83,17 +91,16 @@ export default function Membership() {
         ) : ent ? (
           <Card>
             <Badge label={ent.active ? '이용 가능' : '이용권 없음'} tone={ent.active ? 'ok' : 'muted'} />
-            <T>스토어 구독: {ent.subscriptionActive ? `이용 중${ent.subscriptionUntil ? ` (${fmtDate(ent.subscriptionUntil)}까지)` : ''}` : '없음'}</T>
-            <T>무상 이용권: {ent.grantActive ? `사용 중${ent.grantUntil ? ` (${fmtDate(ent.grantUntil)}까지)` : ''}` : '없음'}</T>
-            <T v="small" color={c.mutedForeground}>무상 이용권은 운영자가 계정에 직접 부여하는 실제 무료 이용권입니다. 앱 밖에서 결제하는 상품이 아닙니다.</T>
-          </Card>
+            <T>구독: {ent.subscriptionActive ? `이용 중${ent.subscriptionUntil ? ` (${fmtDate(ent.subscriptionUntil)}까지)` : ''}` : '없음'}</T>
+            <T>무료 이용: {ent.grantActive ? `사용 중${ent.grantUntil ? ` (${fmtDate(ent.grantUntil)}까지)` : ''}` : '없음'}</T>
+                      </Card>
         ) : <Loading rows={1} />}
       </Section>
 
       {acc.isSignedIn ? (
         <Section title="구매 복원">
           <Card>
-            <T>다른 기기에서 구독하셨다면 복원을 눌러 확인합니다.</T>
+            <T>다른 휴대폰에서 구독했다면 눌러 주세요</T>
             <Btn label="구매 복원" icon="refresh-cw" kind="secondary" loading={busy} onPress={restore} testID="restore-purchases" />
             {msg ? <Notice tone={msg.t === 'warn' ? 'warn' : msg.t}>{msg.s}</Notice> : null}
           </Card>
@@ -102,7 +109,7 @@ export default function Membership() {
 
       <Section title="구독 관리·해지">
         <Card>
-          <T>구독은 앱이 아니라 스토어에서 관리하고 해지합니다.</T>
+          <T>해지는 스토어에서 해요</T>
           <Btn kind="secondary" icon="external-link" label="Apple 구독 관리 열기" onPress={() => Linking.openURL('https://apps.apple.com/account/subscriptions')} testID="manage-apple" />
           <Btn kind="secondary" icon="external-link" label="Google Play 구독 관리 열기" onPress={() => Linking.openURL('https://play.google.com/store/account/subscriptions')} testID="manage-google" />
         </Card>
@@ -110,8 +117,8 @@ export default function Membership() {
 
       <Section title="꼭 알아두세요">
         <Card>
-          <T>• 스토어 구독은 해지하지 않으면 기간이 끝날 때 같은 조건으로 자동 갱신됩니다. 갱신 전에 스토어에서 해지할 수 있습니다.</T>
-          <T>• 앱에서 회원 탈퇴를 해도 스토어 구독은 자동으로 해지되지 않습니다. 탈퇴 전에 스토어에서 먼저 해지해 주세요.</T>
+          <T>• 구독은 해지 전까지 자동 갱신돼요</T>
+          <T>• 탈퇴해도 구독은 해지되지 않아요. 스토어에서 먼저 해지하세요</T>
           <Btn kind="ghost" label="개인정보처리방침" onPress={() => router.push({ pathname: '/legal', params: { section: 'privacy' } })} />
           <Btn kind="ghost" label="이용약관" onPress={() => router.push({ pathname: '/legal', params: { section: 'terms' } })} />
         </Card>

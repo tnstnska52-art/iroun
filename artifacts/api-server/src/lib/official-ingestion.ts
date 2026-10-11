@@ -1,15 +1,18 @@
 import { pool } from "@workspace/db";
 import { audit } from "./benefit-store";
-import { benefitSchema, excludedCategory, normalizeSourceKey, officialUrl } from "./benefit-domain";
+import { benefitSchema, excludedCategory, normalizeSourceKey, officialUrl, publicBenefit } from "./benefit-domain";
 
 /**
  * Store provider notices for operator review. Provider changes are proposals:
  * they must not overwrite curated fields or publish without a human review.
+ * The only exception is options.publish for a brand-new notice: the caller sets it
+ * when automatic structuring found every core field with no ambiguity and the
+ * operator switched IROUN_AUTO_PUBLISH_CONFIDENT on. Existing notices are never auto-published.
  */
 export async function stageOfficialNotice(
   input: unknown,
   operator: string,
-  options: { sourceRecord?: unknown; baselineOnly?: boolean; contentHash?: string } = {},
+  options: { sourceRecord?: unknown; baselineOnly?: boolean; contentHash?: string; publish?: boolean } = {},
 ) {
   const b=benefitSchema.parse(input);
   if(!officialUrl(b.sourceUrl)||excludedCategory(b)) throw new Error("수집 대상이 아닌 출처 또는 제외 사업입니다.");
@@ -61,14 +64,16 @@ export async function stageOfficialNotice(
       await client.query("COMMIT");
       return {id:prior.id,reviewStatus:reviewCopy.reviewStatus,automaticallyPublished:false,preserved:true,reused:true};
     }
+    const auto=options.publish===true&&publicBenefit({...b,reviewStatus:"공개"});
+    if(auto) b.reviewStatus="공개";
     const inserted=await client.query("INSERT INTO iroun_benefits(id,source_key,data) VALUES($1,$2,$3) ON CONFLICT(source_key) DO NOTHING RETURNING id",[b.id,key,JSON.stringify(b)]);
     if(!inserted.rowCount) throw new Error("동일 기관·식별자의 공고가 이미 있습니다.");
-    await audit(operator,"공식 자료 신규 검토대기",b.id,{
+    await audit(operator,auto?"공식 자료 신규 자동 공개(자동 정리 확신 높음)":"공식 자료 신규 검토대기",b.id,{
       before:null,after:b,proposed:b,sourceRecord:options.sourceRecord??input,
     },client);
     await saveSnapshot();
     await client.query("COMMIT");
-    return {id:b.id,reviewStatus:b.reviewStatus,automaticallyPublished:false,preserved:false,reused:false};
+    return {id:b.id,reviewStatus:b.reviewStatus,automaticallyPublished:auto,preserved:false,reused:false};
   }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
 }
 

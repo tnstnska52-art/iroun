@@ -6,6 +6,7 @@ import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { SymbolView } from 'expo-symbols';
+import { useUnreadReplies } from '@/lib/replies';
 
 const TABS = [
   { name: 'index', label: '홈', sf: 'house', feather: 'home' },
@@ -17,12 +18,14 @@ const TABS = [
 const HIDDEN = ['refunds', 'progress', 'mine'] as const;
 
 function NativeTabLayout() {
+  const unread = useUnreadReplies().count;
   return (
     <NativeTabs>
       {TABS.map((t) => (
         <NativeTabs.Trigger key={t.name} name={t.name}>
           <NativeTabs.Trigger.Icon sf={t.sf} />
           <NativeTabs.Trigger.Label>{t.label}</NativeTabs.Trigger.Label>
+          {t.name === 'consult' && unread > 0 ? <NativeTabs.Trigger.Badge>{String(unread)}</NativeTabs.Trigger.Badge> : null}
         </NativeTabs.Trigger>
       ))}
     </NativeTabs>
@@ -75,6 +78,7 @@ function useWebTablistKeyboard() {
 
 function ClassicTabLayout() {
   const colors = useColors();
+  const unread = useUnreadReplies().count;
   useWebTablistKeyboard();
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
@@ -100,7 +104,9 @@ function ClassicTabLayout() {
           name={t.name}
           options={{
             title: t.label,
-            tabBarAccessibilityLabel: `${t.label} 탭`,
+            tabBarAccessibilityLabel: t.name === 'consult' && unread > 0 ? `상담 탭, 새 답변 ${unread}개` : `${t.label} 탭`,
+            tabBarBadge: t.name === 'consult' && unread > 0 ? unread : undefined,
+            tabBarBadgeStyle: { backgroundColor: colors.destructive, color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
             tabBarButtonTestID: `tab-${t.name}`,
             tabBarIcon: ({ color }) =>
               isIOS ? <SymbolView name={t.sf} tintColor={color} size={26} /> : <Feather name={t.feather} size={24} color={color} />,

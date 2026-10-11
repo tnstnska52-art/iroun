@@ -160,6 +160,18 @@ export interface Benefit {
   maxAmount?: number;
   /** 신청 난이도 1(쉬움)~5(어려움). 생략하면 서류·조건 수로 계산 */
   difficulty?: number;
+  /** 자동 정리 기록. 운영자 검토용 */
+  extraction?: BenefitExtraction;
+}
+
+/** 자동 정리 근거: 원문의 어느 문장에서 무엇을 읽었는지 */
+export interface NoticeEvidence { field: string; label: string; quote: string }
+/** 공고에 저장되는 자동 정리 기록(운영자 검토용) */
+export interface BenefitExtraction { confidence: number; evidence: NoticeEvidence[]; missing: string[]; cautions: string[]; at: string }
+/** 원문 자동 정리 결과 */
+export interface NoticeExtraction {
+  region?: string; rules: Rule[]; maxAmount?: number; documents: string[]; startsAt?: string; endsAt?: string;
+  status?: BenefitStatus; budgetStatus: BenefitBudgetStatus; evidence: NoticeEvidence[]; confidence: number; missing: string[]; cautions: string[];
 }
 
 export interface Business {

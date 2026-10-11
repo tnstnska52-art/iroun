@@ -4,6 +4,7 @@ import { z } from "zod";
 import { benefitSchema,excludedCategory,type Benefit } from "./benefit-domain";
 import {storedFeedState,storeFeedState,reserveFeedCall} from "./public-feeds";
 import { refreshOfficialCheck,stageOfficialNotice } from "./official-ingestion";
+import { applyExtraction,autoPublishable,extractNotice } from "./notice-extract";
 
 export const BIZINFO_DOCUMENTATION="https://www.bizinfo.go.kr/apiDetail.do?id=bizinfoApi";
 export const feedState:{
@@ -73,6 +74,14 @@ export function parseBizinfoRecord(value:unknown,checkedAt=new Date().toISOStrin
     startsAt:dates[0]??"",endsAt:dates[1]??"",checkedAt,budgetStatus:"확인 필요",reviewStatus:"검토대기",isTest,rules:[],
   });
 }
+/** 기업마당 응답의 본문 항목을 모아 자동 정리한다. 첨부 공고문(HWP·PDF)은 읽지 못한다. */
+export function structureBizinfo(b:Benefit,raw:unknown,now=new Date()){
+  const r=raw&&typeof raw==="object"?raw as Record<string,unknown>:{};
+  const part=(label:string,...keys:string[])=>{const v=field(r,...keys);return v?`${label}: ${v}`:"";};
+  const body=[part("사업개요","bsnsSumryCn","description"),part("지원대상","trgetNm"),part("신청방법·제출서류","reqstMthPapersCn"),part("신청기간","reqstBeginEndDe","reqstDt")].filter(Boolean).join("\n");
+  const x=extractNotice({title:b.title,text:body,period:field(r,"reqstBeginEndDe","reqstDt"),startsAt:b.startsAt,endsAt:b.endsAt},now);
+  return {benefit:benefitSchema.parse(applyExtraction(b,x)),extraction:x};
+}
 export async function runBizinfoFeed(fetcher:typeof fetch=fetch,testMode=false){
   const stateKey=testMode?"bizinfo:test":"bizinfo";
   Object.assign(feedState,await storedFeedState(stateKey));
@@ -91,7 +100,7 @@ export async function runBizinfoFeed(fetcher:typeof fetch=fetch,testMode=false){
     acquired=(await lock.query("SELECT pg_try_advisory_lock(83417) AS acquired")).rows[0]?.acquired===true;
     if(!acquired) return {blocked:false,busy:true,staged:0,unchanged:0};
     let staged=0,unchanged=0,excluded=0,pagesFetched=0,lastPageLength=0;
-    let created=0,updated=0;
+    let created=0,updated=0,published=0;
     const pageStart=Math.max(1,Number(feedState.nextPage)||1);
     const dailyValue=Number(process.env.IROUN_BIZINFO_DAILY_LIMIT);
     const dailyLimit=Number.isInteger(dailyValue)&&dailyValue>0?Math.min(dailyValue,24):24;
@@ -110,8 +119,10 @@ export async function runBizinfoFeed(fetcher:typeof fetch=fetch,testMode=false){
       if(!Array.isArray(rows)) throw new Error("공식 JSON 응답 형식 확인 필요");
       pagesFetched++;lastPageLength=rows.length;
       for(const raw of rows.slice(0,100)){
-        const b=parseBizinfoRecord(raw,feedState.lastAttempt,testMode);
-        if(excludedCategory(b)){excluded++;continue;}
+        const parsed=parseBizinfoRecord(raw,feedState.lastAttempt,testMode);
+        if(excludedCategory(parsed)){excluded++;continue;}
+        const structured=structureBizinfo(parsed,raw);
+        const b=structured.benefit;
         const fingerprint=createHash("sha256").update(canonical(raw)).digest("hex");
         const prior=(await pool.query("SELECT content_hash FROM iroun_feed_snapshots WHERE source_id=$1",[b.sourceId])).rows[0];
         if(prior?.content_hash===fingerprint){
@@ -119,8 +130,9 @@ export async function runBizinfoFeed(fetcher:typeof fetch=fetch,testMode=false){
           unchanged++;continue;
         }
         const result=await stageOfficialNotice(b,"official-bizinfo-worker",{
-          sourceRecord:raw,baselineOnly:!prior,contentHash:fingerprint,
+          sourceRecord:raw,baselineOnly:!prior,contentHash:fingerprint,publish:!testMode&&autoPublishable(structured.extraction),
         });
+        if(result.automaticallyPublished) published++;
         if(result.reused) updated++;
         else created++;
         staged++;
@@ -137,7 +149,7 @@ export async function runBizinfoFeed(fetcher:typeof fetch=fetch,testMode=false){
         :"공식 API의 제한된 페이지를 확인했습니다. 전국 수집 완료가 아니며 새 자료는 검토대기이고 자동 공개하지 않습니다.",
     });
     await storeFeedState(stateKey,feedState);
-    return {blocked:false,staged,unchanged,excluded,pagesFetched,limited,nationwideComplete:false,automaticallyPublished:false};
+    return {blocked:false,staged,unchanged,excluded,pagesFetched,limited,nationwideComplete:false,automaticallyPublished:published>0,published};
   }catch{
     feedState.status="확인 필요";feedState.reason="공식 API 호출 또는 응답 처리 실패. 자동수집 완료가 아닙니다.";
     await storeFeedState(stateKey,feedState);

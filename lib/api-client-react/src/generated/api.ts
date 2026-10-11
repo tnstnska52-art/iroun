@@ -2975,3 +2975,8 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getProcessAdminDeletionMutationOptions(options));
     }
 
+
+
+/** 공고 원문 자동 정리(관리자). POST /admin/extract — 손으로 추가한 호출 */
+export const extractAdminNotice = async (body: { title: string; text: string }, options?: Parameters<typeof customFetch>[1]): Promise<import('./api.schemas').NoticeExtraction> =>
+  customFetch<import('./api.schemas').NoticeExtraction>('/api/admin/extract', { ...options, method: 'POST', headers: { 'Content-Type': 'application/json', ...options?.headers }, body: JSON.stringify(body) });

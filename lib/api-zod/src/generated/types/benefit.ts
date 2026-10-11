@@ -39,4 +39,6 @@ export interface Benefit {
   maxAmount?: number;
   /** 신청 난이도 1(쉬움)~5(어려움). 생략하면 서류·조건 수로 계산 */
   difficulty?: number;
+  /** 자동 정리 기록. 운영자 검토용 */
+  extraction?: { confidence: number; evidence: { field: string; label: string; quote: string }[]; missing: string[]; cautions: string[]; at: string };
 }

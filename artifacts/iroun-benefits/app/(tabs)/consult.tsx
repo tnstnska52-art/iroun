@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useUnreadReplies } from '@/lib/replies';
 import { useQueryClient } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 import { createInquiry, getGetServiceStateQueryKey } from '@workspace/api-client-react';
@@ -31,6 +32,9 @@ export default function Consult() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   // 같은 문의는 실패해도 같은 키로 다시 보낸다. 성공하면 새 키.
   const key = useRef(newId());
+  // 이 화면을 보고 있는 동안 도착한 답변은 읽은 것으로 처리한다.
+  const { markSeen } = useUnreadReplies();
+  useFocusEffect(useCallback(() => { markSeen(); }, [markSeen]));
 
   const send = async () => {
     const text = body.trim();

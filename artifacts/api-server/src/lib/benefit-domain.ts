@@ -8,6 +8,8 @@ export const personalSchema = z.object({
   children: z.number().int().min(0).max(30).optional(), housing: z.string().max(40).optional(),
 }).strict();
 export const EMPLOYEE_BANDS = ["없음", "1~4명", "5~9명", "10~29명", "30명 이상"] as const;
+/** 연매출 구간(원). 선택식으로만 받으므로 조건과는 구간으로 비교한다. */
+export const REVENUE_RANGE: Record<string, [number, number]> = {"1억 원 미만":[0,99_999_999],"1억~3억 원":[100_000_000,300_000_000],"3억~10억 원":[300_000_000,1_000_000_000],"10억 원 이상":[1_000_000_000,Infinity]};
 const BAND_RANGE: Record<string, [number, number]> = {"없음":[0,0],"1~4명":[1,4],"5~9명":[5,9],"10~29명":[10,29],"30명 이상":[30,Infinity]};
 /** 구간으로만 아는 값의 비교. 구간 전체가 조건을 만족하면 true, 전체가 벗어나면 false, 걸치면 확인 필요(undefined). */
 function rangeCompare(min:number,max:number,op:string,expected:unknown):boolean|undefined{
@@ -43,7 +45,7 @@ export const trackingSchema = z.object({
   saved: z.boolean(), stage: z.enum(["관심", "신청 준비", "신청함", "결과 확인", "지급 확인"]),
   checkedDocuments: z.array(z.string().max(200)).max(100), deadlineReminder: z.boolean(),
 }).strict();
-const fields = ["province", "district", "birthYear", "age", "income", "household", "children", "housing", "entity", "industry", "situation", "openedAt", "revenue", "employees", "duplicateBenefit"];
+const fields = ["province", "district", "birthYear", "age", "income", "household", "children", "housing", "entity", "industry", "situation", "openedAt", "revenue", "employees", "duplicateBenefit", "premises"];
 export const ruleSchema = z.object({
   scope: z.enum(["personal", "business"]),
   field: z.enum(fields as [string, ...string[]]),
@@ -70,6 +72,12 @@ export const benefitSchema = z.object({
   maxAmount: z.number().int().positive().max(100_000_000_000).optional(),
   // 신청 난이도 1(쉬움)~5(어려움). 운영자가 직접 정하면 이 값을 쓰고, 비우면 서류·조건 수로 계산한다.
   difficulty: z.number().int().min(1).max(5).optional(),
+  // 자동 정리 기록: 원문 어느 문장에서 무엇을 읽었는지. 운영자 검토용이며 고객 판단에는 쓰지 않는다.
+  extraction: z.object({
+    confidence: z.number().int().min(0).max(100),
+    evidence: z.array(z.object({field: z.string().max(40), label: z.string().max(200), quote: z.string().max(200)}).strict()).max(40),
+    missing: z.array(z.string().max(60)).max(20), cautions: z.array(z.string().max(200)).max(20), at: z.string().max(40),
+  }).strict().optional(),
 }).strict();
 export type Benefit = z.infer<typeof benefitSchema>;
 export type Profile = z.infer<typeof profileSchema>;
@@ -161,7 +169,8 @@ export function matchBenefit(b: Benefit, p: Profile, now = new Date()) {
       const banded = r.scope==="business" && (actual===undefined||actual===null||actual==="") ? (
         r.field==="employees" && biz.employeeBand && BAND_RANGE[biz.employeeBand] ? rangeCompare(BAND_RANGE[biz.employeeBand]![0],BAND_RANGE[biz.employeeBand]![1],r.operator,expected)
         : r.field==="openedAt" && biz.openedYear && typeof expected==="string" && Number.isFinite(Date.parse(expected)) ? rangeCompare(biz.openedYear<=2009?Date.parse("1900-01-01T00:00:00+09:00"):Date.parse(`${biz.openedYear}-01-01T00:00:00+09:00`),Date.parse(`${biz.openedYear}-12-31T23:59:59+09:00`),r.operator,Date.parse(expected))
-        : null) : null;
+        : null) : r.scope==="business" && r.field==="revenue" && typeof actual==="string" && REVENUE_RANGE[actual] && typeof expected==="number"
+        ? rangeCompare(REVENUE_RANGE[actual]![0],REVENUE_RANGE[actual]![1],r.operator,expected) : null;
       const result = banded!==null ? banded : r.field === "age" && p.personal.birthYear && typeof r.value === "number" && Math.abs(year - p.personal.birthYear - r.value) <= 1 ? undefined : compare(actual, r.operator, expected);
       if (result === true) reasons.push(`${r.label}: 입력 조건과 일치합니다.`);
       else if (result === false) exclusions.push(`${r.label}: 입력 조건과 다릅니다.`);

@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getListBenefitsQueryKey, useListBenefits } from '@workspace/api-client-react';
 import { Feather } from '@expo/vector-icons';
+import { useUnreadReplies } from '@/lib/replies';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
 import { Btn, CountUp, Disclaimer, Emoji, ErrorState, FooterLinks, Loading, Page, SectionHead, T } from '@/components/ui';
@@ -17,6 +18,7 @@ export default function Home() {
   const c = useColors();
   const router = useRouter();
   const acc = useAccount();
+  const newReplies = useUnreadReplies().count;
   const join = useJoinHref();
   const benefits = useListBenefits(undefined, { query: { queryKey: getListBenefitsQueryKey() } });
   const refetchMe = acc.refetch;
@@ -78,7 +80,7 @@ export default function Home() {
                 <Feather name="arrow-right" size={26} color={c.primary} />
               </View>
             </Pressable>
-          ) : <Btn label="상담에 문의 남기기" onPress={() => router.push('/consult' as never)} testID="home-consult" />}
+          ) : <Btn label="계속 이용하기" onPress={() => router.push('/membership' as never)} testID="home-continue" />}
           {easy.length > 0 ? (
             <>
               <SectionHead emoji="🔥" motion="pulse" title="신청이 쉬운 지원금" onMore={() => router.push('/benefits')} testID="home-easy-more" />
@@ -98,6 +100,14 @@ export default function Home() {
             <Total testID="home-missed" tone="red" label={`${lastYear}년에 놓친 지원금`} count={past.items.length} total={past.total} note="올해는 놓치지 마세요" onPress={() => router.push({ pathname: '/benefits', params: { tab: 'missed' } })} />
           ) : null}
 
+          {newReplies > 0 ? (
+            <Pressable testID="home-reply" accessibilityRole="button" accessibilityLabel={`상담 답변 ${newReplies}개 도착. 눌러서 보기`} onPress={() => router.push('/consult' as never)}
+              style={({ pressed }) => ({ backgroundColor: c.card, borderRadius: c.radius + 6, padding: 18, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.9 : 1 })}>
+              <Emoji char="💬" motion="wiggle" />
+              <T v="h3" style={{ flex: 1 }}>답변이 도착했어요</T>
+              <Feather name="chevron-right" size={22} color={c.mutedForeground} />
+            </Pressable>
+          ) : null}
           {openTasks > 0 ? (
             <Pressable testID="home-tasks" accessibilityRole="button" accessibilityLabel={`내가 할 일 ${openTasks}건`} onPress={() => router.push('/company-progress')}
               style={({ pressed }) => ({ backgroundColor: c.primary, borderRadius: c.radius + 6, padding: 20, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.9 : 1 })}>

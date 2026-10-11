@@ -41,7 +41,7 @@ export default function Grants() {
           <Emoji char={expired ? '🔒' : '🔍'} size={40} motion="bounce" />
           <T v="title" style={{ textAlign: 'center' }}>{expired ? '맞춤 이용이 끝났어요' : '조건만 고르면\n지원금을 찾아드려요'}</T>
           <T color={c.mutedForeground} style={{ textAlign: 'center' }}>{expired ? '접수 내역은 계속 볼 수 있어요' : '1분이면 끝나요'}</T>
-          <Btn label={expired ? '상담에 문의 남기기' : '내 사업자 지원금은 얼마일까?'} onPress={() => router.push((expired ? '/consult' : '/onboarding') as never)} testID="grants-start" style={{ alignSelf: 'stretch' }} />
+          <Btn label={expired ? '계속 이용하기' : '내 사업자 지원금은 얼마일까?'} onPress={() => router.push((expired ? '/membership' : '/onboarding') as never)} testID="grants-start" style={{ alignSelf: 'stretch' }} />
         </View>
         {expired && open.length > 0 ? (
           <>

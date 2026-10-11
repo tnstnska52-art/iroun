@@ -8,6 +8,7 @@ import { benefitSchema, excludedCategory, matchBenefit, normalizeSourceKey, offi
 import { billingConfig,syncCustomer,validWebhookAuthorization } from "../lib/store-provider";
 import { registerDevice } from "../lib/push-delivery";
 import { bizinfoStatus,runBizinfoFeed } from "../lib/official-feed";
+import { extractNotice } from "../lib/notice-extract";
 import {publicFeedStatus,runPublicFeed} from "../lib/public-feeds";
 
 type AuthedRequest = Request & { customerId?: string };
@@ -176,6 +177,11 @@ benefitsRouter.get("/admin/dashboard",async(_req,res)=>{
     audit:(await pool.query("SELECT * FROM iroun_audit ORDER BY id DESC LIMIT 300")).rows,
     deletions:(await pool.query("SELECT * FROM iroun_deletions ORDER BY created_at DESC LIMIT 100")).rows,
     connections:[...connections.filter(c=>!["정부24","기업마당"].includes(c.name)),await bizinfoStatus(),...await publicFeedStatus()]});
+});
+// 공고 원문을 붙여 넣으면 지역·조건·금액·서류를 뽑아 준다. 저장하지 않고 결과만 돌려준다.
+benefitsRouter.post("/admin/extract",async(req,res)=>{
+  const input=z.object({title:z.string().max(200),text:z.string().min(1).max(30000)}).strict().parse(req.body);
+  res.json(extractNotice(input));
 });
 benefitsRouter.post("/admin/feeds/bizinfo/run",async(_req,res)=>res.json(await runBizinfoFeed()));
 benefitsRouter.post("/admin/feeds/public/run",async(req,res)=>{

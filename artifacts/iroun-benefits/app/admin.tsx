@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { runOfficialFeed,runPublicOfficialFeed } from '@workspace/api-client-react';
+import { extractAdminNotice, runOfficialFeed,runPublicOfficialFeed, type NoticeExtraction } from '@workspace/api-client-react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -53,6 +53,27 @@ function Select({ label, value, options, onChange, optionLabels }: { label: stri
   );
 }
 
+/** 자동 정리 결과: 무엇을 읽었고 원문 어느 문장이 근거인지 보여준다. */
+function ExtractionBox({ x }: { x: { confidence: number; evidence: { field: string; label: string; quote: string }[]; missing: string[]; cautions: string[] } }) {
+  const c = useColors();
+  return (
+    <View testID="adm-extraction" style={{ gap: 8 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        <Badge label={`찾은 항목 ${x.confidence}%`} tone={x.confidence >= 80 ? 'ok' : x.confidence >= 50 ? 'info' : 'warn'} />
+        {x.cautions.length ? <Badge label={`주의 ${x.cautions.length}`} tone="warn" /> : null}
+      </View>
+      {x.evidence.map((e, i) => (
+        <View key={i} style={{ gap: 2 }}>
+          <T v="label">{e.label}</T>
+          <T v="small" color={c.mutedForeground}>“{e.quote}”</T>
+        </View>
+      ))}
+      {x.missing.length ? <T v="small" color={c.warning}>못 찾음: {x.missing.join(', ')}</T> : null}
+      {x.cautions.map((s, i) => <T key={`c${i}`} v="small" color={c.warning}>주의: {s}</T>)}
+    </View>
+  );
+}
+
 function BenefitForm({ initial, isNew, onDone }: { initial: Benefit; isNew: boolean; onDone: () => void }) {
   const qc = useQueryClient();
   const [b, setB] = useState<Benefit>(initial);
@@ -62,6 +83,29 @@ function BenefitForm({ initial, isNew, onDone }: { initial: Benefit; isNew: bool
     initial.rules.map((r) => ({ scope: r.scope, field: r.field, operator: r.operator, value: typeof r.value === 'string' ? r.value : JSON.stringify(r.value), label: r.label })));
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [raw, setRaw] = useState('');
+  const [found, setFound] = useState<NoticeExtraction | null>(null);
+  const [reading, setReading] = useState(false);
+  // 원문을 붙여 넣으면 서버가 지역·조건·금액·서류를 뽑아 아래 칸을 채운다. 이미 적어 둔 값은 바꾸지 않는다.
+  const autoFill = async () => {
+    setReading(true); setErr(null);
+    try {
+      const x = await extractAdminNotice({ title: b.title, text: raw });
+      setFound(x);
+      setB((p) => ({
+        ...p,
+        region: x.region && (!p.region || p.region === '전국' || p.region === '관할 확인 필요') ? x.region : p.region,
+        maxAmount: p.maxAmount ?? x.maxAmount, startsAt: p.startsAt || x.startsAt || '', endsAt: p.endsAt || x.endsAt || '',
+        status: p.status === '확인 필요' && x.status ? x.status : p.status,
+        budgetStatus: p.budgetStatus === '확인 필요' && x.endsAt ? x.budgetStatus : p.budgetStatus,
+        extraction: { confidence: x.confidence, evidence: x.evidence, missing: x.missing, cautions: x.cautions, at: new Date().toISOString() },
+      }));
+      if (!docs.trim() && x.documents.length) setDocs(x.documents.join('\n'));
+      const have = new Set(rules.map((r) => `${r.scope}.${r.field}`));
+      setRules([...rules, ...x.rules.filter((r) => !have.has(`${r.scope}.${r.field}`)).map((r) => ({ scope: r.scope, field: r.field, operator: r.operator, value: typeof r.value === 'string' ? r.value : JSON.stringify(r.value), label: r.label }))]);
+    } catch (e) { setErr(apiErrorMessage(e)); }
+    setReading(false);
+  };
   const set = <K extends keyof Benefit>(k: K, v: Benefit[K]) => setB((p) => ({ ...p, [k]: v }));
   const parseVal = (s: string,op:string): unknown => {
     if(op==='in'&&!s.trim().startsWith('[')) return s.split(',').map(x=>x.trim()).filter(Boolean);
@@ -83,12 +127,19 @@ function BenefitForm({ initial, isNew, onDone }: { initial: Benefit; isNew: bool
     <Card>
       <T v="h3">{isNew ? '새 공지 작성' : '공지 고치기'}</T>
       <Field label="제목" value={b.title} onChangeText={(v) => set('title', v)} testID="adm-title" />
+      <Card tone="soft">
+        <T v="label">공고 원문 붙여넣기</T>
+        <Field label="원문" value={raw} onChangeText={setRaw} multiline maxLength={30000} testID="adm-raw" placeholder="지원대상, 지원내용, 신청기간, 제출서류가 적힌 부분을 붙여 넣으세요" />
+        <Btn kind="secondary" label="자동 정리" icon="zap" loading={reading} disabled={raw.trim().length < 10} onPress={autoFill} testID="adm-extract" />
+        {found ? <ExtractionBox x={found} /> : null}
+      </Card>
       <Field label="제공 기관" value={b.agency} onChangeText={(v) => set('agency', v)} />
       <Field label="공식 출처 주소" value={b.sourceUrl} onChangeText={(v) => set('sourceUrl', v)} autoCapitalize="none" keyboardType="url" />
       <Field label="출처 식별 번호" value={b.sourceId} onChangeText={(v) => set('sourceId', v)} autoCapitalize="none" />
       <Field label="출처 확인일 (YYYY-MM-DD)" value={b.checkedAt} onChangeText={(v) => set('checkedAt', v)} autoCapitalize="none" />
       <Field label="분류" value={b.category} onChangeText={(v) => set('category', v)} />
-      <Field label="지역" value={b.region} onChangeText={(v) => set('region', v)} />
+      <Field label="지역" value={b.region} onChangeText={(v) => set('region', v)} testID="adm-region" />
+      <Field label="최대 지원금액 (원, 원문에 있을 때만)" value={b.maxAmount ? String(b.maxAmount) : ''} onChangeText={(v) => { const n = parseInt(v.replace(/\D/g, ''), 10); setB((p) => { const { maxAmount: _m, ...rest } = p; return n > 0 ? { ...rest, maxAmount: n } : rest; }); }} keyboardType="number-pad" testID="adm-amount" />
       <Field label="요약" value={b.summary} onChangeText={(v) => set('summary', v)} multiline />
       <Field label="지원 내용" value={b.support} onChangeText={(v) => set('support', v)} multiline />
       <Field label="산정 방식" value={b.calculation} onChangeText={(v) => set('calculation', v)} multiline />
@@ -106,7 +157,7 @@ function BenefitForm({ initial, isNew, onDone }: { initial: Benefit; isNew: bool
       {rules.map((r, i) => (
         <Card key={i} tone="soft">
           <Select label="적용 대상" value={r.scope} options={['personal', 'business']} optionLabels={{personal:'개인·가구',business:'사업장'}} onChange={(v) => setRules(rules.map((x, j) => (j === i ? { ...x, scope: v } : x)))} />
-          <Select label="비교할 항목" value={r.field} options={['province','district','birthYear','age','income','household','children','housing','entity','industry','situation','openedAt','revenue','employees','duplicateBenefit']} optionLabels={{province:'시·도',district:'시·군·구',birthYear:'출생연도',age:'만 나이',income:'소득구간',household:'가구원 수',children:'부양자녀 수',housing:'주거형태',entity:'사업자 형태',industry:'업종',situation:'사업 상황',openedAt:'개업일',revenue:'매출구간',employees:'직원 수',duplicateBenefit:'중복수혜'}} onChange={(v) => setRules(rules.map((x, j) => (j === i ? { ...x, field: v } : x)))} />
+          <Select label="비교할 항목" value={r.field} options={['province','district','birthYear','age','income','household','children','housing','entity','industry','situation','openedAt','revenue','employees','duplicateBenefit','premises']} optionLabels={{province:'시·도',district:'시·군·구',birthYear:'출생연도',age:'만 나이',income:'소득구간',household:'가구원 수',children:'부양자녀 수',housing:'주거형태',entity:'사업자 형태',industry:'업종',situation:'사업 상황',openedAt:'개업일',revenue:'매출구간',employees:'직원 수',duplicateBenefit:'중복수혜'}} onChange={(v) => setRules(rules.map((x, j) => (j === i ? { ...x, field: v } : x)))} />
           <Select label="비교 방식" value={r.operator} options={['eq', 'in', 'gte', 'lte', 'before', 'after']} optionLabels={{eq:'같음',in:'목록 중 하나',gte:'이상',lte:'이하',before:'이전 또는 당일',after:'이후 또는 당일'}} onChange={(v) => setRules(rules.map((x, j) => (j === i ? { ...x, operator: v } : x)))} />
           <Field label="비교할 값 (목록은 쉼표로 구분)" value={r.value} onChangeText={(v) => setRules(rules.map((x, j) => (j === i ? { ...x, value: v } : x)))} autoCapitalize="none" />
           <Field label="사용자에게 보일 설명" value={r.label} onChangeText={(v) => setRules(rules.map((x, j) => (j === i ? { ...x, label: v } : x)))} />
@@ -218,9 +269,11 @@ export default function Admin() {
                   <Badge label={b.reviewStatus} tone={b.reviewStatus === '공개' ? 'ok' : b.reviewStatus === '비공개' ? 'muted' : 'warn'} />
                   <Badge label={b.status} tone={b.status === '마감' ? 'muted' : 'info'} />
                   <Badge label={`규칙 ${b.rules.length}개`} tone="muted" />
+                  {b.extraction ? <Badge label={`자동 정리 ${b.extraction.confidence}%`} tone={b.extraction.confidence >= 80 && !b.extraction.cautions.length ? 'ok' : 'warn'} /> : null}
                 </View>
                 <T v="h3">{b.title}</T>
                 <T v="small">{b.agency} · {b.sourceUrl}</T>
+                {b.extraction && b.reviewStatus === '검토대기' ? <ExtractionBox x={b.extraction} /> : null}
                 <Btn kind="secondary" label="고치기" icon="edit-2" onPress={() => setEditing({ b, isNew: false })} testID={`adm-edit-${b.id}`} />
                 {b.reviewStatus !== '공개' ? <Btn label="공개로 전환" icon="eye" loading={busy === b.id} onPress={() => quick(b, { reviewStatus: '공개' })} /> : null}
                 {b.reviewStatus === '공개' ? <Btn kind="secondary" label="비공개로 전환" icon="eye-off" loading={busy === b.id} onPress={() => quick(b, { reviewStatus: '비공개' })} /> : null}

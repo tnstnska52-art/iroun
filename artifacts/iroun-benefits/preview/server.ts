@@ -4,6 +4,7 @@
  * 운영 빌드에는 포함되지 않는다(EXPO_PUBLIC_PREVIEW=1일 때만 metro가 연결).
  */
 import { matchBenefit, publicBenefit, noticeTime, profileSchema, preferencesSchema, trackingSchema, type Benefit, type Profile } from '../../api-server/src/lib/benefit-domain';
+import { extractNotice } from '../../api-server/src/lib/notice-extract';
 import official from './official-benefits.json';
 
 const HOUR = 3600000, DAY = 24 * HOUR;
@@ -439,6 +440,7 @@ function route(method: string, path: string, query: URLSearchParams, body: Body,
         { name: '기업마당·정부24·복지로', status: '미리보기', reason: '미리보기에서는 공식 수집을 실행하지 않습니다.' },
       ],
     };
+    if (M('POST', /^\/admin\/extract$/)) return extractNotice({ title: String(body.title ?? ''), text: String(body.text ?? '') });
     if (M('POST', /^\/admin\/feeds\//)) throw fail('미리보기에서는 공식 자료 수집을 실행하지 않습니다.', 503);
     if (M('POST', /^\/admin\/benefits$/) || M('PUT', /^\/admin\/benefits\/[^/]+$/)) {
       const b = body as unknown as Benefit, i = benefits.findIndex((n) => n.id === b.id);
