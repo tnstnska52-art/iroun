@@ -63,14 +63,6 @@ export default function Home() {
           <Feather name="check" size={19} color={c.primaryForeground} />
         </View>
         <T v="h2" style={{ flex: 1, fontWeight: '800' }}>이로운사람들</T>
-        <Pressable testID="nav-me" accessibilityRole="button" accessibilityLabel="내 정보 보기" onPress={() => router.push('/account' as never)}
-          style={({ pressed }) => ({ width: 40, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-          <Feather name="user" size={24} color={c.foreground} />
-        </Pressable>
-        <Pressable testID="nav-settings" accessibilityRole="button" accessibilityLabel="환경설정" onPress={() => router.push({ pathname: '/account', params: { view: 'settings' } } as never)}
-          style={({ pressed }) => ({ width: 40, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-          <Feather name="settings" size={23} color={c.foreground} />
-        </Pressable>
         <Pressable testID="nav-alerts" accessibilityRole="button" accessibilityLabel={`알림. 지금 신청 가능 ${alertCount}건`} onPress={() => router.push('/alerts' as never)}
           style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
           <Feather name="bell" size={24} color={c.foreground} />
@@ -143,7 +135,7 @@ export default function Home() {
           ) : null}
 
           {acc.active && acc.me && !acc.me.preferences.notifications ? (
-            <Pressable testID="home-alert-off" accessibilityRole="button" onPress={() => router.push({ pathname: '/account', params: { view: 'settings' } } as never)} style={{ backgroundColor: c.warningSoft, borderRadius: c.radius, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Pressable testID="home-alert-off" accessibilityRole="button" onPress={() => router.push('/alerts' as never)} style={{ backgroundColor: c.warningSoft, borderRadius: c.radius, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               <Feather name="bell-off" size={18} color={c.warning} />
               <T v="small" color={c.warning} style={{ flex: 1, fontWeight: '700' }}>알림이 꺼져 있어요</T>
               <T v="small" color={c.warning} style={{ fontWeight: '800' }}>켜기</T>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import { useQueryClient } from '@tanstack/react-query';
 import { getGetMeQueryKey, savePreferences, type Preferences } from '@workspace/api-client-react';
@@ -13,10 +13,12 @@ import { Btn, Card, Disclaimer, ErrorState, ListRow, Loading, Notice, Page, Sect
 import { apiErrorMessage } from '@/lib/text';
 import { registerNativeNotifications } from '@/lib/native-notifications';
 
-export default function Account() {
+export default function Account() { return <AccountView settings={false} />; }
+
+/** 내 정보(하단 탭)와 환경설정(내 정보 맨 아래에서 들어감)을 같은 틀로 그린다. */
+export function AccountView({ settings }: { settings: boolean }) {
   const c = useColors();
   const router = useRouter();
-  const settings = useLocalSearchParams<{ view?: string }>().view === 'settings';
   const qc = useQueryClient();
   const acc = useAccount();
   const { user } = useUser();
@@ -52,7 +54,7 @@ export default function Account() {
   );
 
   return (
-    <Page back title={settings ? '환경설정' : '내 정보'}>
+    <Page {...(settings ? { back: true } : { tab: true })} title={settings ? '환경설정' : '내 정보'}>
       {!acc.isLoaded || (acc.isSignedIn && acc.loading) ? <Loading rows={2} /> : !acc.isSignedIn ? (
         <Card tone="soft">
           <T v="h3">가입하면 전체 지원금을 볼 수 있어요</T>
@@ -103,6 +105,7 @@ export default function Account() {
         <ListRow icon="bell" label="알림함" onPress={() => router.push('/inbox')} testID="nav-inbox" />
         {acc.me && acc.me.role !== 'user' && acc.me.role !== 'customer' ? <ListRow icon="briefcase" label="회사 업무" onPress={() => router.push('/office')} testID="nav-office" /> : null}
       </Section> : null}
+      {!settings ? <ListRow icon="settings" label="환경설정" onPress={() => router.push('/settings' as never)} testID="nav-settings" /> : null}
       {settings ? <>
       <Section title="화면 설정">
         <Card>{textToggle}</Card>
