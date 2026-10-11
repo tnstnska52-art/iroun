@@ -173,6 +173,12 @@ export interface Business {
   openedAt?: string;
   revenue?: string;
   employees?: number;
+  /** 개업년도. 2009는 '2009년 이전' */
+  openedYear?: number;
+  /** 고용보험 가입 직원 수 구간 */
+  employeeBand?: '없음' | '1~4명' | '5~9명' | '10~29명' | '30명 이상';
+  /** 사업장 형태 */
+  premises?: '임차' | '자가';
 }
 
 export type PersonalEmploymentItem = typeof PersonalEmploymentItem[keyof typeof PersonalEmploymentItem];

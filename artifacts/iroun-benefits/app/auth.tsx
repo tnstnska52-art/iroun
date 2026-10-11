@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth, useSignIn, useSignUp } from '@clerk/expo';
+import { useAuth, useSignIn, useSignUp, useSSO } from '@clerk/expo';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { Btn, Card, Chip, Disclaimer, Field, Notice, Page, T, Toggle, Wrap } from '@/components/ui';
 import { getMe, savePreferences } from '@workspace/api-client-react';
 import { clerkErrorMessage } from '@/lib/text';
@@ -19,6 +20,7 @@ export default function AuthScreen() {
   const params = useLocalSearchParams<{ mode?: string; next?: string; reauth?: string }>();
   const { signIn, fetchStatus: siStatus } = useSignIn();
   const { signUp, fetchStatus: suStatus } = useSignUp();
+  const { startSSOFlow } = useSSO();
   const [mode, setMode] = useState<Mode>(params.mode === 'signup' ? 'signup' : 'signin');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -60,6 +62,12 @@ export default function AuthScreen() {
     try { await fn(); } catch (e) { setErr(clerkErrorMessage(e)); }
     setBusy(false);
   };
+  // 카카오로 가입·로그인. 카카오에서 돌아오면 바로 로그인 상태가 된다.
+  const doKakao = () => guard(async () => {
+    const r = await startSSOFlow({ strategy: 'oauth_custom_kakao' }) // 로그인 서비스에 카카오를 직접 등록해 연결한다;
+    if (r.createdSessionId && r.setActive) { await r.setActive({ session: r.createdSessionId }); setMode('signup'); setPendingCompletion(true); }
+    else setErr('카카오 로그인을 마치지 못했어요. 다시 시도하거나 휴대폰 번호로 진행해 주세요.');
+  });
   const digits = phone.replace(/\D/g, '');
   const phoneOk = /^01[016789]\d{7,8}$/.test(digits);
   const e164 = `+82${digits.slice(1)}`;
@@ -129,6 +137,16 @@ export default function AuthScreen() {
   return (
     <Page back title={mode === 'signin' ? '로그인' : '가입하기'} subtitle={mode === 'signin' ? '휴대폰 번호와 비밀번호를 입력하세요.' : '휴대폰 인증으로 가입해요. 문자로 인증번호를 보내드려요.'}>
       {reauth ? <Notice tone="warn" title="본인 확인을 위해 다시 로그인해 주세요">최근 10분 안에 로그인한 기록이 있어야 회원 탈퇴를 진행할 수 있어요.</Notice> : null}
+      <Pressable testID="auth-kakao" accessibilityRole="button" accessibilityLabel="카카오로 3초 만에 시작하기" disabled={fetching} onPress={doKakao}
+        style={({ pressed }) => ({ minHeight: 58, borderRadius: 12, backgroundColor: '#FEE500', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: fetching ? 0.5 : pressed ? 0.85 : 1 })}>
+        <Feather name="message-circle" size={22} color="#191919" />
+        <T v="h3" color="#191919">카카오로 3초 만에 시작하기</T>
+      </Pressable>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <View style={{ flex: 1, height: 1, backgroundColor: c.border }} />
+        <T v="small" color={c.mutedForeground}>또는 휴대폰 번호로</T>
+        <View style={{ flex: 1, height: 1, backgroundColor: c.border }} />
+      </View>
       <Card>
         {mode === 'signup' ? <Field testID="name-input" label="이름" value={name} onChangeText={setName} autoComplete="name" textContentType="name" placeholder="홍길동" /> : null}
         <Field testID="phone-input" label="휴대폰 번호" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" placeholder="010-1234-5678" error={phone.length >= 10 && !phoneOk ? '휴대폰 번호를 다시 확인해 주세요.' : undefined} />

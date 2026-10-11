@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 import {
-  createServiceRequest, getGetBenefitQueryKey, getGetRecommendationsQueryKey, getGetServiceStateQueryKey, getListTrackingQueryKey, saveTracking,
+  createServiceRequest, getListBenefitsQueryKey, useListBenefits, getGetBenefitQueryKey, getGetRecommendationsQueryKey, getGetServiceStateQueryKey, getListTrackingQueryKey, saveTracking,
   useGetBenefit, useGetRecommendations, useListTracking, type TrackingInput,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
@@ -14,7 +14,7 @@ import { useServiceStateView } from '@/lib/service';
 import { Badge, Box, Btn, Chip, Disclaimer, ErrorState, Loading, Notice, Page, T, Toggle, Wrap } from '@/components/ui';
 import { STAGES, USER_RECORD_NOTICE, apiErrorMessage } from '@/lib/text';
 import { fmtDate } from '@/lib/util';
-import { won } from '@/lib/estimate';
+import { freeIds, hasConditions, useDraftProfile, won } from '@/lib/estimate';
 import { confirmAsk } from '@/lib/confirm';
 import { errStatus } from '@/lib/util';
 import { Collapsible, dday } from '@/components/BenefitCard';
@@ -26,6 +26,8 @@ export default function BenefitDetail() {
   const qc = useQueryClient();
   const acc = useAccount();
   const svc = useServiceStateView();
+  const all = useListBenefits(undefined, { query: { queryKey: getListBenefitsQueryKey() } });
+  const draft = useDraftProfile(acc.me?.id ?? null, id);
   const q = useGetBenefit(id ?? '', { query: { queryKey: getGetBenefitQueryKey(id ?? ''), enabled: !!id } });
   const recs = useGetRecommendations({ query: { queryKey: getGetRecommendationsQueryKey(), enabled: acc.active } });
   const tracks = useListTracking({ query: { queryKey: getListTrackingQueryKey(), enabled: acc.isSignedIn } });
@@ -74,13 +76,16 @@ export default function BenefitDetail() {
   const tone = (r: string) => (r === '조건 일치' ? 'ok' : r === '추가 확인 필요' ? 'warn' : 'muted');
 
   const dd = dday(b);
+  // 가입 전에도 내 조건으로 찾은 위쪽 3건은 정리본 전체를 열어 준다.
+  const myProfile = hasConditions(acc.me?.profile) ? acc.me!.profile : hasConditions(draft) ? draft : null;
+  const unlocked = acc.active || freeIds(all.data ?? [], myProfile).has(b.id);
   const expiredMember = acc.isSignedIn && !acc.active && !!svc.data?.trialUsed;
   const closed = dd.label === '마감';
   const period = b.startsAt || b.endsAt ? `${b.startsAt ? fmtDate(b.startsAt) : '시작일 확인 필요'} ~ ${b.endsAt ? fmtDate(b.endsAt) : b.status === '상시 조회' ? '상시' : '마감일 공고 없음'}` : b.status === '상시 조회' ? '상시 조회' : '기간 확인 필요';
   const info: [keyof typeof Feather.glyphMap, string, string][] = [
     ['file-text', '지원형태', b.kind], ['users', '대상', b.audience === '사업' ? '사업자' : b.audience],
     ['home', '지원기관', b.agency], ['map-pin', '지역', b.region],
-    ['activity', '접수상태', closed ? '마감' : b.status], ['dollar-sign', '지원금액', !acc.active ? '가입 후 확인' : b.maxAmount ? `최대 ${won(b.maxAmount)}` : '공고에서 확인'],
+    ['activity', '접수상태', closed ? '마감' : b.status], ['dollar-sign', '지원금액', !unlocked ? '가입 후 확인' : b.maxAmount ? `최대 ${won(b.maxAmount)}` : '공고에서 확인'],
   ];
   const best = myRecs.find((r) => r.result === '조건 일치') ?? myRecs.find((r) => r.result === '추가 확인 필요');
   // 신청하기: 서버가 최신 조건으로 다시 판단한다. 되면 회사 접수함에 저장되고, 안 되면 이유를 보여준다.
@@ -116,7 +121,7 @@ export default function BenefitDetail() {
   return (
     <Page
       footer={<>
-        {!closed ? <Btn kind="secondary" label={acc.active ? '회사에 신청 도움 요청' : acc.isSignedIn ? '3일 무료로 신청 방법 보기' : '회원가입하고 신청 방법 보기'} icon="send" loading={applying} onPress={() => (acc.active ? apply('신청 지원') : router.push((expiredMember ? '/inquiries' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never))} testID="detail-company-help" /> : null}
+        {!closed ? <Btn kind="secondary" label={acc.active ? '회사에 신청 도움 요청' : unlocked ? '가입하고 신청 도움 받기' : '무료로 전체 보기'} icon="send" loading={applying} onPress={() => (acc.active ? apply('신청 지원') : router.push((expiredMember ? '/inquiries' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never))} testID="detail-company-help" /> : null}
         <Btn label="공식 신청 페이지" icon="external-link" onPress={() => Linking.openURL(b.sourceUrl)} testID="open-source" hint="브라우저에서 공식 페이지가 열립니다" />
       </>}
     >
@@ -177,7 +182,7 @@ export default function BenefitDetail() {
         </View>
       </View>
 
-      {acc.active ? (
+      {unlocked ? (
         <>
       <Box title="이렇게 진행하세요">
         {steps.map((st, i) => (
@@ -208,7 +213,7 @@ export default function BenefitDetail() {
           <View testID="detail-locked" style={{ backgroundColor: c.primarySoft, borderRadius: 10, padding: 14, gap: 8, marginTop: 4 }}>
             <T v="label" color={c.primary}>필요 서류 {b.documents.length > 0 ? `${b.documents.length}가지와 ` : ''}신청 순서는 {expiredMember ? '맞춤 이용 중에' : '회원가입하면'} 볼 수 있어요</T>
             <T v="small">무엇을 준비하고 어디에 어떻게 신청하는지 1번부터 순서대로 정리해 드려요.</T>
-            <Btn label={expiredMember ? '계속 이용 문의하기' : acc.isSignedIn ? '3일 무료로 전체 보기' : '회원가입하고 전체 보기'} onPress={() => router.push((expiredMember ? '/inquiries' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-access" />
+            <Btn label={expiredMember ? '계속 이용 문의하기' : '무료로 전체 보기'} onPress={() => router.push((expiredMember ? '/inquiries' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-access" />
           </View>
         </Box>
       ) : null}
@@ -219,7 +224,7 @@ export default function BenefitDetail() {
         <T v="small" color={c.mutedForeground}>현금·현물 여부와 금액은 기관이 정해요. 이 앱은 금액을 계산하지 않습니다.</T>
       </Box>
 
-      {acc.active ? (
+      {unlocked ? (
         <>
       <Box title="내 조건과 비교">
         {acc.active ? (
@@ -241,8 +246,8 @@ export default function BenefitDetail() {
           ))
         ) : (
           <>
-            <T>{acc.isSignedIn ? '맞춤 이용 중일 때 내 정보와 이 공고의 조건을 비교해 드려요.' : '로그인하면 내 정보와 이 공고의 조건을 비교해 드려요.'}</T>
-            <Btn kind="secondary" label="3일 무료체험으로 확인하기" onPress={() => router.push((acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-access" />
+            <T>가입하면 내 조건과 이 공고의 조건을 하나씩 비교해 드려요.</T>
+            <Btn kind="secondary" label="무료로 비교해 보기" onPress={() => router.push((acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-access" />
           </>
         )}
         <T v="small" color={c.mutedForeground}>조건이 맞아도 선정·예산·중복수혜에 따라 지급이 달라질 수 있어요.</T>

@@ -1,7 +1,7 @@
 import type { Profile } from '@workspace/api-client-react';
 
-const PERSONAL = ['birthYear', 'province'] as const;
-const BUSINESS = ['industry', 'province', 'district', 'revenue', 'employees', 'entity', 'name', 'openedAt'] as const;
+const PERSONAL = [] as const;
+const BUSINESS = ['industry', 'province', 'district', 'openedYear', 'revenue', 'employeeBand', 'premises'] as const;
 const has = (v: unknown) => (Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== '');
 
 /**

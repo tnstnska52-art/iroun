@@ -7,6 +7,15 @@ export const personalSchema = z.object({
   income: z.string().max(50).optional(), household: z.string().max(40).optional(),
   children: z.number().int().min(0).max(30).optional(), housing: z.string().max(40).optional(),
 }).strict();
+export const EMPLOYEE_BANDS = ["없음", "1~4명", "5~9명", "10~29명", "30명 이상"] as const;
+const BAND_RANGE: Record<string, [number, number]> = {"없음":[0,0],"1~4명":[1,4],"5~9명":[5,9],"10~29명":[10,29],"30명 이상":[30,Infinity]};
+/** 구간으로만 아는 값의 비교. 구간 전체가 조건을 만족하면 true, 전체가 벗어나면 false, 걸치면 확인 필요(undefined). */
+function rangeCompare(min:number,max:number,op:string,expected:unknown):boolean|undefined{
+  if(typeof expected!=="number")return undefined;
+  if(op==="gte"||op==="after")return min>=expected?true:max<expected?false:undefined;
+  if(op==="lte"||op==="before")return max<=expected?true:min>expected?false:undefined;
+  return undefined;
+}
 export const businessSchema = z.object({
   id: z.string().min(1).max(80), name: z.string().max(80).optional(),
   province: z.string().max(40).optional(), district: z.string().max(40).optional(),
@@ -16,6 +25,10 @@ export const businessSchema = z.object({
     return !isNaN(d.getTime()) && d.toISOString().slice(0,10)===s && d.getTime()<=Date.now() && s>="1900-01-01";
   },"실제 개업 날짜를 입력하거나 모름으로 남겨 주세요.").optional(),
   revenue: z.string().max(50).optional(), employees: z.number().int().min(0).max(100000).optional(),
+  // 선택식 입력: 개업년도(2009는 '2009년 이전'), 고용보험 가입 직원 수 구간, 사업장 형태(임차·자가)
+  openedYear: z.number().int().min(1900).max(new Date().getFullYear()).optional(),
+  employeeBand: z.enum(EMPLOYEE_BANDS).optional(),
+  premises: z.enum(["임차", "자가"]).optional(),
 }).strict();
 export const profileSchema = z.object({
   unknownAnswers: z.array(z.string().min(1).max(120)).max(500).optional(),
@@ -144,7 +157,12 @@ export function matchBenefit(b: Benefit, p: Profile, now = new Date()) {
         expected=Array.isArray(expected)?expected.map(v=>typeof v==="string"?provinceKey(v)??v:v):typeof expected==="string"?provinceKey(expected)??expected:expected;
       }
       // Only birth year is collected: exact age near a cutoff cannot be guaranteed.
-      const result = r.field === "age" && p.personal.birthYear && typeof r.value === "number" && Math.abs(year - p.personal.birthYear - r.value) <= 1 ? undefined : compare(actual, r.operator, expected);
+      const biz = business as {employeeBand?:string;openedYear?:number};
+      const banded = r.scope==="business" && (actual===undefined||actual===null||actual==="") ? (
+        r.field==="employees" && biz.employeeBand && BAND_RANGE[biz.employeeBand] ? rangeCompare(BAND_RANGE[biz.employeeBand]![0],BAND_RANGE[biz.employeeBand]![1],r.operator,expected)
+        : r.field==="openedAt" && biz.openedYear && typeof expected==="string" && Number.isFinite(Date.parse(expected)) ? rangeCompare(biz.openedYear<=2009?Date.parse("1900-01-01T00:00:00+09:00"):Date.parse(`${biz.openedYear}-01-01T00:00:00+09:00`),Date.parse(`${biz.openedYear}-12-31T23:59:59+09:00`),r.operator,Date.parse(expected))
+        : null) : null;
+      const result = banded!==null ? banded : r.field === "age" && p.personal.birthYear && typeof r.value === "number" && Math.abs(year - p.personal.birthYear - r.value) <= 1 ? undefined : compare(actual, r.operator, expected);
       if (result === true) reasons.push(`${r.label}: 입력 조건과 일치합니다.`);
       else if (result === false) exclusions.push(`${r.label}: 입력 조건과 다릅니다.`);
       else unknowns.push(`${r.label}: 추가 확인이 필요합니다.`);

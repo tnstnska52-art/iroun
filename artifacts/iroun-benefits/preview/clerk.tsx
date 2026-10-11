@@ -63,7 +63,7 @@ function PreviewBar() {
 export function ClerkProvider({ children }: { children: React.ReactNode; [k: string]: unknown }) {
   return (
     <View style={{ flex: 1, backgroundColor: '#dfe6f1', alignItems: 'center' }}>
-      <View style={{ flex: 1, width: '100%', maxWidth: 430, backgroundColor: '#ffffff', overflow: 'hidden' }}>
+      <View style={{ flex: 1, width: '100%', backgroundColor: '#ffffff', overflow: 'hidden' }}>
         <PreviewBar />
         <View style={{ flex: 1 }}>{children}</View>
       </View>
@@ -132,6 +132,16 @@ export function useSignUp() {
         },
       },
       finalize: async ({ navigate }: { navigate: () => void }) => { setUser(ensureUser(`new-${ref.current.phone}`, local(ref.current.phone), ref.current.name).id); navigate(); },
+    },
+  };
+}
+
+/** 미리보기: 카카오 가입은 실제 카카오로 가지 않고 바로 가입된 것으로 처리한다. */
+export function useSSO() {
+  return {
+    startSSOFlow: async (_: { strategy: string }) => {
+      const id = ensureUser('new-kakao', '카카오 계정', '카카오').id;
+      return { createdSessionId: 'preview-kakao', setActive: async (_a: { session: string }) => { setUser(id); } };
     },
   };
 }

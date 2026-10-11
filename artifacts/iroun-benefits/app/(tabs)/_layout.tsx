@@ -9,12 +9,12 @@ import { SymbolView } from 'expo-symbols';
 
 const TABS = [
   { name: 'index', label: '홈', sf: 'house', feather: 'home' },
-  { name: 'benefits', label: '전체혜택', sf: 'list.bullet.rectangle', feather: 'list' },
-  { name: 'mine', label: '내혜택', sf: 'bookmark', feather: 'bookmark' },
-  { name: 'account', label: '내정보', sf: 'person.crop.circle', feather: 'user' },
+  { name: 'benefits', label: '지원금', sf: 'list.bullet.rectangle', feather: 'list' },
+  { name: 'consult', label: '상담', sf: 'bubble.left', feather: 'message-circle' },
+  { name: 'account', label: '더보기', sf: 'ellipsis', feather: 'more-horizontal' },
 ] as const;
 /** 탭에는 보이지 않지만 기존 주소(/refunds, /progress) 호환을 위해 남겨 둔 화면 */
-const HIDDEN = ['refunds', 'progress'] as const;
+const HIDDEN = ['refunds', 'progress', 'mine'] as const;
 
 function NativeTabLayout() {
   return (
@@ -84,13 +84,13 @@ function ClassicTabLayout() {
         tabBarInactiveTintColor: '#8B95A1',
         tabBarActiveTintColor: colors.foreground,
         headerShown: false,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 13, fontWeight: '700', ...(isWeb ? { fontFamily: 'Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif' } : {}) },
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           paddingTop: 6,
-          ...(isWeb ? { height: 64 } : {}),
+          ...(isWeb ? { height: 70 } : {}),
         },
       }}
     >
@@ -103,7 +103,7 @@ function ClassicTabLayout() {
             tabBarAccessibilityLabel: `${t.label} 탭`,
             tabBarButtonTestID: `tab-${t.name}`,
             tabBarIcon: ({ color }) =>
-              isIOS ? <SymbolView name={t.sf} tintColor={color} size={26} /> : <Feather name={t.feather} size={22} color={color} />,
+              isIOS ? <SymbolView name={t.sf} tintColor={color} size={26} /> : <Feather name={t.feather} size={24} color={color} />,
           }}
         />
       ))}

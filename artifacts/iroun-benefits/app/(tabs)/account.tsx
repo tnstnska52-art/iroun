@@ -51,7 +51,7 @@ export default function Account() {
   );
 
   return (
-    <Page tab title="내 정보" subtitle="개인정보와 설정을 관리합니다.">
+    <Page tab title="더보기">
       {!acc.isLoaded || (acc.isSignedIn && acc.loading) ? <Loading rows={2} /> : !acc.isSignedIn ? (
         <Card tone="soft">
           <T v="h3">로그인하면 더 많이 쓸 수 있어요</T>
@@ -74,13 +74,11 @@ export default function Account() {
 
           <Section title="내 정보">
             <Card>
-              <T v="label">거주지</T>
-              <T>{p?.personal.province ? `${p.personal.province} ${p.personal.district ?? ''}` : '입력 안 함'}</T>
-              <T v="label">사업장</T>
+              <T v="label">내 사업장 조건</T>
               {p && p.businesses.length > 0 ? p.businesses.map((b) => (
-                <T key={b.id}>{b.name || '이름 미입력 사업장'} · {b.province ? `${b.province} ${b.district ?? ''}` : '지역 미입력'}</T>
-              )) : <T>입력 안 함</T>}
-              <Btn label={p && (p.personal.province || p.businesses.length) ? '내 정보 이어서 고치기' : '내 정보 입력하기'} icon="edit-3" onPress={() => router.push('/onboarding')} testID="account-edit-profile" />
+                <T key={b.id}>{[b.industry, b.province && `${b.province} ${b.district ?? ''}`.trim(), b.openedYear && (b.openedYear <= 2009 ? '2009년 이전 개업' : `${b.openedYear}년 개업`), b.revenue, b.employeeBand && `직원 ${b.employeeBand}`, b.premises].filter(Boolean).join(' · ') || '고른 조건 없음'}</T>
+              )) : <T>아직 고르지 않았어요</T>}
+              <Btn label={p && p.businesses.length ? '조건 다시 고르기' : '내 사업자 지원금은 얼마일까?'} icon="edit-3" onPress={() => router.push('/onboarding')} testID="account-edit-profile" />
             </Card>
           </Section>
 
@@ -100,7 +98,7 @@ export default function Account() {
         <ListRow icon="award" label="이용 상태·동의" onPress={() => router.push('/access')} testID="nav-access" />
         <ListRow icon="target" label="맞춤 공고" onPress={() => router.push('/matches')} testID="nav-matches" />
         <ListRow icon="clipboard" label="회사 진행" onPress={() => router.push('/company-progress')} testID="nav-company-progress" />
-        <ListRow icon="message-square" label="문의·건의" onPress={() => router.push('/inquiries')} testID="nav-inquiries" />
+        <ListRow icon="bookmark" label="저장한 공고·내 기록" onPress={() => router.push('/mine')} testID="nav-mine" />
         <ListRow icon="bell" label="알림함" onPress={() => router.push('/inbox')} testID="nav-inbox" />
         {acc.me && acc.me.role !== 'user' && acc.me.role !== 'customer' ? <ListRow icon="briefcase" label="회사 업무" onPress={() => router.push('/office')} testID="nav-office" /> : null}
       </Section>

@@ -64,6 +64,28 @@ const SAMPLES: Benefit[] = [
   sample({ id: 'ex-closed-energy', title: '[예시] 소상공인 전기요금 특별지원 (마감)', audience: '사업', category: '경영', region: '전국', agency: '중소벤처기업부',
     sourceUrl: 'https://www.mss.go.kr/', summary: '화면 확인용 예시 공고입니다. 연매출이 일정 규모 이하인 소상공인의 전기요금을 지원했던 형태입니다.', support: '전기요금 일부를 정액 지원했던 형태입니다.', calculation: '예시 자료입니다.',
     documents: ['사업자등록증명', '전기요금 납부 확인서'], startsAt: '2026-07-01', endsAt: '2026-09-30', status: '마감', maxAmount: 200000 }),
+  // 작년(2025년)에 마감된 예시: "이 조건이면 작년에" 화면 확인용
+  sample({ id: 'ex-2025-smartshop', title: '[예시] 2025 스마트상점 기술보급 지원', audience: '사업', category: '경영', region: '전국', agency: '소상공인시장진흥공단',
+    sourceUrl: 'https://www.sbiz24.kr/', summary: '화면 확인용 예시 공고입니다. 키오스크·테이블오더 같은 스마트기술 도입 비용을 지원했던 형태입니다.', support: '도입 비용의 일부를 지원했던 형태입니다.', calculation: '예시 자료입니다.',
+    documents: ['사업자등록증명', '소상공인확인서', '견적서'], startsAt: '2025-03-10', endsAt: '2025-04-18', status: '마감', maxAmount: 5000000,
+    rules: [{ scope: 'business', field: 'employees', operator: 'lte', value: 9, label: '상시 근로자 10인 미만' }] }),
+  sample({ id: 'ex-2025-voucher', title: '[예시] 2025 소상공인 부담경감 크레딧', audience: '사업', category: '경영', region: '전국', agency: '중소벤처기업부',
+    sourceUrl: 'https://www.mss.go.kr/', summary: '화면 확인용 예시 공고입니다. 공과금·보험료 납부에 쓸 수 있는 크레딧을 지급했던 형태입니다.', support: '사업자당 정액 크레딧을 지급했던 형태입니다.', calculation: '예시 자료입니다.',
+    documents: ['사업자등록증명'], startsAt: '2025-07-14', endsAt: '2025-11-28', status: '마감', maxAmount: 500000 }),
+  sample({ id: 'ex-2025-gg-env', title: '[예시] 2025 경기도 소상공인 경영환경 개선', audience: '사업', category: '경영', region: '경기도', agency: '경기도시장상권진흥원',
+    summary: '화면 확인용 예시 공고입니다. 점포 환경 개선 비용을 지원했던 형태입니다.', support: '점포당 공급가액 일부를 지원했던 형태입니다.', calculation: '예시 자료입니다.',
+    documents: ['사업자등록증명', '소상공인확인서', '사업계획서'], startsAt: '2025-02-17', endsAt: '2025-03-14', status: '마감', maxAmount: 3000000,
+    rules: [{ scope: 'business', field: 'province', operator: 'eq', value: '경기', label: '사업장 소재지(경기도)' }] }),
+  sample({ id: 'ex-2025-hire', title: '[예시] 2025 일자리 안정 인건비 지원', audience: '사업', category: '고용', region: '전국', agency: '고용노동부',
+    sourceUrl: 'https://www.moel.go.kr/', summary: '화면 확인용 예시 공고입니다. 직원을 고용 중인 소상공인의 인건비 일부를 지원했던 형태입니다.', support: '직원 1인당 월 일정액을 지원했던 형태입니다.', calculation: '예시 자료입니다.',
+    documents: ['사업자등록증명', '고용보험 가입자 명부'], startsAt: '2025-01-13', endsAt: '2025-12-12', status: '마감', maxAmount: 3600000,
+    rules: [{ scope: 'business', field: 'employees', operator: 'gte', value: 1, label: '고용보험 가입 직원 1명 이상' }] }),
+  sample({ id: 'ex-2025-insurance', title: '[예시] 2025 자영업자 고용보험료 환급', kind: '환급금', audience: '사업', category: '보험', region: '전국', agency: '근로복지공단',
+    sourceUrl: 'https://www.comwel.or.kr/', summary: '화면 확인용 예시 공고입니다. 납부한 고용보험료 일부를 돌려줬던 형태입니다.', support: '납부 보험료의 일부를 환급했던 형태입니다.', calculation: '예시 자료입니다.',
+    documents: ['사업자등록증명', '고용보험 가입 확인서'], startsAt: '2025-01-06', endsAt: '2025-12-19', status: '마감', maxAmount: 1200000 }),
+  sample({ id: 'ex-2025-online', title: '[예시] 2025 소상공인 온라인 판로 지원', audience: '사업', category: '마케팅', region: '전국', agency: '중소기업유통센터',
+    sourceUrl: 'https://www.sbiz24.kr/', summary: '화면 확인용 예시 공고입니다. 온라인몰 입점과 홍보 비용을 지원했던 형태입니다.', support: '입점·홍보 비용 일부를 지원했던 형태입니다.', calculation: '예시 자료입니다.',
+    documents: ['사업자등록증명', '소상공인확인서'], startsAt: '2025-04-01', endsAt: '2025-05-30', status: '마감', maxAmount: 2000000 }),
 ];
 const benefits: Benefit[] = [...(official as Benefit[]), ...SAMPLES];
 const notices = () => benefits.filter(publicBenefit);
@@ -94,7 +116,7 @@ const consentTexts = {
 const emptyProfile = (): Profile => ({ personal: {}, businesses: [], step: 0 });
 const filledProfile = (): Profile => ({
   personal: { birthYear: 1964, province: '경기도' },
-  businesses: [{ id: 'biz-1', name: '행복한 밥상', province: '경기도', district: '수원시', entity: '개인사업자', industry: '음식점', openedAt: '2015-03-02', revenue: '1억~3억 원', employees: 2 }],
+  businesses: [{ id: 'biz-1', name: '행복한 밥상', province: '경기도', district: '수원시', industry: '음식점', openedYear: 2015, revenue: '1억~3억 원', employeeBand: '1~4명', premises: '임차' }],
   step: 10,
 });
 const serviceConsent = (at: number) => [{ kind: 'service', version: CONSENT_VERSION, content: consentTexts.service, accepted: true, recorded_at: isoIn(at) }];

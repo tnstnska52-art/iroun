@@ -24,9 +24,9 @@ for (const f of files.filter((x) => x.includes('/assets/'))) {
 
 const page = `<title>이로운혜택 미리보기</title>
 <style>
-  :root { --frame: #dfe6f1; --ink: #0f172a; color-scheme: light; }
+  :root { --frame: #F2F4F7; --ink: #191F28; color-scheme: light; }
   html, body { height: 100%; }
-  body { overflow: hidden; background: var(--frame); color: var(--ink); font-family: Inter, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif; }
+  body { overflow: hidden; background: var(--frame); color: var(--ink); font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif; }
   #root { display: flex; height: 100%; flex: 1; }
   #boot { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #334155; }
 ${css}
@@ -36,6 +36,13 @@ ${css}
 <script>
   // 앱의 화면 주소는 "/"부터 시작한다. 페이지가 다른 주소에 올라가 있어도 첫 화면이 열리게 맞춘다.
   (function () {
+    // 글꼴 파일은 이 페이지와 같은 자리에 있다. 화면 주소를 바꾸기 전에 전체 주소로 등록해 둔다.
+    try {
+      var base = location.href.replace(/[#?].*$/, "").replace(/[^/]*$/, "");
+      var face = document.createElement("style");
+      face.textContent = '@font-face{font-family:Pretendard;font-weight:45 920;font-display:swap;src:url("' + base + 'pretendard.woff2") format("woff2-variations"),url("' + base + 'pretendard.woff2") format("woff2")}';
+      document.head.appendChild(face);
+    } catch (e) {}
     try { history.replaceState(null, "", "/"); } catch (e) {}
     ["pushState", "replaceState"].forEach(function (name) {
       var original = history[name].bind(history);
@@ -47,4 +54,5 @@ ${css}
 mkdirSync(out, { recursive: true });
 writeFileSync(join(out, 'page.html'), page);
 writeFileSync(join(out, 'app.js'), js);
+writeFileSync(join(out, 'pretendard.woff2'), readFileSync(new URL('../preview/fonts/PretendardVariable.woff2', import.meta.url)));
 console.log(JSON.stringify({ inlinedAssets: inlined, inlinedKB: Math.round(bytes / 1024), appJsMB: +(Buffer.byteLength(js) / 1048576).toFixed(2) }));

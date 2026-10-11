@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  ActivityIndicator, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Text, TextInput,
+  ActivityIndicator, Animated, Easing, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Text, TextInput,
   TextInputProps, TextStyle, View, ViewStyle,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -11,15 +11,17 @@ import { useSettings } from '@/lib/settings';
 import { DISCLAIMER } from '@/lib/text';
 import { KeyboardAwareScrollViewCompat } from './KeyboardAwareScrollViewCompat';
 
+/** 웹에서는 Pretendard를 쓴다. 기기 앱에서는 글꼴 파일을 넣기 전까지 기본 글꼴로 보인다. */
+export const FONT = Platform.OS === 'web' ? ({ fontFamily: 'Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif' } as const) : {};
 type Variant = 'hero' | 'title' | 'h2' | 'h3' | 'body' | 'small' | 'label';
 const SIZES: Record<Variant, { s: number; w: TextStyle['fontWeight']; l: number }> = {
-  hero: { s: 24, w: '800', l: 32 },
-  title: { s: 22, w: '800', l: 30 },
-  h2: { s: 18, w: '700', l: 26 },
-  h3: { s: 17, w: '700', l: 24 },
-  body: { s: 16, w: '400', l: 24 },
-  small: { s: 14, w: '400', l: 20 },
-  label: { s: 15, w: '700', l: 22 },
+  hero: { s: 30, w: '800', l: 40 },
+  title: { s: 24, w: '800', l: 33 },
+  h2: { s: 20, w: '700', l: 28 },
+  h3: { s: 18, w: '700', l: 26 },
+  body: { s: 17, w: '400', l: 26 },
+  small: { s: 15, w: '400', l: 22 },
+  label: { s: 16, w: '700', l: 23 },
 };
 
 export function T({ v = 'body', color, style, children, ...rest }: {
@@ -34,7 +36,7 @@ export function T({ v = 'body', color, style, children, ...rest }: {
       maxFontSizeMultiplier={2}
       accessibilityRole={v === 'hero' || v === 'title' ? 'header' : rest.accessibilityRole}
       {...rest}
-      style={[{ fontSize: z.s * scale, lineHeight: z.l * scale, fontWeight: z.w, color: color ?? c.foreground, flexShrink: 1 }, style]}
+      style={[FONT, { fontSize: z.s * scale, lineHeight: z.l * scale, fontWeight: z.w, color: color ?? c.foreground, flexShrink: 1 }, style]}
     >
       {children}
     </Text>
@@ -124,7 +126,7 @@ export function Btn({ label, onPress, kind = 'primary', icon, disabled, loading,
       disabled={off}
       onPress={onPress}
       style={({ pressed }) => [{
-        minHeight: small ? 44 : 52, borderRadius: 10, backgroundColor: bg, paddingHorizontal: 16, paddingVertical: 12,
+        minHeight: small ? 46 : 56, borderRadius: 12, backgroundColor: bg, paddingHorizontal: 16, paddingVertical: 12,
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
         borderWidth: kind === 'secondary' ? 1 : 0, borderColor: c.input,
         opacity: off ? 0.5 : pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.985 : 1 }],
@@ -148,9 +150,9 @@ export function Field({ label, error, hint, ...rest }: TextInputProps & { label:
         placeholderTextColor={c.mutedForeground}
         maxFontSizeMultiplier={2}
         {...rest}
-        style={[{
-          minHeight: 52, borderWidth: 1, borderColor: error ? c.destructive : c.input, borderRadius: 10,
-          paddingHorizontal: 14, paddingVertical: 12, fontSize: 16 * scale, color: c.foreground, backgroundColor: c.card,
+        style={[FONT, {
+          minHeight: 56, borderWidth: 1, borderColor: error ? c.destructive : c.input, borderRadius: 10,
+          paddingHorizontal: 14, paddingVertical: 12, fontSize: 17 * scale, color: c.foreground, backgroundColor: c.card,
         }, rest.multiline ? { minHeight: 110, textAlignVertical: 'top' } : null]}
       />
       {error ? <T v="small" color={c.destructive} accessibilityRole="text">{error}</T> : null}
@@ -359,5 +361,52 @@ export function Toast({ text, tone = 'ok' }: { text: string | null; tone?: 'ok' 
         <T v="small" style={{ fontWeight: '600' }}>{text}</T>
       </View>
     </View>
+  );
+}
+
+/** 섹션 제목 옆에서 살짝 움직이는 그림 문자. 장식이므로 화면 낭독에서는 건너뛴다. */
+export function Emoji({ char, size = 22, motion = 'bounce' }: { char: string; size?: number; motion?: 'bounce' | 'wiggle' | 'pulse' }) {
+  const v = React.useRef(new Animated.Value(0)).current;
+  React.useEffect(() => {
+    const loop = Animated.loop(Animated.sequence([
+      Animated.timing(v, { toValue: 1, duration: 600, easing: Easing.inOut(Easing.quad), useNativeDriver: Platform.OS !== 'web' }),
+      Animated.timing(v, { toValue: 0, duration: 600, easing: Easing.inOut(Easing.quad), useNativeDriver: Platform.OS !== 'web' }),
+      Animated.delay(500),
+    ]));
+    loop.start();
+    return () => loop.stop();
+  }, [v]);
+  const transform = motion === 'wiggle' ? [{ rotate: v.interpolate({ inputRange: [0, 1], outputRange: ['-10deg', '12deg'] }) }]
+    : motion === 'pulse' ? [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.2] }) }]
+    : [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }];
+  return <Animated.Text accessibilityElementsHidden importantForAccessibility="no" aria-hidden style={{ fontSize: size, lineHeight: size * 1.3, transform }}>{char}</Animated.Text>;
+}
+
+/** 0에서 목표 숫자까지 빠르게 올라가는 숫자 */
+export function CountUp({ to, duration = 900, format, style, color }: { to: number; duration?: number; format?: (n: number) => string; style?: StyleProp<TextStyle>; color?: string }) {
+  const [n, setN] = React.useState(0);
+  React.useEffect(() => {
+    let raf = 0; const start = Date.now();
+    const tick = () => {
+      const t = Math.min(1, (Date.now() - start) / duration);
+      setN(Math.round(to * (1 - Math.pow(1 - t, 3))));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [to, duration]);
+  return <T v="hero" color={color} style={style} accessibilityRole="text">{format ? format(n) : n.toLocaleString('ko-KR')}</T>;
+}
+
+/** 제목 왼쪽에 움직이는 그림 문자가 붙는 섹션 머리 */
+export function SectionHead({ emoji, motion, title, onMore, testID }: { emoji?: string; motion?: 'bounce' | 'wiggle' | 'pulse'; title: string; onMore?: () => void; testID?: string }) {
+  const c = useColors();
+  return (
+    <Pressable testID={testID} accessibilityRole={onMore ? 'button' : 'header'} accessibilityLabel={onMore ? `${title} 더 보기` : title} disabled={!onMore} onPress={onMore}
+      style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, paddingHorizontal: 2 }}>
+      {emoji ? <Emoji char={emoji} motion={motion} /> : null}
+      <T v="h2" style={{ flex: 1 }}>{title}</T>
+      {onMore ? <Feather name="chevron-right" size={22} color={c.foreground} /> : null}
+    </Pressable>
   );
 }

@@ -6,38 +6,34 @@ import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollV
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import { useQueryClient } from '@tanstack/react-query';
-import { getGetMeQueryKey, getListBenefitsQueryKey, saveProfile, savePreferences, useListBenefits, type Business, type Personal, type Profile } from '@workspace/api-client-react';
+import { getGetMeQueryKey, saveProfile, savePreferences, type Business, type Personal, type Profile } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
 import { loadDraft, saveDraft } from '@/lib/draft';
 import { confirmAsk } from '@/lib/confirm';
 import { apiErrorMessage } from '@/lib/text';
 import { DISTRICTS, PROVINCE_ORDER } from '@/lib/regions';
-import { estimate, won } from '@/lib/estimate';
 import { newId } from '@/lib/util';
 import { Btn, Field, Loading, Notice, T, Toast, Toggle } from '@/components/ui';
 
-type Q = { key: string; title: string; hint?: string; kind: 'number' | 'text' | 'select' | 'multi'; options?: string[]; min?: number; max?: number; placeholder?: string; unit?: string };
+type Q = { key: string; title: string; hint?: string; kind: 'number' | 'text' | 'select' | 'multi'; options?: string[]; min?: number; max?: number; placeholder?: string; unit?: string; /** 고른 글자를 저장할 값으로 바꾼다 */ toValue?: (o: string) => string | number };
 
-// 개인 정보는 꼭 필요한 두 가지만 묻는다(나이 조건, 거주지 조건이 있는 공고 판단용).
-const PERSONAL_Q: Q[] = [
-  { key: 'birthYear', title: '태어난 해는 언제인가요?', hint: '나이 조건이 있는 지원금을 찾는 데 써요. 예: 1968', kind: 'number', min: 1900, max: new Date().getFullYear(), placeholder: '1968', unit: '년' },
-  { key: 'province', title: '사시는 곳은 어느 지역인가요?', hint: '사업장과 사는 곳이 다르면 받을 수 있는 지원금이 달라져요.', kind: 'select', options: PROVINCE_ORDER },
-];
+// 질문은 모두 고르는 방식이다. 사업장 조건 일곱 화면(지역은 시·도와 시·군·구 두 번)만 묻는다.
+const PERSONAL_Q: Q[] = [];
 const NONE = '해당 없음';
 export const INDUSTRIES = ['음식점', '도소매', '서비스', '제조', '건설', '운수', '숙박', '교육', '보건·복지', '정보통신', '농림어업', '기타'];
-// 앞의 조건(업종·지역·매출·직원·형태)만 고르면 바로 결과를 보여준다. 나머지는 나중에 채운다.
-const QUICK = 6;
+const THIS_YEAR = new Date(Date.now() + 9 * 3600000).getUTCFullYear();
+const YEARS = [...Array.from({ length: THIS_YEAR - 2009 }, (_, i) => `${THIS_YEAR - i}년`), '2009년 이전'];
 const BIZ_Q: Q[] = [
   { key: 'industry', title: '어떤 업종인가요?', hint: '가장 가까운 것을 골라 주세요.', kind: 'select', options: INDUSTRIES },
   { key: 'province', title: '사업장은 어느 지역에 있나요?', hint: '사는 곳이 아니라 사업장 주소 기준이에요.', kind: 'select', options: PROVINCE_ORDER },
   { key: 'district', title: '어느 시·군·구인가요?', hint: '시 단위까지 골라야 지역 지원금을 정확히 찾아요.', kind: 'select', options: [] },
-  { key: 'revenue', title: '지난해 연매출은 어느 정도인가요?', hint: '1년 매출 합계예요. 정확한 금액은 묻지 않아요.', kind: 'select', options: ['1억 원 미만', '1억~3억 원', '3억~10억 원', '10억 원 이상'] },
-  { key: 'employees', title: '4대보험에 가입된 직원은 몇 명인가요?', hint: '대표자 본인은 빼고 세어 주세요. 없으면 0을 입력해 주세요.', kind: 'number', min: 0, max: 100000, placeholder: '0', unit: '명' },
-  { key: 'entity', title: '개인사업자인가요, 법인인가요?', kind: 'select', options: ['개인사업자', '법인사업자'] },
-  { key: 'name', title: '사업장 이름을 알려주세요', hint: '담당자가 도와드릴 때 필요해요.', kind: 'text', placeholder: '상호' },
-  { key: 'openedAt', title: '개업한 날은 언제인가요?', hint: '2015-03-01처럼 입력해 주세요. 일까지 모르면 \'잘 모르겠어요\'를 눌러 주세요.', kind: 'text', placeholder: 'YYYY-MM-DD' },
+  { key: 'openedYear', title: '언제 개업하셨나요?', hint: '사업자등록증의 개업 연도를 골라 주세요.', kind: 'select', options: YEARS, toValue: (o) => parseInt(o, 10) },
+  { key: 'revenue', title: '지난해 매출은 어느 정도인가요?', hint: '1년 매출 합계예요. 정확한 금액은 묻지 않아요.', kind: 'select', options: ['1억 원 미만', '1억~3억 원', '3억~10억 원', '10억 원 이상'] },
+  { key: 'employeeBand', title: '고용보험에 가입된 직원은 몇 명인가요?', hint: '대표자 본인은 빼고 세어 주세요.', kind: 'select', options: ['없음', '1~4명', '5~9명', '10~29명', '30명 이상'] },
+  { key: 'premises', title: '사업장은 임차인가요, 자가인가요?', kind: 'select', options: ['임차', '자가'] },
 ];
+const QUICK = BIZ_Q.length;
 function validDate(t: string): boolean {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
   if (!m) return false;
@@ -61,9 +57,8 @@ export default function Onboarding() {
   const [idx, setIdx] = useState(0);
   const [biz, setBiz] = useState<{ id: string; sub: number } | null>(null);
   const [quick, setQuick] = useState(false);
-  const [result, setResult] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [more, setMore] = useState(false);
-  const benefits = useListBenefits(undefined, { query: { queryKey: getListBenefitsQueryKey() } });
   const [text, setText] = useState('');
   const [multi, setMulti] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -197,10 +192,9 @@ export default function Onboarding() {
   const skipUnknown = () => { setText(''); void commit(undefined, goNext); };
   const goNext = () => {
     if (biz) {
-      // 처음 다섯 가지를 고르면 홈으로 돌아가 맞는 공고부터 보여준다.
-      if (quick && biz.sub + 1 === QUICK) { setQuick(false); setResult(true); return; }
-      if (biz.sub + 1 >= BIZ_Q.length) { setBiz(null); const next = PERSONAL_Q.findIndex((x) => { const v = (profile.personal as Record<string, unknown>)[x.key]; return v === undefined || v === '' || (Array.isArray(v) && v.length === 0); }); setIdx(next >= 0 ? next + 1 : HUB); }
-      else setBiz({ ...biz, sub: biz.sub + 1 });
+      // 마지막 조건까지 고르면 찾는 중 화면으로 넘어간다.
+      if (biz.sub + 1 >= BIZ_Q.length) { setSearching(true); return; }
+      setBiz({ ...biz, sub: biz.sub + 1 });
     }
     else setIdx((i) => i + 1);
   };
@@ -219,7 +213,7 @@ export default function Onboarding() {
     if (profile.businesses.length === 0) { setBusy(true); setQuick(true); await addBiz(); setBusy(false); return; }
     const b = profile.businesses[0] as unknown as Record<string, unknown>;
     const sub = BIZ_Q.findIndex((x) => b[x.key] === undefined || b[x.key] === '');
-    if (sub >= 0) { setQuick(sub < QUICK); setBiz({ id: profile.businesses[0].id, sub }); } else setIdx(1);
+    setQuick(true); setBiz({ id: profile.businesses[0].id, sub: sub >= 0 ? sub : 0 });
   };
   const removeBiz = (id: string) => confirmAsk('사업장 삭제', '이 사업장 정보를 지웁니다. 계속할까요?', '삭제', async () => {
     const p = { ...profile, businesses: profile.businesses.filter((b) => b.id !== id), unknownAnswers: (profile.unknownAnswers ?? []).filter((x) => !x.startsWith(`business.${id}.`)) };
@@ -245,32 +239,11 @@ export default function Onboarding() {
   const toast = sync?.t === 'ok' ? sync.s : null;
   const syncNote = sync && sync.t !== 'ok' ? <Notice tone={sync.t === 'warn' ? 'info' : 'error'}>{sync.s}</Notice> : null;
 
-  if (result) {
-    const est = estimate(benefits.data ?? [], profile);
-    const go = (acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never;
-    return (
-      <Sheet title="고객님의 예상 지원사업" step="확인 완료" onClose={() => router.replace('/')} toast={toast}>
-        <View testID="estimate-result" style={{ backgroundColor: c.primarySoft, borderRadius: 14, padding: 20, gap: 6, alignItems: 'center' }}>
-          <T v="label" color={c.primary}>예상 지원사업</T>
-          <T v="hero" color={c.primary} style={{ fontSize: 30, lineHeight: 38 }}>{est.items.length}건</T>
-          {est.total > 0 ? (
-            <>
-              <T v="label" color={c.primary} style={{ marginTop: 6 }}>예상 수령액</T>
-              <T v="hero" color={c.primary} style={{ fontSize: 30, lineHeight: 38 }}>최대 {won(est.total)}</T>
-            </>
-          ) : null}
-        </View>
-        <T v="small" color={c.mutedForeground} style={{ textAlign: 'center' }}>공고에 적힌 최대 금액을 더한 값이에요. 실제 지급액은 심사·예산에 따라 달라요.</T>
-        <T v="h3" style={{ textAlign: 'center', marginTop: 4 }}>{acc.active ? '홈에서 바로 확인해 보세요' : '회원가입만 하고 즉시 확인해보세요'}</T>
-        <Btn testID="result-signup" label={acc.active ? '홈에서 확인하기' : acc.isSignedIn ? '3일 무료로 확인하기' : '회원가입하고 확인하기'} onPress={() => (acc.active ? router.replace('/') : router.replace(go))} />
-        {!acc.active ? <Btn kind="ghost" label="홈으로" onPress={() => router.replace('/')} testID="result-home" /> : null}
-      </Sheet>
-    );
-  }
+  if (searching) return <Searching onDone={() => router.replace('/result' as never)} />;
 
   if (!biz && idx === 0) {
     return (
-      <Sheet title="내 사업장 예상지원금 확인" hint="업종·지역·매출·직원 수·사업자 형태만 고르면 돼요. 1분이면 끝나요." step="시작하기" onClose={close} toast={toast}>
+      <Sheet title="내 사업자 지원금은 얼마일까?" hint="업종, 지역, 개업년도, 매출, 직원 수, 사업장 형태만 고르면 돼요. 1분이면 끝나요." step="시작하기" onClose={close} toast={toast}>
         <Pressable testID="consent-more" accessibilityRole="button" accessibilityState={{ expanded: more }} onPress={() => setMore(!more)} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <T v="small" style={{ fontWeight: '700' }}>개인정보 수집·이용 안내</T>
           <Feather name={more ? 'chevron-up' : 'chevron-down'} size={18} color={c.mutedForeground} />
@@ -333,7 +306,7 @@ export default function Onboarding() {
           <Btn testID="wizard-next" label="선택 완료" loading={busy} onPress={submitCurrent} />
         </>
       ) : isSelect ? (
-        q.options!.map((o) => <Option key={o} label={o} selected={selected === o} disabled={busy} onPress={() => void commit(o, goNext)} testID={`opt-${o}`} />)
+        q.options!.map((o) => <Option key={o} label={o} selected={selected === String(q.toValue ? q.toValue(o) : o) && (q.key !== 'openedYear' || o.startsWith(selected))} disabled={busy} onPress={() => void commit(q.toValue ? q.toValue(o) : o, goNext)} testID={`opt-${o}`} />)
       ) : (
         <>
           <Field testID="wizard-input" label={q.unit ? `답변 (단위: ${q.unit})` : '답변'} value={text} onChangeText={(t) => { setText(t); setErr(null); }} keyboardType={q.kind === 'number' ? 'number-pad' : 'default'} placeholder={q.placeholder} error={err ?? undefined} onSubmitEditing={submitCurrent} returnKeyType="next" />
@@ -383,5 +356,33 @@ function Option({ label, selected, onPress, testID, disabled, multi }: { label: 
       <T v="body" style={{ fontWeight: '600' }} color={selected ? c.primary : c.foreground}>{label}</T>
       {selected ? <Feather name="check" size={20} color={c.primary} /> : null}
     </Pressable>
+  );
+}
+
+/** 조건을 다 고른 뒤 잠깐 보여주는 찾는 중 화면. 1%에서 100%까지 차오른 뒤 결과로 넘어간다. */
+function Searching({ onDone }: { onDone: () => void }) {
+  const c = useColors();
+  const [pct, setPct] = useState(1);
+  const done = useRef(false);
+  useEffect(() => {
+    const started = Date.now(), total = 2600;
+    const h = setInterval(() => {
+      const t = Math.min(1, (Date.now() - started) / total);
+      const p = Math.max(1, Math.round(100 * (1 - Math.pow(1 - t, 2))));
+      setPct(p);
+      if (t >= 1 && !done.current) { done.current = true; clearInterval(h); setTimeout(onDone, 350); }
+    }, 40);
+    return () => clearInterval(h);
+  }, [onDone]);
+  const step = pct < 35 ? '업종과 지역 조건을 확인하고 있어요' : pct < 70 ? '매출과 직원 수 조건을 확인하고 있어요' : pct < 100 ? '지나간 공고도 살펴보고 있어요' : '다 찾았어요';
+  return (
+    <View testID="searching" style={{ flex: 1, backgroundColor: c.card, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 18 }}>
+      <T v="title" style={{ textAlign: 'center' }}>조건에 맞는 지원금과{'\n'}환급금을 찾고 있어요</T>
+      <T v="hero" color={c.primary} style={{ fontSize: 56, lineHeight: 66 }} accessibilityRole="text">{pct}%</T>
+      <View accessible accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: pct }} style={{ alignSelf: 'stretch', height: 14, borderRadius: 7, backgroundColor: c.secondary, overflow: 'hidden' }}>
+        <View style={{ width: `${pct}%`, height: 14, borderRadius: 7, backgroundColor: c.primary }} />
+      </View>
+      <T color={c.mutedForeground} style={{ textAlign: 'center' }}>{step}</T>
+    </View>
   );
 }
