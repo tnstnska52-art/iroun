@@ -8,16 +8,17 @@ import { errStatus } from '@/lib/util';
 import { kst, lines, MatchesPayload, OfficeRequest, REQUEST_STATES } from '@/lib/service';
 import type { OfficeProps } from './shared';
 
-function CustomerMatches({ userId }: { userId: string }) {
+export function CustomerMatches({ userId, period = 'current' }: { userId: string; period?: 'current' | 'past' }) {
   const c = useColors();
-  const q = useGetOfficeCustomerMatches(userId, { period: 'current' }, { query: { queryKey: ['/api/office/customers', userId, 'matches', 'current'], retry: false, gcTime: 0 } });
+  const q = useGetOfficeCustomerMatches(userId, { period }, { query: { queryKey: ['/api/office/customers', userId, 'matches', period], retry: false, gcTime: 0 } });
   if (q.isLoading) return <Loading rows={1} />;
   if (q.error) {
     return <Notice tone="error">{errStatus(q.error) === 403 ? '이 고객의 이용 기간이 끝나 맞춤 결과를 볼 수 없습니다. 고객이 다시 체험하거나 계약해야 합니다.' : apiErrorMessage(q.error)}</Notice>;
   }
   const d = q.data as unknown as MatchesPayload | undefined;
-  if (!d || d.items.length === 0) return <T v="small" color={c.mutedForeground}>맞는 공고가 없습니다.</T>;
-  return <View style={{ gap: 6 }}>{d.items.map((i) => <T key={i.benefit.id} v="small">• {i.benefit.title}{i.closed ? ' (마감)' : ''} / {i.matches.map((m) => m.result).join(', ')}</T>)}</View>;
+  const items = (d?.items ?? []).filter((i) => (period === 'past' ? i.matches.some((m) => !(m.referenceExclusions?.length)) : i.matches.some((m) => m.result !== '대상 제외')));
+  if (items.length === 0) return <T v="small" color={c.mutedForeground}>{period === 'past' ? '올해 지나간 공고 중 맞았던 것이 없어요.' : '지금 맞는 공고가 없어요.'}</T>;
+  return <View style={{ gap: 6 }}>{items.map((i) => <T key={i.benefit.id} v="small">• {i.benefit.title} — {period === 'past' ? `${i.benefit.endsAt || ''} 마감` : i.matches.map((m) => m.result).join(', ')}{i.benefit.maxAmount ? ` · 공고상 최대 ${Math.round(i.benefit.maxAmount / 10000).toLocaleString('ko-KR')}만원` : ''}</T>)}</View>;
 }
 
 function Detail({ r }: { r: OfficeRequest }) {
@@ -55,7 +56,7 @@ function Row({ r, o, refresh }: { r: OfficeRequest } & OfficeProps) {
   const [showM, setShowM] = useState(false);
   const [msg, setMsg] = useState<{ t: 'ok' | 'error'; s: string } | null>(null);
   const customer = o.customers.find((x) => x.id === r.user_id);
-  const pname = customer?.profile?.businesses?.[0]?.name || customer?.profile?.personal?.province || '이름 미입력';
+  const pname = [customer?.name, customer?.profile?.businesses?.[0]?.name].filter(Boolean).join(' · ') || '이름 미확인';
   const save = async () => {
     setBusy(true); setMsg(null);
     try {
@@ -71,7 +72,7 @@ function Row({ r, o, refresh }: { r: OfficeRequest } & OfficeProps) {
     <Card style={{ gap: 12 }}>
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}><Badge label={r.state} tone="info" /><Badge label={r.kind} tone="muted" /></View>
       <T v="h3">{r.snapshot?.title ?? r.benefit_id}</T>
-      <T v="small" color={c.mutedForeground}>접수번호 {r.id} · 고객 {pname} · 담당 {r.staff_name ?? '미지정'}</T>
+      <T v="small" color={c.mutedForeground}>접수번호 {r.id} · 고객 {pname}{customer?.phone ? ` (${customer.phone})` : ''} · 담당 {r.staff_name ?? '미지정'}</T>
       <Notice tone="warn">서류와 발급처는 공고 원문으로 다시 확인해야 합니다. 상태는 회사 안의 진행이며 기관 신청 완료가 아닙니다.</Notice>
       <Detail r={r} />
       <T v="label">진행 상태</T>

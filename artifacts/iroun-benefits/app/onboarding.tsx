@@ -28,16 +28,19 @@ const PERSONAL_Q: Q[] = [
   { key: 'employment', title: '지금 하시는 일은 무엇인가요?', hint: '해당하는 것을 모두 고른 뒤 다음을 눌러 주세요. 근로자이면서 사업자일 수도 있습니다.', kind: 'multi', options: ['근로자', '사업자', '구직 중', '해당 없음'] },
 ];
 const NONE = '해당 없음';
+export const INDUSTRIES = ['음식점', '도소매', '서비스', '제조', '건설', '운수', '숙박', '교육', '보건·복지', '정보통신', '농림어업', '기타'];
+// 앞의 다섯 가지(업종·지역·매출·직원·형태)만 고르면 바로 맞는 공고를 보여준다. 나머지는 나중에 채운다.
+const QUICK = 5;
 const BIZ_Q: Q[] = [
+  { key: 'industry', title: '어떤 업종인가요?', hint: '가장 가까운 것을 골라 주세요.', kind: 'select', options: INDUSTRIES },
+  { key: 'province', title: '사업장은 어느 지역에 있나요?', hint: '사는 곳이 아니라 사업장 주소 기준이에요.', kind: 'select', options: PROVINCES },
+  { key: 'revenue', title: '지난해 연매출은 어느 정도인가요?', hint: '1년 매출 합계예요. 정확한 금액은 묻지 않아요.', kind: 'select', options: ['1억 원 미만', '1억~3억 원', '3억~10억 원', '10억 원 이상'] },
+  { key: 'employees', title: '상시 직원은 몇 명인가요?', hint: '대표자 본인은 빼고 세어 주세요. 없으면 0을 입력해 주세요.', kind: 'number', min: 0, max: 100000, placeholder: '0', unit: '명' },
+  { key: 'entity', title: '개인사업자인가요, 법인인가요?', kind: 'select', options: ['개인사업자', '법인사업자'] },
   { key: 'name', title: '사업장 이름을 알려주세요', hint: '상호를 입력해 주세요.', kind: 'text', placeholder: '상호' },
-  { key: 'province', title: '사업장은 어느 시·도에 있나요?', hint: '거주지와 다를 수 있습니다.', kind: 'select', options: PROVINCES },
-  { key: 'district', title: '사업장의 시·군·구는 어디인가요?', kind: 'text', placeholder: '시·군·구' },
-  { key: 'entity', title: '사업자 형태는 무엇인가요?', kind: 'select', options: ['개인사업자', '법인사업자'] },
-  { key: 'industry', title: '어떤 업종인가요?', hint: '예: 음식점, 도소매, 제조', kind: 'text', placeholder: '업종' },
-  { key: 'openedAt', title: '개업한 날은 언제인가요?', hint: '정확한 날짜를 YYYY-MM-DD로 입력해 주세요. 예: 2015-03-01. 일까지 모르면 \'잘 모르겠어요\'를 눌러 주세요.', kind: 'text', placeholder: 'YYYY-MM-DD' },
-  { key: 'revenue', title: '지난해 연매출 규모는 어느 쪽인가요?', hint: '1년 동안의 매출 합계(원)입니다. 정확한 금액은 묻지 않습니다.', kind: 'select', options: ['1억 원 미만', '1억~3억 원', '3억~10억 원', '10억 원 이상'] },
-  { key: 'employees', title: '직원은 몇 명인가요?', hint: '대표자 본인은 빼고 세어 주세요. 없으면 0을 입력해 주세요.', kind: 'number', min: 0, max: 100000, placeholder: '0', unit: '명' },
-  { key: 'situation', title: '지금 사업은 어떤 상태인가요?', hint: '이 사업장의 상태를 알려 주세요. 모르면 건너뛸 수 있어요.', kind: 'select', options: ['창업 준비 중', '운영 중', '휴업 중', '폐업'] },
+  { key: 'district', title: '사업장의 시·군·구는 어디인가요?', hint: '시·군·구까지 알면 지역 공고를 더 정확히 찾아요.', kind: 'text', placeholder: '예: 수원시 팔달구' },
+  { key: 'openedAt', title: '개업한 날은 언제인가요?', hint: '2015-03-01처럼 입력해 주세요. 일까지 모르면 \'잘 모르겠어요\'를 눌러 주세요.', kind: 'text', placeholder: 'YYYY-MM-DD' },
+  { key: 'situation', title: '지금 사업은 어떤 상태인가요?', kind: 'select', options: ['창업 준비 중', '운영 중', '휴업 중', '폐업'] },
 ];
 function validDate(t: string): boolean {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);
@@ -61,6 +64,7 @@ export default function Onboarding() {
   const [consent, setConsent] = useState(false);
   const [idx, setIdx] = useState(0);
   const [biz, setBiz] = useState<{ id: string; sub: number } | null>(null);
+  const [quick, setQuick] = useState(false);
   const [text, setText] = useState('');
   const [multi, setMulti] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
@@ -85,7 +89,14 @@ export default function Onboarding() {
       if(cs && d?.cursor && (useDraft || p.step === d.profile.step)) {
         setIdx(Math.max(1,Math.min(d.cursor.idx,HUB)));
         const cursor=d.cursor.biz;
-        if(cursor && p.businesses.some(b=>b.id===cursor.id)) setBiz({id:cursor.id,sub:Math.max(0,Math.min(cursor.sub,BIZ_Q.length-1))});
+        if(cursor && p.businesses.some(b=>b.id===cursor.id)) { setBiz({id:cursor.id,sub:Math.max(0,Math.min(cursor.sub,BIZ_Q.length-1))}); setQuick(cursor.sub<QUICK); }
+      }
+      // 사업장 조건 다섯 가지가 비어 있으면 그 질문부터 이어간다.
+      if (cs && !(d?.cursor?.biz)) {
+        const first = p.businesses[0] as unknown as Record<string, unknown> | undefined;
+        const sub = first ? BIZ_Q.slice(0, QUICK).findIndex((x) => first[x.key] === undefined || first[x.key] === '') : -1;
+        if (first && sub >= 0) { setQuick(true); setBiz({ id: p.businesses[0].id, sub }); }
+        else if (!first) setIdx(0);
       }
       setReady(true);
     })();
@@ -117,7 +128,7 @@ export default function Onboarding() {
     const storeErr = stored ? '' : '이 기기에 저장하지 못했습니다(저장 공간 오류). ';
     if (!acc.isSignedIn || !acc.me || !consent) {
       if (!stored) { setSync({ t: 'error', s: `${storeErr}입력한 내용이 사라질 수 있으니 저장 공간을 확인하고 다시 시도해 주세요.` }); return false; }
-      setSync({ t: 'warn', s: acc.isSignedIn ? '이 기기에 임시 저장했습니다. 서버에 저장하려면 개인정보 동의가 필요합니다.' : '이 기기에 임시 저장했습니다. 로그인하면 서버에 저장됩니다.' });
+      setSync(acc.isSignedIn ? { t: 'warn', s: '이 기기에 임시 저장했어요. 서버에 저장하려면 개인정보 동의가 필요해요.' } : { t: 'ok', s: '저장했어요.' });
       return true;
     }
     try {
@@ -183,7 +194,12 @@ export default function Onboarding() {
   };
   const skipUnknown = () => { setText(''); void commit(undefined, goNext); };
   const goNext = () => {
-    if (biz) { if (biz.sub + 1 >= BIZ_Q.length) { setBiz(null); setIdx(HUB); } else setBiz({ ...biz, sub: biz.sub + 1 }); }
+    if (biz) {
+      // 처음 다섯 가지를 고르면 홈으로 돌아가 맞는 공고부터 보여준다.
+      if (quick && biz.sub + 1 === QUICK) { router.replace('/'); return; }
+      if (biz.sub + 1 >= BIZ_Q.length) { setBiz(null); const next = PERSONAL_Q.findIndex((x) => { const v = (profile.personal as Record<string, unknown>)[x.key]; return v === undefined || v === '' || (Array.isArray(v) && v.length === 0); }); setIdx(next >= 0 ? next + 1 : HUB); }
+      else setBiz({ ...biz, sub: biz.sub + 1 });
+    }
     else setIdx((i) => i + 1);
   };
   const goBack = () => {
@@ -195,6 +211,13 @@ export default function Onboarding() {
     const b: Business = { id: newId() };
     const p = { ...profile, businesses: [...profile.businesses, b], step: HUB };
     if(await persist(p,false,{idx:HUB,biz:{id:b.id,sub:0}})){setProfile(p);setBiz({id:b.id,sub:0});}
+  };
+  // 동의 뒤에는 사업장 조건 다섯 가지부터 묻는다. 이미 사업장이 있으면 비어 있는 질문으로 이어간다.
+  const startAfterConsent = async () => {
+    if (profile.businesses.length === 0) { setBusy(true); setQuick(true); await addBiz(); setBusy(false); return; }
+    const b = profile.businesses[0] as unknown as Record<string, unknown>;
+    const sub = BIZ_Q.findIndex((x) => b[x.key] === undefined || b[x.key] === '');
+    if (sub >= 0) { setQuick(sub < QUICK); setBiz({ id: profile.businesses[0].id, sub }); } else setIdx(1);
   };
   const removeBiz = (id: string) => confirmAsk('사업장 삭제', '이 사업장 정보를 지웁니다. 계속할까요?', '삭제', async () => {
     const p = { ...profile, businesses: profile.businesses.filter((b) => b.id !== id), unknownAnswers: (profile.unknownAnswers ?? []).filter((x) => !x.startsWith(`business.${id}.`)) };
@@ -216,13 +239,13 @@ export default function Onboarding() {
   const total = PERSONAL_Q.length + 1;
   const stepNo = biz ? biz.sub + 1 : Math.min(idx + 1, total + 1);
   const totalNo = biz ? BIZ_Q.length : total + 1;
-  const stepText = biz ? `사업장 질문 ${stepNo} / ${totalNo}` : idx >= DONE ? '입력 완료' : `질문 ${stepNo} / ${totalNo}`;
+  const stepText = biz ? (quick ? `조건 ${Math.min(stepNo, QUICK)} / ${QUICK}` : `사업장 질문 ${stepNo} / ${totalNo}`) : idx >= DONE ? '입력 완료' : `질문 ${stepNo} / ${totalNo}`;
   const toast = sync?.t === 'ok' ? sync.s : null;
   const syncNote = sync && sync.t !== 'ok' ? <Notice tone={sync.t === 'warn' ? 'info' : 'error'}>{sync.s}</Notice> : null;
 
   if (!biz && idx === 0) {
     return (
-      <Sheet title="먼저 동의가 필요해요" hint="맞는 혜택을 찾도록 정확히 알려주세요." step={stepText} onClose={close} toast={toast}>
+      <Sheet title="조건 5가지만 골라 주세요" hint="업종·지역·매출·직원 수·사업자 형태를 고르면 맞는 지원금과 환급금을 모두 찾아드려요." step={stepText} onClose={close} toast={toast}>
         <View style={{ backgroundColor: c.secondary, borderRadius: 10, padding: 14, gap: 6 }}>
           <T v="label">개인정보 수집·이용 동의</T>
           <T v="small">거주 지역, 출생연도, 소득 구간, 가구·주거 형태와 사업장 정보(지역·업종·개업일·매출 구간·직원 수)를 입력받아요. 주민등록번호, 계좌, 사업자등록번호는 묻지 않습니다.</T>
@@ -230,7 +253,7 @@ export default function Onboarding() {
         </View>
         <Toggle testID="consent-toggle" label="위 내용에 동의합니다" value={consent} onChange={async (v) => { setConsent(v); if (!(await saveDraft({ profile, consent: v }, uid))) setSync({ t: 'error', s: '이 기기에 저장하지 못했어요. 저장 공간을 확인해 주세요.' }); else setSync(null); }} />
         {syncNote}
-        <Btn testID="wizard-next" label="동의하고 시작" disabled={!consent || sync?.t === 'error'} onPress={() => setIdx(1)} />
+        <Btn testID="wizard-next" label="동의하고 시작" disabled={!consent || sync?.t === 'error'} loading={busy} onPress={startAfterConsent} />
         <Btn kind="ghost" label="나중에 하기" onPress={close} />
       </Sheet>
     );

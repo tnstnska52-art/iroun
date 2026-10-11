@@ -38,7 +38,7 @@ const contractInput=z.object({id:z.string().max(100).optional(),accountCode:z.st
 const inquiryInput=z.object({title:z.string().min(1).max(100),body:z.string().min(1).max(3000),requestKey:z.string().min(8).max(100)}).strict();
 const requestInput=z.object({benefitId:z.string().min(1).max(80),businessId:z.string().max(80).default(""),kind:z.enum(["신청 지원","자격 확인"]),confirmed:z.boolean()}).strict();
 const updateRequest=z.object({assignedTo:z.string().max(100).nullable().optional(),state:z.enum(["회사 접수","자격 확인","자료 준비","공식 신청 안내","고객 확인","회사 지원 종료"]),internalNote:z.string().max(3000).optional(),customerTasks:z.array(z.string().max(300)).max(60),staffTasks:z.array(z.string().max(300)).max(60),completedTasks:z.array(z.string().max(300)).max(120)}).strict();
-export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;identity?:(id:string)=>Promise<string>}={}){
+export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;identity?:(id:string)=>Promise<string>;person?:(id:string)=>Promise<{name?:string;phone?:string}>}={}){
  const router=Router();
  const notices=options.notices??(async()=> (await pool.query("SELECT data FROM iroun_benefits")).rows.map(r=>r.data as Benefit).filter(publicBenefit));
  const identity=options.identity??(async(id:string)=>{
@@ -49,6 +49,10 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
   const p=u.phoneNumbers.find(p=>p.id===u.primaryPhoneNumberId&&p.verification?.status==="verified");
   if(!p)throw fail("휴대폰 인증 후 체험을 시작해 주세요.",403);
   return "phone:"+p.phoneNumber.replace(/\D/g,"");
+ });
+ // 가입 때 인증한 이름·휴대폰 번호. 확인하지 못하면 비워 둔다(추측하지 않는다).
+ const person=options.person??(async(id:string)=>{
+  try{const u=await clerkClient.users.getUser(id);return{name:u.firstName??undefined,phone:u.phoneNumbers.find(p=>p.id===u.primaryPhoneNumberId)?.phoneNumber};}catch{return{};}
  });
  router.use(async(req,res,next)=>{
   try{if(!getAuth(req).userId)throw fail("로그인 후 이용해 주세요.",401);res.set("Cache-Control","private, no-store");await account(uid(req));next();}catch(e){next(e);}
@@ -216,7 +220,8 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
  });
  router.get("/office/state",async(req,res)=>{
   const a=await officeAccess(req);const admin=a.role==="admin";const requests=await requestRows(a.id,admin,!admin);
-  const customers=(await pool.query(`SELECT id,role,profile FROM iroun_accounts WHERE deleted_at IS NULL ${admin?"":"AND id IN(SELECT user_id FROM iroun_service_requests WHERE assigned_to=$1)"}`,admin?[]:[a.id])).rows;
+  const customerRows=(await pool.query(`SELECT id,role,profile FROM iroun_accounts WHERE deleted_at IS NULL ${admin?"":"AND id IN(SELECT user_id FROM iroun_service_requests WHERE assigned_to=$1)"}`,admin?[]:[a.id])).rows;
+  const customers=await Promise.all(customerRows.map(async r=>({...r,...await person(r.id)})));
   const inquiries=(await pool.query(`SELECT * FROM iroun_inquiries WHERE ${admin?"true":"user_id IN(SELECT user_id FROM iroun_service_requests WHERE assigned_to=$1)"} ORDER BY created_at DESC`,admin?[]:[a.id])).rows;
   const staff=admin?(await pool.query("SELECT * FROM iroun_staff")).rows:[];
   const contracts=admin?(await pool.query("SELECT * FROM iroun_contracts ORDER BY created_at DESC")).rows:[];

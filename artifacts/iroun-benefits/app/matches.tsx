@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { createServiceRequest, getGetServiceStateQueryKey } from '@workspace/api-client-react';
 import { Badge, Btn, Card, Chip, Empty, Notice, Page, T, Wrap, Field } from '@/components/ui';
@@ -15,7 +15,8 @@ function Body() {
   const router = useRouter();
   const qc = useQueryClient();
   const thisYear = new Date(Date.now()+9*3600000).getUTCFullYear();
-  const [period, setPeriod] = useState<'current' | 'past'>('current');
+  const params = useLocalSearchParams<{ period?: string }>();
+  const [period, setPeriod] = useState<'current' | 'past'>(params.period === 'past' ? 'past' : 'current');
   const [year, setYear] = useState(thisYear);
   const [businessScope,setBusinessScope]=useState('all');
   const [regionQuery,setRegionQuery]=useState('');
@@ -73,7 +74,7 @@ function Body() {
         <Chip label="지난 공고" selected={period === 'past'} onPress={() => setPeriod('past')} testID="svc-period-past" />
       </Wrap>
       {period === 'past' ? (
-        <Wrap>{[1, 2, 3].map((n) => <Chip key={n} label={`${thisYear - n}년`} selected={year === thisYear - n} onPress={() => setYear(thisYear - n)} testID={`svc-year-${thisYear - n}`} />)}</Wrap>
+        <Wrap>{[0, 1, 2].map((n) => <Chip key={n} label={n === 0 ? `올해(${thisYear}년)` : `${thisYear - n}년`} selected={year === thisYear - n} onPress={() => setYear(thisYear - n)} testID={`svc-year-${thisYear - n}`} />)}</Wrap>
       ) : null}
       {period === 'past' ? <Notice tone="warn" title="지난 공고는 참고용입니다">올해 같은 지원이 같은 조건으로 열린다는 뜻이 아닙니다. 신청 요청은 현재 공고에서만 할 수 있습니다.</Notice> : null}
       <Wrap><Chip label="모두" selected={businessScope==='all'} onPress={()=>setBusinessScope('all')} /><Chip label="개인·가구" selected={businessScope==='personal'} onPress={()=>setBusinessScope('personal')} />{acc.me?.profile.businesses.map(b=><Chip key={b.id} label={b.name||'내 사업장'} selected={businessScope===b.id} onPress={()=>setBusinessScope(b.id)} />)}</Wrap>

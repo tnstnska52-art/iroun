@@ -14,7 +14,7 @@ import { BenefitCard, dday } from '@/components/BenefitCard';
 import { Btn, Disclaimer, FooterLinks, Empty, ErrorState, Loading, Page, T } from '@/components/ui';
 import { apiErrorMessage } from '@/lib/text';
 import { daysLeft, endTime, fmtDate } from '@/lib/util';
-import { remaining, useServiceStateView } from '@/lib/service';
+import { remaining, useMatchesView, useServiceStateView } from '@/lib/service';
 import { useRecent } from '@/lib/recent';
 import { profileCompletion } from '@/lib/profile';
 import { HEADLINE_STAT, IS_PREVIEW, estimate, useDraftProfile, won } from '@/lib/estimate';
@@ -63,6 +63,7 @@ export default function Home() {
   const draft = useDraftProfile(acc.me?.id ?? null, focusCount);
 
   const svc = useServiceStateView();
+  const past = useMatchesView('past', new Date(Date.now() + 9 * 3600000).getUTCFullYear(), acc.active);
   const recentIds = useRecent();
   const ent = acc.me?.entitlement;
   const until = ent?.trialActive ? ent.trialUntil : ent?.contractActive ? ent.contractUntil : ent?.subscriptionActive ? ent.subscriptionUntil : ent?.grantActive ? ent.grantUntil : undefined;
@@ -86,18 +87,25 @@ export default function Home() {
   const ongoing = list.filter((b) => b.status === '접수 중').length;
   const open = list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0);
 
-  // 예상 지원금: 서버에 저장한 정보가 있으면 그것으로, 없으면 이 기기에 임시 저장한 입력으로 계산한다.
-  const basis = done.answered > 0 ? profile : draftDone.answered > 0 ? draft : null;
+  // 내 조건으로 찾은 공고: 서버에 저장한 정보가 있으면 그것으로, 없으면 이 기기에 임시 저장한 조건으로 찾는다.
+  // 맞춤 이용이 끝난 고객에게는 맞춤 결과를 보여주지 않는다(전체 공고만).
+  const expired = acc.isSignedIn && !acc.active && !!svc.data?.trialUsed;
+  const basis = expired ? null : done.answered > 0 ? profile : draftDone.answered > 0 ? draft : null;
   const est = basis ? estimate(list, basis) : null;
+  const showAmount = acc.active; // 예상 수령액은 체험·계약 이용 중에만 보여준다.
+  const trialGo = (acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as Href;
   const headline = IS_PREVIEW || HEADLINE_STAT.verified ? HEADLINE_STAT.text : '받을 수 있는 지원금, 놓치고 있지 않나요?';
   const summary: { big: string; sub: string; go: Href; strip: string; stripGo: Href; testID: string } =
-    est ? { big: est.total > 0 ? `예상 지원금 최대 ${won(est.total)}` : `맞을 수 있는 공고 ${est.items.length}건`, sub: `내 조건에 맞을 수 있는 공고 ${est.items.length}건 기준`, go: acc.active ? '/matches' : '/benefits',
-        strip: !acc.isSignedIn ? '로그인하고 내 정보 저장하기' : (done.pct < 100 ? '정보를 더 채우고 정확도 높이기' : acc.active ? '맞는 이유 자세히 보기' : '3일 무료체험으로 맞는 이유 확인하기'),
-        stripGo: !acc.isSignedIn ? '/auth' : done.pct < 100 ? '/onboarding' : acc.active ? '/matches' : '/access', testID: 'home-personalized' }
-    : { big: `신청 가능 ${open.length}건`, sub: acc.isSignedIn ? '사업자가 받을 수 있는 공고' : '로그인 없이 볼 수 있는 공고', go: '/benefits', strip: '내 사업자 예상지원금 확인하기', stripGo: '/onboarding', testID: acc.isSignedIn ? 'home-all-primary' : 'home-browse' };
+    est && showAmount ? { big: est.total > 0 ? `예상 수령액 최대 ${won(est.total)}` : `내게 맞는 공고 ${est.items.length}건`, sub: `지금 신청할 수 있는 공고 ${est.items.length}건 기준`, go: '/matches',
+        strip: done.pct < 100 ? '정보를 더 채우고 정확도 높이기' : '맞는 이유와 신청 방법 보기', stripGo: done.pct < 100 ? '/onboarding' : '/matches', testID: 'home-personalized' }
+    : est ? { big: `내 조건에 맞는 공고 ${est.items.length}건`, sub: '지원금·환급금을 모두 찾았어요', go: trialGo, strip: '예상 수령액 보기 · 3일 무료', stripGo: trialGo, testID: 'home-see-amount' }
+    : expired ? { big: `신청 가능 ${open.length}건`, sub: '맞춤 이용이 끝났어요. 접수한 내역은 계속 볼 수 있어요.', go: '/benefits', strip: '계속 이용하려면 회사에 문의하기', stripGo: '/inquiries', testID: 'home-all-primary' }
+    : { big: `신청 가능 ${open.length}건`, sub: '사업자가 받을 수 있는 지원금·환급금', go: '/benefits', strip: '내 조건에 맞는 공고 찾기', stripGo: '/onboarding', testID: acc.isSignedIn ? 'home-all-primary' : 'home-browse' };
 
   const picks = (est ? est.items.map((x) => x.benefit) : open).slice(0, 8);
   const resultOf = new Map((est?.items ?? []).map((x) => [x.benefit.id, x.result]));
+  const pastItems = (past.data?.items ?? []).filter((x) => x.matches.some((m) => !(m.referenceExclusions?.length)));
+  const pastTotal = pastItems.reduce((n, x) => n + (x.benefit.maxAmount ?? 0), 0);
   const featured = upcoming[0];
   const quick: { icon: keyof typeof Feather.glyphMap; label: string; go: Href; testID: string }[] = [
     { icon: 'target', label: '맞춤공고', go: '/matches', testID: 'nav-matches' },
@@ -140,7 +148,14 @@ export default function Home() {
           <Feather name="chevron-right" size={18} color={c.mutedForeground} />
         </Pressable>
       </View>
-      {est ? <T v="small" color={c.mutedForeground} style={{ paddingHorizontal: 4 }}>{est.total > 0 ? '공고에 적힌 최대 금액을 더한 예시예요. ' : ''}실제 지급액은 심사·예산·중복수혜에 따라 달라요.{est.noAmount > 0 ? ` 금액이 공고에 없는 ${est.noAmount}건은 합계에서 뺐어요.` : ''}</T> : null}
+      {est && showAmount ? <T v="small" color={c.mutedForeground} style={{ paddingHorizontal: 4 }}>{est.total > 0 ? '공고에 적힌 최대 금액을 더한 값이에요. ' : ''}실제 지급액은 심사·예산·중복수혜에 따라 달라요.{est.noAmount > 0 ? ` 금액이 공고에 없는 ${est.noAmount}건은 합계에서 뺐어요.` : ''}</T> : null}
+      {acc.active && acc.me && !acc.me.preferences.notifications ? (
+        <Pressable testID="home-alert-off" accessibilityRole="button" onPress={() => router.push('/account')} style={{ backgroundColor: c.warningSoft, borderRadius: c.radius, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Feather name="bell-off" size={18} color={c.warning} />
+          <T v="small" color={c.warning} style={{ flex: 1, fontWeight: '700' }}>알림이 꺼져 있어요. 새 지원금을 놓칠 수 있어요.</T>
+          <T v="small" color={c.warning} style={{ fontWeight: '800' }}>켜기</T>
+        </Pressable>
+      ) : null}
       {acc.active && until ? <T v="small" color={c.mutedForeground} style={{ paddingHorizontal: 4 }}>{ent?.trialActive ? '무료체험' : '이용 기간'} {fmtDate(until)}까지{acc.me ? ` · ${remaining(until, acc.me.serverNow ?? new Date().toISOString())}` : ''}</T> : null}
 
       {/* 회사가 요청한 할 일: 있을 때만 */}
@@ -158,31 +173,31 @@ export default function Home() {
       ) : null}
 
       {/* 정보 입력 완성도 */}
-      {acc.isSignedIn && !acc.loading && done.pct < 100 ? (
+      {acc.isSignedIn && !acc.loading && !expired && (done.pct < 100 || !acc.active) ? (
         <View testID="home-profile-card" style={{ backgroundColor: c.card, borderRadius: c.radius + 2, overflow: 'hidden', minHeight: 232 }}>
-          <Wave pct={done.pct} />
+          <Wave pct={est && !acc.active ? 55 : done.pct} />
           <View style={{ padding: 16, gap: 4 }}>
-            <T v="title" style={{ fontSize: 20 }}>{done.pct === 0 && !est ? headline : `내 정보 입력 ${done.pct}%`}</T>
-            <T v="small" color={c.mutedForeground}>{done.pct === 0 ? '조건 몇 가지만 고르면 내 사업장 예상지원금을 보여드려요.' : `나머지 ${100 - done.pct}%를 채우면 더 정확히 찾아드려요.`}</T>
-            {done.pct === 0 && !est && IS_PREVIEW && !HEADLINE_STAT.verified ? <T v="small" color={c.warning} style={{ fontSize: 12 }}>예시 문구 · 수치 근거 확인 전이라 실제 앱에는 아직 나오지 않아요</T> : null}
+            <T v="title" style={{ fontSize: 20 }}>{!est ? headline : !acc.active ? '내 사업장 예상 수령액은?' : `내 정보 입력 ${done.pct}%`}</T>
+            <T v="small" color={c.mutedForeground}>{!est ? '업종·지역·매출 등 5가지만 고르면 맞는 지원금과 환급금을 모두 찾아드려요.' : !acc.active ? `맞는 공고 ${est.items.length}건을 찾았어요. 3일 동안 무료로 금액과 신청 방법을 볼 수 있어요.` : `나머지 ${100 - done.pct}%를 채우면 더 정확히 찾아드려요.`}</T>
+            {!est && IS_PREVIEW && !HEADLINE_STAT.verified ? <T v="small" color={c.warning} style={{ fontSize: 12 }}>예시 문구 · 수치 근거 확인 전이라 실제 앱에는 아직 나오지 않아요</T> : null}
           </View>
           <View style={{ flex: 1 }} />
           <View style={{ padding: 16 }}>
-            <Btn label={done.pct === 0 ? '내 사업자 예상지원금 확인하기' : '이어서 입력'} onPress={() => router.push('/onboarding')} testID="home-start-onboarding" />
+            <Btn label={!est ? '내 조건에 맞는 지원금 찾기' : !acc.active ? '예상 수령액 보기' : '이어서 입력'} onPress={() => router.push(!est || acc.active ? '/onboarding' : trialGo)} testID="home-start-onboarding" />
           </View>
         </View>
       ) : null}
       {!acc.isSignedIn ? (
         <View style={{ backgroundColor: c.card, borderRadius: c.radius + 2, overflow: 'hidden', minHeight: 200 }}>
-          <Wave pct={est ? draftDone.pct : 8} />
+          <Wave pct={est ? 55 : 8} />
           <View style={{ padding: 16, gap: 4 }}>
-            <T v="title" style={{ fontSize: 20 }}>{est ? `내 정보 입력 ${draftDone.pct}%` : headline}</T>
-            <T v="small" color={c.mutedForeground}>{est ? '로그인하면 입력한 정보를 저장하고 이어갈 수 있어요.' : '조건 몇 가지만 고르면 내 사업장 예상지원금을 보여드려요.'}</T>
+            <T v="title" style={{ fontSize: 20 }}>{est ? '내 사업장 예상 수령액은?' : headline}</T>
+            <T v="small" color={c.mutedForeground}>{est ? `맞는 공고 ${est.items.length}건을 찾았어요. 가입하면 3일 동안 무료로 금액과 신청 방법을 볼 수 있어요.` : '업종·지역·매출 등 5가지만 고르면 맞는 지원금과 환급금을 모두 찾아드려요.'}</T>
             {!est && IS_PREVIEW && !HEADLINE_STAT.verified ? <T v="small" color={c.warning} style={{ fontSize: 12 }}>예시 문구 · 수치 근거 확인 전이라 실제 앱에는 아직 나오지 않아요</T> : null}
           </View>
           <View style={{ flex: 1 }} />
           <View style={{ padding: 16 }}>
-            <Btn label={est ? '로그인하고 저장하기' : '내 사업자 예상지원금 확인하기'} onPress={() => router.push(est ? '/auth' : '/onboarding')} testID={est ? 'home-login' : 'home-estimate-start'} />
+            <Btn label={est ? '예상 수령액 보기' : '내 조건에 맞는 지원금 찾기'} onPress={() => router.push(est ? trialGo : '/onboarding')} testID={est ? 'home-login' : 'home-estimate-start'} />
           </View>
         </View>
       ) : null}
@@ -205,7 +220,7 @@ export default function Home() {
       {/* 가로로 넘기는 추천 */}
       {picks.length > 0 ? (
         <>
-          <SectionHead title={est ? '내 조건으로 찾은 공고' : '지금 신청할 수 있는 공고'} onMore={() => router.push(est && acc.active ? '/matches' : '/benefits')} testID="home-picks-more" />
+          <SectionHead title={est ? '내 조건으로 찾은 공고' : '지금 신청할 수 있는 공고'} onMore={() => router.push(est && acc.active ? '/matches' : est ? trialGo : '/benefits')} testID="home-picks-more" />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 10 }}>
             {picks.map((b) => (
               <Pressable key={b.id} testID={`home-pick-${b.id}`} accessibilityRole="button" accessibilityLabel={`${b.title}. 자세히 보기`}
@@ -213,7 +228,7 @@ export default function Home() {
                 style={({ pressed }) => ({ width: 136, height: 128, borderRadius: 14, overflow: 'hidden', opacity: pressed ? 0.85 : 1 })}>
                 <LinearGradient colors={['#4B6CB7', '#3A4E7A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, padding: 12, justifyContent: 'space-between' }}>
                   <T v="label" color="#fff" numberOfLines={3}>{b.title}</T>
-                  <T v="small" color="#DCE6FF" style={{ fontWeight: '700' }}>{b.maxAmount ? `최대 ${won(b.maxAmount)}` : resultOf.get(b.id) === '조건 일치' ? '조건 일치' : resultOf.has(b.id) ? '추가 확인' : dday(b).label}</T>
+                  <T v="small" color="#DCE6FF" style={{ fontWeight: '700' }}>{showAmount && b.maxAmount ? `최대 ${won(b.maxAmount)}` : resultOf.get(b.id) === '조건 일치' ? '조건 일치' : resultOf.has(b.id) ? '추가 확인' : dday(b).label}</T>
                 </LinearGradient>
               </Pressable>
             ))}
@@ -244,17 +259,36 @@ export default function Home() {
 
       {est && est.items.length > 0 ? (
         <>
-          <SectionHead title={`받을 수 있는지 확인할 공고 ${est.items.length}건`} />
+          <SectionHead title={`지금 받을 수 있는 지원금·환급금 ${est.items.length}건`} />
           {est.items.slice(0, 6).map((x) => (
             <BenefitCard key={x.benefit.id} b={x.benefit} extra={
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingLeft: 52 }}>
                 <View style={{ backgroundColor: x.result === '조건 일치' ? c.successSoft : c.warningSoft, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
                   <T v="small" color={x.result === '조건 일치' ? c.success : c.warning} style={{ fontWeight: '700', fontSize: 12, lineHeight: 16 }}>{x.result === '조건 일치' ? '조건 일치' : '추가 확인 필요'}</T>
                 </View>
-                <T v="small" color={c.mutedForeground}>{x.benefit.maxAmount ? `공고상 최대 ${won(x.benefit.maxAmount)}` : '금액은 공고에서 확인'}</T>
+                <T v="small" color={c.mutedForeground}>{!showAmount ? '금액은 무료체험에서 확인' : x.benefit.maxAmount ? `공고상 최대 ${won(x.benefit.maxAmount)}` : '금액은 공고에서 확인'}</T>
               </View>
             } />
           ))}
+        </>
+      ) : null}
+
+      {acc.active && pastItems.length > 0 ? (
+        <>
+          <SectionHead title={`올해 지나간 공고 ${pastItems.length}건`} onMore={() => router.push({ pathname: '/matches', params: { period: 'past' } })} testID="home-past-more" />
+          <View testID="home-past" style={{ backgroundColor: c.card, borderRadius: c.radius + 2, padding: 16, gap: 10 }}>
+            {pastTotal > 0 ? <T v="h3" color={c.primary}>공고상 최대 {won(pastTotal)}</T> : null}
+            <T v="small" color={c.mutedForeground}>1월부터 지금까지 마감된 공고 중 내 조건에 맞았던 것들이에요. 선정이 확정된 금액은 아니에요.</T>
+            {pastItems.slice(0, 4).map((x) => (
+              <Pressable key={x.benefit.id} accessibilityRole="button" onPress={() => router.push({ pathname: '/benefit/[id]', params: { id: x.benefit.id } })} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 40, borderTopWidth: 1, borderTopColor: c.border, paddingTop: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <T v="label" numberOfLines={1}>{x.benefit.title}</T>
+                  <T v="small" color={c.mutedForeground}>{x.benefit.endsAt ? `${fmtDate(x.benefit.endsAt)} 마감` : '마감'}{x.benefit.maxAmount ? ` · 최대 ${won(x.benefit.maxAmount)}` : ''}</T>
+                </View>
+                <Feather name="chevron-right" size={18} color={c.mutedForeground} />
+              </Pressable>
+            ))}
+          </View>
         </>
       ) : null}
 

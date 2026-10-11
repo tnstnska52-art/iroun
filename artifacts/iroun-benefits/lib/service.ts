@@ -48,7 +48,7 @@ export interface OfficeRequest {
 export interface OfficeStaffRow { user_id: string; name: string; phone?: string | null; kakao?: string | null; enabled: boolean }
 export interface OfficeContract { id: string; user_id: string; starts_at: string; ends_at: string; reason?: string; evidence?: string; revoked_at?: string | null }
 export interface OfficeState {
-  admin: boolean; requests: OfficeRequest[]; customers: { id: string; role: string; profile?: Profile }[];
+  admin: boolean; requests: OfficeRequest[]; customers: { id: string; role: string; profile?: Profile; name?: string; phone?: string }[];
   inquiries: (SvcInquiry & { user_id?: string })[]; staff: OfficeStaffRow[]; contracts: OfficeContract[];
   company: CompanyInfo; contractPolicy?: unknown;
 }

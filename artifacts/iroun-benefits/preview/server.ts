@@ -54,6 +54,16 @@ const SAMPLES: Benefit[] = [
     support: '임차료 일부를 지원했던 형태입니다.', calculation: '예시 자료라 금액을 제시하지 않습니다.',
     documents: ['임대차계약서', '사업자등록증명'], startsAt: '2026-02-02', endsAt: '2026-03-13', status: '마감', maxAmount: 2000000,
     rules: [{ scope: 'business', field: 'province', operator: 'eq', value: '경기', label: '사업장 소재지(경기도)' }] }),
+  sample({ id: 'ex-closed-digital', title: '[예시] 소상공인 스마트기기 도입 지원 (마감)', audience: '사업', category: '경영', region: '전국', agency: '소상공인시장진흥공단',
+    sourceUrl: 'https://www.sbiz24.kr/', summary: '화면 확인용 예시 공고입니다. 키오스크·서빙로봇 등 스마트기기 도입 비용을 지원했던 형태입니다.', support: '도입 비용의 일부를 지원했던 형태입니다.', calculation: '예시 자료입니다.',
+    documents: ['사업자등록증명', '견적서'], startsAt: '2026-04-06', endsAt: '2026-05-15', status: '마감', maxAmount: 5000000,
+    rules: [{ scope: 'business', field: 'employees', operator: 'lte', value: 9, label: '상시 근로자 10인 미만' }] }),
+  sample({ id: 'ex-closed-insurance', title: '[예시] 자영업자 고용보험료 환급 (마감)', kind: '환급금', audience: '사업', category: '보험', region: '전국', agency: '근로복지공단',
+    sourceUrl: 'https://www.comwel.or.kr/', summary: '화면 확인용 예시 공고입니다. 자영업자 고용보험료 일부를 돌려줬던 형태입니다.', support: '납부한 보험료의 일부를 환급했던 형태입니다.', calculation: '예시 자료입니다.',
+    documents: ['사업자등록증명', '고용보험 가입 확인서'], startsAt: '2026-01-05', endsAt: '2026-06-30', status: '마감', maxAmount: 1200000 }),
+  sample({ id: 'ex-closed-energy', title: '[예시] 소상공인 전기요금 특별지원 (마감)', audience: '사업', category: '경영', region: '전국', agency: '중소벤처기업부',
+    sourceUrl: 'https://www.mss.go.kr/', summary: '화면 확인용 예시 공고입니다. 연매출이 일정 규모 이하인 소상공인의 전기요금을 지원했던 형태입니다.', support: '전기요금 일부를 정액 지원했던 형태입니다.', calculation: '예시 자료입니다.',
+    documents: ['사업자등록증명', '전기요금 납부 확인서'], startsAt: '2026-07-01', endsAt: '2026-09-30', status: '마감', maxAmount: 200000 }),
 ];
 const benefits: Benefit[] = [...(official as Benefit[]), ...SAMPLES];
 const notices = () => benefits.filter(publicBenefit);
@@ -339,7 +349,7 @@ function route(method: string, path: string, query: URLSearchParams, body: Body,
     const mineIds = new Set(requests.filter((r) => r.assigned_to === id).map((r) => r.user_id));
     return {
       admin, requests: rows,
-      customers: [...users.values()].filter((c) => !c.deleted && (admin || mineIds.has(c.id))).map((c) => ({ id: c.id, role: c.role, profile: c.profile })),
+      customers: [...users.values()].filter((c) => !c.deleted && (admin || mineIds.has(c.id))).map((c) => ({ id: c.id, role: c.role, profile: c.profile, name: c.name, phone: c.email })),
       inquiries: inquiries.filter((q) => admin || mineIds.has(q.user_id)).sort((p1, p2) => p2.created_at.localeCompare(p1.created_at)),
       staff: admin ? [...staff.values()] : [],
       contracts: admin ? [...users.values()].filter((c) => c.contract).map((c) => ({ id: c.contract!.id, user_id: c.id, starts_at: c.contract!.startsAt, ends_at: c.contract!.endsAt, reason: c.contract!.reason, evidence: c.contract!.evidence, revoked_at: c.contract!.revokedAt ?? null })) : [],
