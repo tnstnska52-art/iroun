@@ -4,6 +4,8 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { getListBenefitsQueryKey, useListBenefits } from '@workspace/api-client-react';
 import { Feather } from '@expo/vector-icons';
 import { useUnreadReplies } from '@/lib/replies';
+import { TodayPicks } from '@/components/TodayPicks';
+import { todayPicks } from '@/lib/picks';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
 import { BigMoney, Btn, CountUp, Disclaimer, Emoji, ErrorState, FooterLinks, Loading, Page, SectionHead, T } from '@/components/ui';
@@ -46,6 +48,8 @@ export default function Home() {
   // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 마감 7일 안쪽을 보여준다.
   const closing = (est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }))).filter((x) => within7(x.benefit)).sort((x, y) => (daysLeft(x.benefit.endsAt) ?? 0) - (daysLeft(y.benefit.endsAt) ?? 0)).slice(0, 5);
   const nowOpen = open.filter((b) => !within7(b)).slice(0, 5).map((b) => ({ benefit: b, result: '추가 확인 필요' as const }));
+  // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 오늘 받기 쉬운 5건을 고른다.
+  const picks = todayPicks(est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' })));
   const closingBlock = closing.length > 0 ? (
     <>
       <SectionHead emoji="🚨" motion="pulse" title="마감 7일 전 지원금" />
@@ -99,6 +103,7 @@ export default function Home() {
               </View>
             </Pressable>
           ) : <Btn label="계속 이용하기" onPress={() => router.push('/membership' as never)} testID="home-continue" />}
+          <TodayPicks items={picks} />
           {nowOpen.length > 0 ? (
             <>
               <SectionHead emoji="👉" motion="wiggle" title="지금 신청 가능한 지원금" onMore={() => router.push('/benefits')} testID="home-easy-more" />
@@ -146,6 +151,7 @@ export default function Home() {
             </Pressable>
           ) : null}
 
+          <TodayPicks items={picks} />
           <SectionHead emoji="👉" motion="wiggle" title="지금 신청 가능한 지원금" onMore={() => router.push('/benefits')} testID="home-list-more" />
           <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
             {shown.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === shown.length - 1 && est.items.length <= shown.length} />)}
