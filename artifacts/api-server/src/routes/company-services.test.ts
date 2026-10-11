@@ -149,6 +149,14 @@ describe("신규 회사 접수·담당자·문의·알림",()=>{
  it("예산소진·공식 종료는 마감",()=>{expect(finished({...base,budgetStatus:"소진"})).toBe(true);expect(finished({...base,status:"마감"})).toBe(true);});
  it("과거 비교는 당시 나이와 확인필요 표시",()=>{const r=historicalMatch({...base,startsAt:"2020-01-01",rules:[{scope:"personal",field:"age",operator:"gte",value:65,label:"연령"}]},profile)[0];expect(r.referenceYear).toBe(2020);expect(r.result).toBe("추가 확인 필요");});
  it("무료 신청지원 요청 403",async()=>expect((await apply()).status).toBe(403));
+ it("월 구독자는 맞춤 이용은 되지만 회사 신청지원은 요청 불가(패키지 계약 고객만)",async()=>{
+  await pool.query("INSERT INTO iroun_subscriptions(user_id,expires_at,state,provider,provider_id) VALUES($1,now()+interval '30 days','active','test',$2)",[owner,`qa-sub-${suffix}`]);
+  await post("/service/consents",{kind:"service",accepted:true,version:CONSENT_VERSION});
+  const state=(await get("/service/state")).body;expect(state.account.entitlement.subscriptionActive).toBe(true);expect(state.account.entitlement.contractActive).toBe(false);
+  expect((await get("/service/matches")).status).toBe(200);
+  const r=await apply();expect(r.status).toBe(403);expect(r.body.error).toContain("계약 고객");
+  await signed();expect((await apply()).status).toBe(200);
+ });
  it("체험 회원은 신청지원 요청 불가(계약 고객만)",async()=>{await trial();const r=await apply();expect(r.status).toBe(403);expect(r.body.error).toContain("계약 고객");await signed();expect((await apply()).status).toBe(200);});
  it("조건일치·고객확인→회사 실제접수",async()=>{await gift();const r=await apply();expect(r.status).toBe(200);const state=(await get("/service/state")).body;expect(state.requests[0].state).toBe("회사 접수");expect(state.requests[0].snapshot.warning).toContain("기관");});
  it("불일치 이유 반환·자격문의 가능",async()=>{await gift();b.rules=[{...base.rules[0],value:"제조업"}];const r=await apply();expect(r.status).toBe(409);expect(r.body.detail.exclusions[0]).toContain("업종");expect((await apply("자격 확인")).status).toBe(200);});
