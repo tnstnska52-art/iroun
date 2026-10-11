@@ -32,8 +32,8 @@ export default function Funds() {
         <Pressable testID="fund-start" accessibilityRole="button" accessibilityLabel="정책자금 예상 한도와 금리 진단받기" onPress={() => router.push('/fund-check' as never)}
           style={({ pressed }) => ({ backgroundColor: c.primary, borderRadius: c.radius + 6, paddingVertical: 24, paddingHorizontal: 22, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.9 : 1 })}>
           <View style={{ flex: 1, gap: 4 }}>
-            <T v="title" color="#FFFFFF" style={{ fontSize: 21, lineHeight: 30 }}>내 사업자로 가능한 정책자금</T>
-            <T v="title" color="#FFFFFF" style={{ fontSize: 21, lineHeight: 30 }}>예상 한도·금리 진단받기</T>
+            <T v="title" color="#FFFFFF">내 사업자로 가능한{'\n'}정책자금 한도·금리{'\n'}진단받기</T>
+            <T v="small" color="#DCE6FF">1분이면 끝나요</T>
           </View>
           <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
             <Feather name="arrow-right" size={26} color={c.primary} />
@@ -63,7 +63,7 @@ export default function Funds() {
               <Pressable testID={`fund-${f.id}`} accessibilityRole="button" accessibilityState={{ expanded: on }} onPress={() => setOpen(on ? null : f.id)}
                 style={{ minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 }}>
                 <View style={{ flex: 1, gap: 2 }}>
-                  <T style={{ fontWeight: '600' }}>{f.name}</T>
+                  <T v="h3">{f.name}</T>
                   <T v="small" color={f.status === '접수 중' ? c.primary : c.mutedForeground}>{f.status}</T>
                 </View>
                 <Feather name={on ? 'chevron-up' : 'chevron-down'} size={22} color={c.mutedForeground} />
@@ -72,8 +72,8 @@ export default function Funds() {
                 <View testID={`fund-detail-${f.id}`} style={{ paddingBottom: 16, gap: 10 }}>
                   {([['금리', [f.rate]], ['한도', f.limit.split(' / ')]] as const).map(([k, lines]) => (
                     <View key={k} style={{ backgroundColor: c.secondary, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', gap: 14 }}>
-                      <T color={c.mutedForeground} style={{ width: 36 }}>{k}</T>
-                      <View style={{ flex: 1, gap: 2 }}>{lines.map((x) => <T key={x} style={{ fontWeight: '600' }}>{x}</T>)}</View>
+                      <T v="small" color={c.mutedForeground} style={{ width: 36, lineHeight: 23 }}>{k}</T>
+                      <View style={{ flex: 1, gap: 2 }}>{lines.map((x) => <T key={x} v="label">{x}</T>)}</View>
                     </View>
                   ))}
                   <View style={{ flexDirection: 'row', gap: 14, paddingHorizontal: 14 }}><T v="small" color={c.mutedForeground} style={{ width: 36 }}>대상</T><T v="small" style={{ flex: 1 }}>{f.target}</T></View>
