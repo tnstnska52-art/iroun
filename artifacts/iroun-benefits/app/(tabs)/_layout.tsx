@@ -81,16 +81,16 @@ function ClassicTabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.mutedForeground,
+        tabBarInactiveTintColor: '#8B95A1',
+        tabBarActiveTintColor: colors.foreground,
         headerShown: false,
-        tabBarLabelStyle: { fontSize: 14, fontWeight: '700' },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopWidth: 1,
           borderTopColor: colors.border,
           paddingTop: 6,
-          ...(isWeb ? { height: 84 } : {}),
+          ...(isWeb ? { height: 64 } : {}),
         },
       }}
     >
@@ -103,7 +103,7 @@ function ClassicTabLayout() {
             tabBarAccessibilityLabel: `${t.label} 탭`,
             tabBarButtonTestID: `tab-${t.name}`,
             tabBarIcon: ({ color }) =>
-              isIOS ? <SymbolView name={t.sf} tintColor={color} size={26} /> : <Feather name={t.feather} size={24} color={color} />,
+              isIOS ? <SymbolView name={t.sf} tintColor={color} size={26} /> : <Feather name={t.feather} size={22} color={color} />,
           }}
         />
       ))}

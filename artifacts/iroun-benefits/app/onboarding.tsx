@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Platform, Pressable, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import { useQueryClient } from '@tanstack/react-query';
@@ -10,7 +13,7 @@ import { loadDraft, saveDraft } from '@/lib/draft';
 import { confirmAsk } from '@/lib/confirm';
 import { PROVINCES, apiErrorMessage } from '@/lib/text';
 import { newId } from '@/lib/util';
-import { Btn, Card, Chip, Field, Loading, Notice, Page, T, Toggle, Wrap } from '@/components/ui';
+import { Btn, Field, Loading, Notice, T, Toast, Toggle } from '@/components/ui';
 
 type Q = { key: string; title: string; hint?: string; kind: 'number' | 'text' | 'select' | 'multi'; options?: string[]; min?: number; max?: number; placeholder?: string; unit?: string };
 
@@ -64,6 +67,7 @@ export default function Onboarding() {
   const [sync, setSync] = useState<{ t: 'ok' | 'warn' | 'error'; s: string } | null>(null);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  useEffect(() => { if (sync?.t !== 'ok') return; const h = setTimeout(() => setSync((x) => (x?.t === 'ok' ? null : x)), 1600); return () => clearTimeout(h); }, [sync]);
   const inited = useRef(false);
   const commitInFlight=useRef(false);
 
@@ -207,66 +211,58 @@ export default function Onboarding() {
     if (ok) setIdx(DONE);
   };
 
-  if (!ready) return <Page back title="내 정보"><Loading rows={2} /></Page>;
+  const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  if (!ready) return <Sheet title="내 정보" onClose={close}><Loading rows={2} /></Sheet>;
   const total = PERSONAL_Q.length + 1;
   const stepNo = biz ? biz.sub + 1 : Math.min(idx + 1, total + 1);
   const totalNo = biz ? BIZ_Q.length : total + 1;
-  const pct = Math.round((stepNo / totalNo) * 100);
-  const noteTop = (
-    <View style={{ gap: 8 }}>
-      <T v="label" color={c.primary}>{biz ? `사업장 질문 ${stepNo} / ${totalNo}` : idx >= DONE ? '완료' : `질문 ${stepNo} / ${totalNo}`}</T>
-      <View accessible accessibilityRole="progressbar" accessibilityLabel={`진행률 ${pct}퍼센트`} accessibilityValue={{ min: 0, max: 100, now: pct }} style={{ height: 10, backgroundColor: c.secondary, borderRadius: 5, overflow: 'hidden' }}>
-        <View style={{ height: 10, width: `${pct}%`, backgroundColor: c.primary }} />
-      </View>
-    </View>
-  );
-  const syncNote = sync ? <Notice tone={sync.t === 'ok' ? 'ok' : sync.t === 'warn' ? 'info' : 'error'}>{sync.s}</Notice> : null;
+  const stepText = biz ? `사업장 질문 ${stepNo} / ${totalNo}` : idx >= DONE ? '입력 완료' : `질문 ${stepNo} / ${totalNo}`;
+  const toast = sync?.t === 'ok' ? sync.s : null;
+  const syncNote = sync && sync.t !== 'ok' ? <Notice tone={sync.t === 'warn' ? 'info' : 'error'}>{sync.s}</Notice> : null;
 
   if (!biz && idx === 0) {
     return (
-      <Page back title="먼저 동의가 필요해요">
-        {noteTop}
-        <Card>
-          <T v="h3">개인정보 수집·이용 동의</T>
-          <T>맞춤 확인을 위해 거주 지역, 출생연도, 소득 구간, 가구·주거 형태와 사업장 정보(지역·업종·개업일·매출 구간·직원 수)를 입력받습니다. 주민등록번호, 계좌, 사업자등록번호 같은 민감한 정보는 묻지 않습니다.</T>
-          <T v="small" color={c.mutedForeground}>모르는 항목은 건너뛸 수 있고, 언제든 고치거나 지울 수 있습니다. 로그인 전에는 이 기기에만 임시 저장됩니다.</T>
-          <Toggle testID="consent-toggle" label="위 내용에 동의합니다" value={consent} onChange={async (v) => { setConsent(v); if (!(await saveDraft({ profile, consent: v }, uid))) setSync({ t: 'error', s: '이 기기에 저장하지 못했습니다. 저장 공간을 확인해 주세요.' }); else setSync(null); }} />
-        </Card>
+      <Sheet title="먼저 동의가 필요해요" hint="맞는 혜택을 찾도록 정확히 알려주세요." step={stepText} onClose={close} toast={toast}>
+        <View style={{ backgroundColor: c.secondary, borderRadius: 10, padding: 14, gap: 6 }}>
+          <T v="label">개인정보 수집·이용 동의</T>
+          <T v="small">거주 지역, 출생연도, 소득 구간, 가구·주거 형태와 사업장 정보(지역·업종·개업일·매출 구간·직원 수)를 입력받아요. 주민등록번호, 계좌, 사업자등록번호는 묻지 않습니다.</T>
+          <T v="small" color={c.mutedForeground}>모르면 나중에 입력해도 돼요. 언제든 고치거나 지울 수 있고, 로그인 전에는 이 기기에만 임시 저장됩니다.</T>
+        </View>
+        <Toggle testID="consent-toggle" label="위 내용에 동의합니다" value={consent} onChange={async (v) => { setConsent(v); if (!(await saveDraft({ profile, consent: v }, uid))) setSync({ t: 'error', s: '이 기기에 저장하지 못했어요. 저장 공간을 확인해 주세요.' }); else setSync(null); }} />
         {syncNote}
-        <Btn testID="wizard-next" label="동의하고 시작" icon="arrow-right" disabled={!consent || sync?.t === 'error'} onPress={() => setIdx(1)} />
-        <Btn kind="ghost" label="나중에 하기" onPress={() => router.back()} />
-      </Page>
+        <Btn testID="wizard-next" label="동의하고 시작" disabled={!consent || sync?.t === 'error'} onPress={() => setIdx(1)} />
+        <Btn kind="ghost" label="나중에 하기" onPress={close} />
+      </Sheet>
     );
   }
 
   if (!biz && idx === HUB) {
     return (
-      <Page back title="사업장 정보" subtitle="사업장이 여러 곳이면 모두 추가할 수 있습니다. 사업장이 없으면 바로 완료하세요.">
-        {noteTop}
+      <Sheet title="사업장 정보" hint="사업장이 여러 곳이면 모두 추가할 수 있어요. 사업장이 없으면 바로 완료하세요." step={stepText} onClose={close} toast={toast}>
         {profile.businesses.map((b, i) => (
-          <Card key={b.id}>
+          <View key={b.id} style={{ borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 14, gap: 6 }}>
             <T v="h3">{b.name || `사업장 ${i + 1}`}</T>
-            <T color={c.mutedForeground}>{[b.province, b.district, b.industry].filter(Boolean).join(' · ') || '입력한 내용이 아직 없습니다'}</T>
-            <Btn kind="secondary" label="이 사업장 고치기" icon="edit-2" onPress={() => setBiz({ id: b.id, sub: 0 })} testID={`edit-biz-${i}`} />
-            <Btn kind="ghost" label="이 사업장 삭제" icon="trash-2" onPress={() => removeBiz(b.id)} testID={`remove-biz-${i}`} />
-          </Card>
+            <T v="small" color={c.mutedForeground}>{[b.province, b.district, b.industry].filter(Boolean).join(' · ') || '입력한 내용이 아직 없어요'}</T>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Btn kind="secondary" label="정보 수정" icon="edit-2" onPress={() => setBiz({ id: b.id, sub: 0 })} testID={`edit-biz-${i}`} style={{ flex: 1 }} />
+              <Btn kind="secondary" label="삭제" icon="trash-2" onPress={() => removeBiz(b.id)} testID={`remove-biz-${i}`} style={{ flex: 1 }} />
+            </View>
+          </View>
         ))}
         <Btn testID="add-business" label="사업장 추가하기" icon="plus" kind="secondary" onPress={addBiz} />
         {syncNote}
-        <Btn testID="wizard-finish" label={acc.isSignedIn ? '입력 완료' : '로그인하고 저장하기'} icon="check" loading={busy} onPress={finish} />
+        <Btn testID="wizard-finish" label={acc.isSignedIn ? '입력 완료' : '로그인하고 저장하기'} loading={busy} onPress={finish} />
         <Btn kind="ghost" label="이전 질문" onPress={goBack} />
-      </Page>
+      </Sheet>
     );
   }
 
   if (!biz && idx >= DONE) {
     return (
-      <Page back title="입력을 마쳤습니다">
-        {noteTop}
-        <Notice tone="ok" title="저장되었습니다">입력하신 정보는 내 정보 화면에서 언제든 고치거나 이어서 입력할 수 있습니다.</Notice>
+      <Sheet title="입력을 마쳤어요" hint="내정보에서 언제든 고치거나 이어서 입력할 수 있어요." step={stepText} onClose={close} toast={toast}>
         <Btn label="홈으로 가기" icon="home" onPress={() => router.replace('/')} testID="wizard-home" />
-        <Btn kind="secondary" label="처음부터 다시 보기" onPress={() => setIdx(1)} />
-      </Page>
+        <Btn kind="secondary" label="정보 수정" onPress={() => setIdx(1)} />
+      </Sheet>
     );
   }
 
@@ -274,31 +270,66 @@ export default function Onboarding() {
   const isSelect = q.kind === 'select';
   const selected = Array.isArray(cur()) ? '' : String(cur() ?? '');
   const wasUnknown = unknownIds.includes(answerId(q.key));
-  const hasAnswer = q.kind === 'multi' ? Array.isArray(cur()) && (cur() as unknown as string[]).length > 0 : cur() !== undefined && cur() !== '';
   const toggleMulti = (o: string) => { setErr(null); setMulti((m) => (m.includes(o) ? m.filter((x) => x !== o) : o === NONE ? [NONE] : [...m.filter((x) => x !== NONE), o])); };
   return (
-    <Page back title={q.title} subtitle={q.hint}>
-      {noteTop}
-      {wasUnknown ? <Notice tone="warn" title="이전 답변: 잘 모르겠어요">알게 되면 지금 답을 고르거나 입력해 주세요.</Notice> : !hasAnswer ? <T v="small" color={c.mutedForeground}>아직 답하지 않은 질문입니다.</T> : null}
+    <Sheet title={q.title} hint={q.hint} step={stepText} onClose={close} toast={toast}>
+      {wasUnknown ? <T v="small" color={c.warning}>지난번에 '잘 모르겠어요'로 넘긴 질문이에요.</T> : null}
       {q.kind === 'multi' ? (
         <>
-          <Wrap>{q.options!.map((o) => <Chip key={o} label={o} selected={multi.includes(o)} onPress={() => toggleMulti(o)} testID={`opt-${o}`} />)}</Wrap>
+          {q.options!.map((o) => <Option key={o} label={o} selected={multi.includes(o)} onPress={() => toggleMulti(o)} testID={`opt-${o}`} multi />)}
           {err ? <T v="small" color={c.destructive}>{err}</T> : null}
-          <Btn testID="wizard-next" label="선택 확인하고 다음" icon="arrow-right" loading={busy} onPress={submitCurrent} />
+          <Btn testID="wizard-next" label="선택 완료" loading={busy} onPress={submitCurrent} />
         </>
       ) : isSelect ? (
-        <Wrap>
-          {q.options!.map((o) => <Chip key={o} label={o} selected={selected === o} onPress={() => void commit(o, goNext)} testID={`opt-${o}`} />)}
-        </Wrap>
+        q.options!.map((o) => <Option key={o} label={o} selected={selected === o} disabled={busy} onPress={() => void commit(o, goNext)} testID={`opt-${o}`} />)
       ) : (
         <>
           <Field testID="wizard-input" label={q.unit ? `답변 (단위: ${q.unit})` : '답변'} value={text} onChangeText={(t) => { setText(t); setErr(null); }} keyboardType={q.kind === 'number' ? 'number-pad' : 'default'} placeholder={q.placeholder} error={err ?? undefined} onSubmitEditing={submitCurrent} returnKeyType="next" />
-          <Btn testID="wizard-next" label="다음" icon="arrow-right" onPress={submitCurrent} />
+          <Btn testID="wizard-next" label="입력 완료" loading={busy} onPress={submitCurrent} />
         </>
       )}
       {syncNote}
-      <Btn testID="wizard-unknown" kind="secondary" label="잘 모르겠어요 (건너뛰기)" onPress={skipUnknown} hint="이 항목은 비워 두고 다음으로 넘어갑니다" />
-      <Btn testID="wizard-back" kind="ghost" label="이전 질문" icon="arrow-left" onPress={goBack} />
-    </Page>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Btn testID="wizard-back" kind="ghost" label="이전 질문" icon="chevron-left" onPress={goBack} style={{ flex: 1 }} />
+        <Btn testID="wizard-unknown" kind="ghost" label="잘 모르겠어요" onPress={skipUnknown} hint="모르면 나중에 입력해도 돼요. 이 항목은 비워 두고 다음으로 넘어갑니다" style={{ flex: 1 }} />
+      </View>
+    </Sheet>
+  );
+}
+
+/** 참고 영상의 입력 방식: 아래에서 올라오는 판에 한 번에 한 질문 */
+function Sheet({ title, hint, step, onClose, toast, children }: { title: string; hint?: string; step?: string; onClose: () => void; toast?: string | null; children: React.ReactNode }) {
+  const c = useColors();
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'flex-end' }}>
+      <Pressable style={{ flex: 1, minHeight: 48 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="입력 닫기" testID="sheet-backdrop" />
+      <Toast text={toast ?? null} />
+      <View style={{ backgroundColor: c.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '88%', paddingBottom: Platform.OS === 'web' ? 8 : insets.bottom }}>
+        <View style={{ alignItems: 'center', paddingTop: 10 }}><View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: c.border }} /></View>
+        <KeyboardAwareScrollViewCompat keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20, gap: 10 }} bottomOffset={24}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 36 }}>
+            <T v="small" color={c.primary} style={{ fontWeight: '700' }}>{step ?? ''}</T>
+            <Pressable testID="back-button" accessibilityRole="button" accessibilityLabel="입력 닫기" onPress={onClose} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', marginRight: -10 }}>
+              <Feather name="x" size={22} color={c.mutedForeground} />
+            </Pressable>
+          </View>
+          <T v="h2" accessibilityRole="header" style={{ fontSize: 20, lineHeight: 28 }}>{title}</T>
+          {hint ? <T v="small" color={c.mutedForeground}>{hint}</T> : null}
+          <View style={{ gap: 8, marginTop: 6 }}>{children}</View>
+        </KeyboardAwareScrollViewCompat>
+      </View>
+    </View>
+  );
+}
+
+function Option({ label, selected, onPress, testID, disabled, multi }: { label: string; selected: boolean; onPress: () => void; testID?: string; disabled?: boolean; multi?: boolean }) {
+  const c = useColors();
+  return (
+    <Pressable testID={testID} accessibilityRole={multi ? 'checkbox' : 'button'} accessibilityLabel={label} accessibilityState={{ selected, checked: multi ? selected : undefined, disabled: !!disabled }} disabled={disabled} onPress={onPress}
+      style={({ pressed }) => ({ minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, borderRadius: 10, borderWidth: 1.5, borderColor: selected ? c.primary : c.input, backgroundColor: selected ? c.primarySoft : c.card, opacity: pressed ? 0.8 : 1 })}>
+      <T v="body" style={{ fontWeight: '600' }} color={selected ? c.primary : c.foreground}>{label}</T>
+      {selected ? <Feather name="check" size={20} color={c.primary} /> : null}
+    </Pressable>
   );
 }

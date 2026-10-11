@@ -4,47 +4,49 @@ import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import type { Benefit } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
-import { Badge, T } from './ui';
-import { daysLeft, fmtDate } from '@/lib/util';
+import { T } from './ui';
+import { daysLeft } from '@/lib/util';
 
 export function statusTone(s: string): 'ok' | 'warn' | 'muted' | 'info' {
   return s === '접수 중' ? 'ok' : s === '마감' ? 'muted' : s === '상시 조회' ? 'info' : 'warn';
 }
 
+const AUDIENCE_ICON: Record<string, keyof typeof Feather.glyphMap> = { 사업: 'briefcase', 개인: 'user', 가구: 'home' };
+
+/** D-day 표시. 확인된 마감일이 있을 때만 숫자를 보여준다. */
+export function dday(b: Pick<Benefit, 'endsAt' | 'status'>): { label: string; urgent: boolean } {
+  const d = daysLeft(b.endsAt);
+  if (b.status === '마감' || (d !== null && d < 0)) return { label: '마감', urgent: false };
+  if (d !== null) return { label: d === 0 ? 'D-DAY' : `D-${d}`, urgent: d <= 14 };
+  return { label: b.status === '상시 조회' ? '상시' : b.status === '접수 중' ? '접수 중' : '기간 확인', urgent: false };
+}
+
+/** 참고 영상의 목록 줄: 둥근 표식 + 제목 한 줄 + 기관·마감 + 작은 "보기" */
 export function BenefitCard({ b, extra }: { b: Benefit; extra?: React.ReactNode }) {
   const c = useColors();
   const router = useRouter();
-  const d = daysLeft(b.endsAt);
-  const soon = d !== null && d >= 0 && d <= 14;
+  const dd = dday(b);
   return (
     <Pressable
       testID={`benefit-${b.id}`}
       accessibilityRole="button"
-      accessibilityLabel={`${b.title}. ${b.kind}. ${b.status}. 자세히 보기`}
+      accessibilityLabel={`${b.title}. ${b.agency}. ${dd.label}. 자세히 보기`}
       onPress={() => router.push({ pathname: '/benefit/[id]', params: { id: b.id } })}
-      style={({ pressed }) => ({ backgroundColor: c.card, borderRadius: c.radius + 4, padding: 18, gap: 10, borderWidth: 1, borderColor: c.border, opacity: pressed ? 0.88 : 1, transform: [{ scale: pressed ? 0.99 : 1 }] })}
+      style={({ pressed }) => ({ backgroundColor: c.card, borderRadius: c.radius, paddingHorizontal: 14, paddingVertical: 14, gap: 8, opacity: pressed ? 0.85 : 1 })}
     >
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        <Badge label={b.status} tone={statusTone(b.status)} />
-        <Badge label={b.kind} tone={b.kind === '환급금' ? 'ok' : 'info'} />
-        <Badge label={b.audience} tone="muted" />
-        {b.isTest ? <Badge label="시험용" tone="warn" /> : null}
-      </View>
-      <T v="h3">{b.title}</T>
-      <T v="small" color={c.mutedForeground}>{b.agency} · {b.region}</T>
-      <View style={{ backgroundColor: c.secondary, borderRadius: c.radius, padding: 12, gap: 4 }}>
-        <T v="small" color={c.mutedForeground} style={{ fontWeight: '700' }}>지원형태 확인 필요</T>
-        <T numberOfLines={3}>{b.support || b.summary || '지원 내용은 공식 출처에서 확인해 주세요.'}</T>
-      </View>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 14, rowGap: 4 }}>
-        {b.endsAt ? (
-          <T v="small" color={soon ? c.destructive : c.mutedForeground} style={{ fontWeight: '700' }}>
-            마감 {fmtDate(b.endsAt)}{d !== null && d >= 0 ? ` · ${d}일 남음` : ''}
-          </T>
-        ) : <T v="small" color={c.mutedForeground}>마감일 공고 없음</T>}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          <Feather name="shield" size={16} color={c.mutedForeground} />
-          <T v="small" color={c.mutedForeground}>출처 확인 {fmtDate(b.checkedAt)}</T>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: c.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+          <Feather name={AUDIENCE_ICON[b.audience] ?? 'file-text'} size={20} color={c.primary} />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <T v="h3" numberOfLines={1}>{b.title}</T>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <T v="small" color={c.mutedForeground} numberOfLines={1} style={{ flexShrink: 1 }}>{b.agency}</T>
+            <T v="small" color={dd.urgent ? c.destructive : c.primary} style={{ fontWeight: '700', flexShrink: 0 }}>{dd.label}</T>
+          </View>
+        </View>
+        <View style={{ backgroundColor: c.secondary, borderRadius: 6, paddingHorizontal: 10, paddingVertical: 6 }}>
+          <T v="small" color={c.mutedForeground} style={{ fontWeight: '600', fontSize: 12, lineHeight: 16 }}>보기</T>
         </View>
       </View>
       {extra}
@@ -62,9 +64,9 @@ export function Collapsible({ text, lines = 4, testID }: { text: string; lines?:
       <T numberOfLines={long && !open ? lines : undefined}>{text}</T>
       {long ? (
         <Pressable testID={testID} accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen(!open)}
-          style={{ minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <T v="label" color={c.primary}>{open ? '접기' : '더 보기'}</T>
-          <Feather name={open ? 'chevron-up' : 'chevron-down'} size={20} color={c.primary} />
+          style={{ minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <T v="small" color={c.primary} style={{ fontWeight: '700' }}>{open ? '접기' : '더 보기'}</T>
+          <Feather name={open ? 'chevron-up' : 'chevron-down'} size={16} color={c.primary} />
         </Pressable>
       ) : null}
     </View>

@@ -10,10 +10,10 @@ import {
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
-import { Badge, Btn, Card, Chip, Disclaimer, ErrorState, Loading, Notice, Page, Section, T, Toggle, Wrap } from '@/components/ui';
+import { Badge, Box, Btn, Chip, Disclaimer, ErrorState, Loading, Notice, Page, T, Toggle, Wrap } from '@/components/ui';
 import { STAGES, USER_RECORD_NOTICE, apiErrorMessage } from '@/lib/text';
 import { fmtDate } from '@/lib/util';
-import { Collapsible, statusTone } from '@/components/BenefitCard';
+import { Collapsible, dday } from '@/components/BenefitCard';
 
 export default function BenefitDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -66,128 +66,140 @@ export default function BenefitDetail() {
   const bizName = (bid: string) => acc.me?.profile.businesses.find((x) => x.id === bid)?.name || '내 사업장';
   const tone = (r: string) => (r === '조건 일치' ? 'ok' : r === '추가 확인 필요' ? 'warn' : 'muted');
 
+  const dd = dday(b);
+  const closed = dd.label === '마감';
+  const period = b.startsAt || b.endsAt ? `${b.startsAt ? fmtDate(b.startsAt) : '시작일 확인 필요'} ~ ${b.endsAt ? fmtDate(b.endsAt) : b.status === '상시 조회' ? '상시' : '마감일 공고 없음'}` : b.status === '상시 조회' ? '상시 조회' : '기간 확인 필요';
+  const info: [keyof typeof Feather.glyphMap, string, string][] = [
+    ['file-text', '지원형태', b.kind], ['users', '대상', b.audience === '사업' ? '사업자' : b.audience],
+    ['home', '지원기관', b.agency], ['map-pin', '지역', b.region],
+    ['activity', '접수상태', closed ? '마감' : b.status], ['pie-chart', '예산', b.budgetStatus],
+  ];
+  const best = myRecs.find((r) => r.result === '조건 일치') ?? myRecs.find((r) => r.result === '추가 확인 필요');
+
   return (
-    <Page back>
-      <View style={{ gap: 10 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-          <Badge label={b.kind} tone={b.kind === '환급금' ? 'ok' : 'info'} />
-          <Badge label={b.audience} tone="muted" />
-          <Badge label={b.status} tone={statusTone(b.status)} />
+    <Page
+      footer={<>
+        {acc.active && best && !closed ? <Btn kind="secondary" label={best.result === '조건 일치' ? '회사에 도움 요청' : '자격 확인 문의하기'} icon="send" onPress={() => router.push('/matches')} testID="detail-company-help" /> : null}
+        <Btn label="공식 신청 페이지" icon="external-link" onPress={() => Linking.openURL(b.sourceUrl)} testID="open-source" hint="브라우저에서 공식 페이지가 열립니다" />
+      </>}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44, marginHorizontal: -6 }}>
+        <Pressable testID="back-button" accessibilityRole="button" accessibilityLabel="이전 화면으로 돌아가기" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+          <Feather name="chevron-left" size={28} color={c.foreground} />
+        </Pressable>
+        <View style={{ flexDirection: 'row' }}>
+          {acc.isSignedIn ? (
+            <Pressable testID="save-toggle" accessibilityRole="button" accessibilityLabel={base.saved ? '저장함. 눌러서 해제' : '이 공고 저장하기'} accessibilityState={{ selected: base.saved }} disabled={busy}
+              onPress={() => save({ saved: !base.saved }, base.saved ? '저장을 해제했어요.' : '저장했어요.')} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+              <Feather name="bookmark" size={22} color={base.saved ? c.primary : c.foreground} />
+            </Pressable>
+          ) : null}
+          <Pressable testID="share-source" accessibilityRole="button" accessibilityLabel={Platform.OS === 'web' ? '공식 주소 복사' : '공식 주소 공유'} onPress={shareSource} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+            <Feather name="share-2" size={22} color={c.foreground} />
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={{ gap: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          <Badge label={b.category} tone="info" />
+          {base.saved ? <Badge label="저장함" tone="ok" /> : null}
           {b.isTest ? <Badge label="시험용 정보" tone="warn" /> : null}
         </View>
         <T v="title">{b.title}</T>
-        <T color={c.mutedForeground}>{b.agency} · {b.region} · {b.category}</T>
-        {b.summary ? <Collapsible text={b.summary} testID="summary-more" /> : null}
+        <T v="label" color={dd.urgent ? c.destructive : c.primary}>{dd.label}</T>
+      </View>
+      {msg ? <Notice tone={msg.t}>{msg.s}</Notice> : null}
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, marginTop: 4 }}>
+        {info.map(([icon, label, value]) => (
+          <View key={label} style={{ width: '50%', flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 8 }}>
+            <Feather name={icon} size={20} color={c.primary} />
+            <View style={{ flex: 1 }}>
+              <T v="small" color={c.mutedForeground} style={{ fontSize: 12, lineHeight: 16 }}>{label}</T>
+              <T v="label" numberOfLines={2}>{value}</T>
+            </View>
+          </View>
+        ))}
+        <View style={{ width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Feather name="calendar" size={20} color={c.primary} />
+          <View style={{ flex: 1 }}>
+            <T v="small" color={c.mutedForeground} style={{ fontSize: 12, lineHeight: 16 }}>신청기간</T>
+            <T v="label">{period}</T>
+          </View>
+        </View>
       </View>
 
+      {b.summary ? <Box title="개요"><Collapsible text={b.summary} testID="summary-more" /></Box> : null}
+      <Box title="지원내용">
+        <T>{b.support || '공식 출처에서 확인해 주세요.'}</T>
+        <T v="small" color={c.mutedForeground}>현금·현물 여부와 금액은 기관이 정해요. 이 앱은 금액을 계산하지 않습니다.</T>
+      </Box>
 
-
-
-
-
-
-      <Notice tone="info" title="신청과 선정은 기관이 합니다">{b.agency}의 공고입니다. 이로운사람들은 정부기관이 아니며, 회사 도움은 신청 준비를 돕는 별도 서비스입니다.</Notice>
-      <Section title="지원 내용">
-        <Card>
-          <Badge label="지원형태 확인 필요" tone="muted" />
-          <T>{b.support || '공식 출처에서 확인해 주세요.'}</T>
-          <T v="small" color={c.mutedForeground}>공고 원문의 지원 내용입니다. 현금·현물 여부와 금액은 기관에 확인해 주세요.</T>
-        </Card>
-      </Section>
-      <Section title="신청 기간">
-        <Card>
-          <T>시작: {fmtDate(b.startsAt)}</T>
-          <T>마감: {fmtDate(b.endsAt)}</T>
-          <T>상태: {b.status}</T>
-          <T>예산 상태: {b.budgetStatus}</T>
-        </Card>
-      </Section>
-      <Section title="공식 출처">
-        <Card>
-          <T>제공 기관: {b.agency}</T>
-          <T v="small">출처 번호: {b.sourceId}</T>
-          <T v="label" color={c.primary}>출처 확인일: {fmtDate(b.checkedAt)}</T>
-          <Btn kind="secondary" label="공식 출처 열기" icon="external-link" onPress={() => Linking.openURL(b.sourceUrl)} testID="open-source" hint="브라우저에서 공식 페이지가 열립니다" />
-          <Btn kind="ghost" label={Platform.OS === 'web' ? '공식 주소 복사' : '공식 주소 공유'} icon="share-2" onPress={shareSource} testID="share-source" hint="공고 제목과 공식 주소만 전달됩니다" />
-          <T v="small" color={c.mutedForeground} selectable>{b.sourceUrl}</T>
-        </Card>
-      </Section>
-      <Section title="확인할 사항">
-        <Card>
-          {b.checks.length === 0 ? <T>공식 출처에서 확인 중입니다.</T> : b.checks.map((x, i) => <T key={i}>• {x}</T>)}
-          {b.rules.length > 0 ? <T v="label" style={{ marginTop: 6 }}>공개된 조건</T> : null}
-          {b.rules.map((r, i) => <T key={`rule${i}`} v="small">• {r.label} ({r.scope === 'business' ? '사업장' : '개인·가구'})</T>)}
-        </Card>
-      </Section>
-      <Section title="필요 서류">
-        <Card>
-          {b.documents.length === 0 ? <T>공식 출처에서 확인 중입니다.</T> : b.documents.map((d) => {
-            const on = base.checkedDocuments.includes(d);
-            return acc.isSignedIn ? (
-              <Pressable key={d} testID={`doc-${d}`} accessibilityRole="checkbox" accessibilityLabel={d} accessibilityState={{ checked: on }} aria-checked={on} disabled={busy}
-                onPress={() => save({ checkedDocuments: on ? base.checkedDocuments.filter((x) => x !== d) : [...base.checkedDocuments, d] }, '서류 체크를 기록했습니다.')}
-                style={{ minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Feather name={on ? 'check-square' : 'square'} size={28} color={on ? c.primary : c.mutedForeground} />
-                <T style={{ flex: 1 }}>{d}</T>
-              </Pressable>
-            ) : <T key={d}>• {d}</T>;
-          })}
-          {!acc.isSignedIn && b.documents.length > 0 ? <T v="small" color={c.mutedForeground}>로그인하면 준비한 서류를 체크해 저장할 수 있습니다.</T> : null}
-        </Card>
-      </Section>
-      <Section title="산정 방식">
-        <Card>
-          {b.calculation ? <Collapsible text={b.calculation} testID="calc-more" /> : <T>공식 출처에서 확인해 주세요.</T>}
-          <T v="small" color={c.mutedForeground}>실제 금액은 기관이 정합니다. 이 앱은 금액을 계산하지 않습니다.</T>
-        </Card>
-      </Section>
-      <Section title="내 조건 비교 (회원)">
+      <Box title="내 조건과 비교">
         {acc.active ? (
           recs.isLoading ? <Loading rows={1} /> : recs.error ? <ErrorState message={apiErrorMessage(recs.error)} onRetry={() => recs.refetch()} /> : myRecs.length === 0 ? (
-            <Notice>이 지원에 대한 비교 결과가 아직 없습니다. 내 정보를 더 입력하면 비교할 수 있습니다.</Notice>
+            <T>아직 비교한 결과가 없어요. 내 정보를 더 입력하면 비교할 수 있어요.</T>
           ) : myRecs.map((r) => (
-            <Card key={`${r.benefitId}-${r.businessId}`}>
+            <View key={`${r.benefitId}-${r.businessId}`} style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                 <Badge label={r.result} tone={tone(r.result)} />
-                <T v="label">{bizName(r.businessId)}</T>
+                {r.businessId ? <T v="small" style={{ fontWeight: '700' }}>{bizName(r.businessId)}</T> : null}
               </View>
-              {r.reasons.length > 0 ? <T v="label">맞는 이유</T> : null}
-              {r.reasons.map((x, i) => <T key={`r${i}`}>• {x}</T>)}
-              {r.unknowns.length > 0 ? <T v="label">더 알려주셔야 하는 정보</T> : null}
-              {r.unknowns.map((x, i) => <T key={`u${i}`}>• {x}</T>)}
-              {r.exclusions.length > 0 ? <T v="label">제외 사유</T> : null}
-              {r.exclusions.map((x, i) => <T key={`e${i}`}>• {x}</T>)}
-            </Card>
+              {r.reasons.length > 0 ? <T v="label">내 조건과 맞는 점</T> : null}
+              {r.reasons.map((x, i) => <T key={`r${i}`} v="small">• {x}</T>)}
+              {r.unknowns.length > 0 ? <T v="label">이 조건을 더 확인해 주세요</T> : null}
+              {r.unknowns.map((x, i) => <T key={`u${i}`} v="small">• {x}</T>)}
+              {r.exclusions.length > 0 ? <T v="label">조건과 다른 점</T> : null}
+              {r.exclusions.map((x, i) => <T key={`e${i}`} v="small" color={c.destructive}>• {x}</T>)}
+            </View>
           ))
         ) : (
-          <Card tone="soft">
-            <T v="h3">회원 기능입니다</T>
-            <T>회원 이용권이 있으면 내 사업장·가구 정보와 이 지원의 조건을 비교해 사유를 보여드립니다.</T>
-            <Btn kind="secondary" label={acc.isSignedIn ? '이용권 안내 보기' : '로그인하고 안내 보기'} onPress={() => router.push(acc.isSignedIn ? '/membership' : '/auth')} testID="detail-membership" />
-            <Btn kind="secondary" label="이용 상태·72시간 체험" onPress={() => router.push(acc.isSignedIn ? '/access' : '/auth')} testID="detail-access" />
-          </Card>
+          <>
+            <T>{acc.isSignedIn ? '맞춤 이용 중일 때 내 정보와 이 공고의 조건을 비교해 드려요.' : '로그인하면 내 정보와 이 공고의 조건을 비교해 드려요.'}</T>
+            <Btn kind="secondary" label={acc.isSignedIn ? '이용 상태·3일 무료체험' : '로그인하기'} onPress={() => router.push(acc.isSignedIn ? '/access' : '/auth')} testID="detail-access" />
+          </>
         )}
-      </Section>
-      <Section title="내 기록">
-        {!acc.isSignedIn ? (
-          <Card tone="soft">
-            <T>저장, 신청 단계, 마감 알림 기록은 로그인 후 사용할 수 있습니다.</T>
-            <Btn label="로그인하고 기록하기" onPress={() => router.push('/auth')} testID="detail-login" />
-          </Card>
-        ) : (
-          <Card>
-            <Notice tone="warn" title="직접 기록한 내용입니다">{USER_RECORD_NOTICE}</Notice>
-            <Btn testID="save-toggle" icon={base.saved ? 'bookmark' : 'plus'} kind={base.saved ? 'secondary' : 'primary'} label={base.saved ? '저장함 (눌러서 해제)' : '이 지원 저장하기'} loading={busy} onPress={() => save({ saved: !base.saved }, base.saved ? '저장을 해제했습니다.' : '저장했습니다.')} />
-            <T v="label">내가 기록하는 신청 단계</T>
-            <Wrap>{STAGES.map((s) => <Chip key={s} label={s} selected={base.stage === s && !!cur} onPress={() => save({ stage: s }, `단계를 "${s}"(으)로 기록했습니다.`)} testID={`stage-${s}`} />)}</Wrap>
-            {acc.me && !acc.me.preferences.notifications && !base.deadlineReminder ? (
-              <Notice tone="warn" title="알림 설정이 꺼져 있습니다">마감 알림을 기록하려면 먼저 내 정보에서 알림 받기를 켜 주세요. 푸시 알림은 아직 연동되지 않아 발송되지 않습니다.</Notice>
-            ) : null}
-            <Toggle testID="reminder-toggle" label="마감 알림 기록" desc="알림 의사를 기록합니다. 푸시 알림은 아직 연동되지 않아 발송되지 않습니다." value={base.deadlineReminder} onChange={(v) => save({ deadlineReminder: v }, v ? '마감 알림 의사를 기록했습니다.' : '마감 알림 기록을 해제했습니다.')} disabled={busy || (!base.deadlineReminder && !acc.me?.preferences.notifications)} />
-            {msg ? <Notice tone={msg.t}>{msg.s}</Notice> : null}
-          </Card>
-        )}
-      </Section>
+        <T v="small" color={c.mutedForeground}>조건이 맞아도 선정·예산·중복수혜에 따라 지급이 달라질 수 있어요.</T>
+      </Box>
+
+      <Box title="필요 서류">
+        {b.documents.length === 0 ? <T>공식 출처에서 확인해 주세요.</T> : b.documents.map((d) => {
+          const on = base.checkedDocuments.includes(d);
+          return acc.isSignedIn ? (
+            <Pressable key={d} testID={`doc-${d}`} accessibilityRole="checkbox" accessibilityLabel={d} accessibilityState={{ checked: on }} aria-checked={on} disabled={busy}
+              onPress={() => save({ checkedDocuments: on ? base.checkedDocuments.filter((x) => x !== d) : [...base.checkedDocuments, d] }, on ? '체크를 해제했어요.' : '준비한 서류로 저장했어요.')}
+              style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Feather name={on ? 'check-square' : 'square'} size={22} color={on ? c.primary : c.mutedForeground} />
+              <T style={{ flex: 1 }}>{d}</T>
+            </Pressable>
+          ) : <T key={d}>• {d}</T>;
+        })}
+        {b.documents.length > 0 ? <T v="small" color={c.mutedForeground}>{acc.isSignedIn ? '준비한 서류를 눌러 체크해 두세요. 발급처는 공식 원문에서 확인해 주세요.' : '로그인하면 준비한 서류를 체크해 둘 수 있어요.'}</T> : null}
+      </Box>
+
+      <Box title="확인할 사항">
+        {b.checks.length === 0 && b.rules.length === 0 ? <T>공식 출처에서 확인해 주세요.</T> : null}
+        {b.checks.map((x, i) => <T key={i}>• {x}</T>)}
+        {b.rules.map((r, i) => <T key={`rule${i}`}>• {r.label} ({r.scope === 'business' ? '사업장' : '개인·가구'})</T>)}
+      </Box>
+
+      {b.calculation ? <Box title="금액 산정"><Collapsible text={b.calculation} testID="calc-more" /></Box> : null}
+
+      {acc.isSignedIn ? (
+        <Box title="내 기록">
+          <T v="small" color={c.mutedForeground}>{USER_RECORD_NOTICE}</T>
+          <Wrap>{STAGES.map((s) => <Chip key={s} label={s} selected={base.stage === s && !!cur} onPress={() => save({ stage: s }, `"${s}" 단계로 저장했어요.`)} testID={`stage-${s}`} />)}</Wrap>
+          <Toggle testID="reminder-toggle" label="마감 알림 받기" desc={!base.deadlineReminder && !acc.me?.preferences.notifications ? '내정보에서 알림 받기를 먼저 켜 주세요.' : '실제 휴대폰 알림은 아직 연결 전이에요.'} value={base.deadlineReminder} onChange={(v) => save({ deadlineReminder: v }, v ? '마감 알림을 저장했어요.' : '마감 알림을 해제했어요.')} disabled={busy || (!base.deadlineReminder && !acc.me?.preferences.notifications)} />
+        </Box>
+      ) : null}
+
+      <Box title="공식 출처">
+        <T>{b.agency}의 공고예요. 신청과 선정은 기관이 합니다.</T>
+        <T v="small" color={c.mutedForeground}>자료 확인 {fmtDate(b.checkedAt)} · 출처 번호 {b.sourceId}</T>
+        <T v="small" color={c.mutedForeground} selectable>{b.sourceUrl}</T>
+        <T v="small" color={c.mutedForeground}>이로운사람들은 정부기관이 아니며, 회사 도움은 신청 준비를 돕는 별도 서비스예요.</T>
+      </Box>
       <Disclaimer />
     </Page>
   );
