@@ -32,8 +32,8 @@ export default function Funds() {
         <Pressable testID="fund-start" accessibilityRole="button" accessibilityLabel="정책자금 예상 한도와 금리 진단받기" onPress={() => router.push('/fund-check' as never)}
           style={({ pressed }) => ({ backgroundColor: c.primary, borderRadius: c.radius + 6, paddingVertical: 24, paddingHorizontal: 22, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.9 : 1 })}>
           <View style={{ flex: 1, gap: 4 }}>
-            <T v="small" color="#DCE6FF">내 사업자로 가능한 정책자금</T>
-            <T v="title" color="#FFFFFF">예상 한도·금리{'\n'}진단받기</T>
+            <T color="#DCE6FF" style={{ fontWeight: '500' }}>내 사업자로 가능한 정책자금</T>
+            <T color="#FFFFFF" style={{ fontSize: 24, lineHeight: 32, fontWeight: '700', letterSpacing: -0.3 }}>예상 한도·금리 진단받기</T>
           </View>
           <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
             <Feather name="arrow-right" size={26} color={c.primary} />
@@ -63,26 +63,22 @@ export default function Funds() {
               <Pressable testID={`fund-${f.id}`} accessibilityRole="button" accessibilityState={{ expanded: on }} onPress={() => setOpen(on ? null : f.id)}
                 style={{ minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 }}>
                 <View style={{ flex: 1, gap: 2 }}>
-                  <T v="h3">{f.name}</T>
-                  <T v="small" color={f.status === '접수 중' ? c.primary : c.mutedForeground} style={{ fontWeight: '700' }}>{f.status}</T>
+                  <T style={{ fontWeight: '600' }}>{f.name}</T>
+                  <T v="small" color={f.status === '접수 중' ? c.primary : c.mutedForeground}>{f.status}</T>
                 </View>
                 <Feather name={on ? 'chevron-up' : 'chevron-down'} size={22} color={c.mutedForeground} />
               </Pressable>
               {on ? (
                 <View testID={`fund-detail-${f.id}`} style={{ paddingBottom: 16, gap: 10 }}>
-                  <View style={{ flexDirection: 'row', gap: 10 }}>
-                    <View style={{ flex: 1, backgroundColor: c.primarySoft, borderRadius: 12, padding: 14, gap: 2 }}>
-                      <T v="small" color={c.primary}>금리</T>
-                      <T v="label" color={c.primary}>{f.rate}</T>
+                  {([['금리', [f.rate]], ['한도', f.limit.split(' / ')]] as const).map(([k, lines]) => (
+                    <View key={k} style={{ backgroundColor: c.secondary, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, flexDirection: 'row', gap: 14 }}>
+                      <T color={c.mutedForeground} style={{ width: 36 }}>{k}</T>
+                      <View style={{ flex: 1, gap: 2 }}>{lines.map((x) => <T key={x} style={{ fontWeight: '600' }}>{x}</T>)}</View>
                     </View>
-                    <View style={{ flex: 1, backgroundColor: c.primarySoft, borderRadius: 12, padding: 14, gap: 2 }}>
-                      <T v="small" color={c.primary}>한도</T>
-                      <T v="label" color={c.primary}>{f.limit}</T>
-                    </View>
-                  </View>
-                  <T v="small"><T v="small" color={c.mutedForeground}>대상  </T>{f.target}</T>
-                  <T v="small"><T v="small" color={c.mutedForeground}>기간  </T>{f.term}</T>
-                  <T v="small"><T v="small" color={c.mutedForeground}>접수  </T>{f.period}</T>
+                  ))}
+                  <View style={{ flexDirection: 'row', gap: 14, paddingHorizontal: 14 }}><T v="small" color={c.mutedForeground} style={{ width: 36 }}>대상</T><T v="small" style={{ flex: 1 }}>{f.target}</T></View>
+                  <View style={{ flexDirection: 'row', gap: 14, paddingHorizontal: 14 }}><T v="small" color={c.mutedForeground} style={{ width: 36 }}>기간</T><T v="small" style={{ flex: 1 }}>{f.term}</T></View>
+                  <View style={{ flexDirection: 'row', gap: 14, paddingHorizontal: 14 }}><T v="small" color={c.mutedForeground} style={{ width: 36 }}>접수</T><T v="small" style={{ flex: 1 }}>{f.period}</T></View>
                 </View>
               ) : null}
             </View>

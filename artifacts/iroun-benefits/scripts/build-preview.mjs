@@ -13,7 +13,7 @@ const css = files.filter((f) => f.endsWith('.css')).map((f) => readFileSync(f, '
 
 // 실제로 쓰는 글꼴·작은 이미지만 파일 안에 넣는다(화면 틀에서는 바깥 경로를 불러올 수 없다).
 const MIME = { '.ttf': 'font/ttf', '.png': 'image/png', '.ico': 'image/x-icon' };
-const wanted = (rel, size) => /Inter_(400Regular|500Medium|600SemiBold|700Bold)\.[a-f0-9]+\.ttf$/.test(rel) || /Fonts\/Feather\./.test(rel) || (size < 60000 && extname(rel) === '.png');
+const wanted = (rel, size) => /Inter_(400Regular|500Medium|600SemiBold|700Bold)\.[a-f0-9]+\.ttf$/.test(rel) || /Fonts\/(Feather|MaterialCommunityIcons)\./.test(rel) || (size < 60000 && extname(rel) === '.png');
 let inlined = 0, bytes = 0;
 for (const f of files.filter((x) => x.includes('/assets/'))) {
   const rel = '/' + relative(dist, f), size = statSync(f).size;

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { useColors } from '@/hooks/useColors';
-import { Feather } from '@expo/vector-icons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
@@ -9,11 +9,11 @@ import { SymbolView } from 'expo-symbols';
 import { useUnreadReplies } from '@/lib/replies';
 
 const TABS = [
-  { name: 'index', label: '홈', sf: 'house', feather: 'home' },
-  { name: 'benefits', label: '지원금', sf: 'list.bullet.rectangle', feather: 'list' },
-  { name: 'funds', label: '정책자금', sf: 'wonsign.circle', feather: 'dollar-sign' },
-  { name: 'refunds', label: '환급금', sf: 'arrow.uturn.backward.circle', feather: 'rotate-ccw' },
-  { name: 'consult', label: '상담', sf: 'bubble.left', feather: 'message-circle' },
+  { name: 'index', label: '홈', sf: 'house', icon: 'home-outline' },
+  { name: 'benefits', label: '지원금', sf: 'gift', icon: 'hand-coin-outline' },
+  { name: 'funds', label: '정책자금', sf: 'building.columns', icon: 'bank-outline' },
+  { name: 'refunds', label: '환급금', sf: 'arrow.uturn.left.circle', icon: 'cash-refund' },
+  { name: 'consult', label: '상담', sf: 'bubble.left', icon: 'chat-outline' },
 ] as const;
 /** 탭에는 보이지 않지만 기존 주소(/refunds, /progress) 호환을 위해 남겨 둔 화면 */
 const HIDDEN = ['progress', 'mine', 'account'] as const;
@@ -110,7 +110,7 @@ function ClassicTabLayout() {
             tabBarBadgeStyle: { backgroundColor: colors.destructive, color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
             tabBarButtonTestID: `tab-${t.name}`,
             tabBarIcon: ({ color }) =>
-              isIOS ? <SymbolView name={t.sf} tintColor={color} size={26} /> : <Feather name={t.feather} size={24} color={color} />,
+              isIOS ? <SymbolView name={t.sf} tintColor={color} size={26} /> : <MaterialCommunityIcons name={t.icon} size={26} color={color} />,
           }}
         />
       ))}
