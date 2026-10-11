@@ -63,7 +63,7 @@ function Body() {
         <Section title="3일 무료체험">
           <Card>
             <T>체험은 한 번만 쓸 수 있고, 시작하면 3일(72시간) 동안 맞춤 확인이 열립니다. 알림 허용 여부와는 관계없습니다.</T>
-            {data.trialUsed ? <Notice tone="warn" title="이미 체험을 사용했습니다">같은 계정은 다시 체험할 수 없습니다. 회사 담당자에게 계약을 문의해 주세요.</Notice> : null}
+            {data.trialUsed ? <Notice tone="warn" title="이미 체험을 사용했습니다">다시 체험할 수 없어요. 상담에 문의해 주세요.</Notice> : null}
             {!data.trialUsed && !hasInfo ? <Notice tone="warn" title="내 정보가 먼저 필요해요">거주지나 사업장 정보를 한 단계라도 입력해 주세요.</Notice> : null}
             {!data.trialUsed && !privacy ? <Notice tone="warn" title="개인정보 동의가 필요해요">내 정보 화면에서 동의를 켜 주세요.</Notice> : null}
             {!data.trialUsed && latestService?.accepted!==true ? <Notice tone="warn">아래 동의 관리에서 필요한 서비스 동의를 확인해 주세요. 선택 마케팅은 거절해도 됩니다.</Notice>:null}

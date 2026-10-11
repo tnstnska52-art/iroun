@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { getListBenefitsQueryKey, useListBenefits } from '@workspace/api-client-react';
 import { Btn, CountUp, Disclaimer, Emoji, ErrorState, Loading, Page, T } from '@/components/ui';
-import { GrantList, GrantRow } from '@/components/GrantList';
+import { GrantList, GrantRow, Total } from '@/components/GrantList';
 import { useColors } from '@/hooks/useColors';
 import { apiErrorMessage } from '@/lib/text';
 import { useAccount } from '@/lib/session';
@@ -39,8 +39,8 @@ export default function Grants() {
       <Page tab title="지원금">
         <View testID="grants-empty" style={{ backgroundColor: c.card, borderRadius: c.radius + 6, padding: 22, gap: 10, alignItems: 'center' }}>
           <Emoji char={expired ? '🔒' : '🔍'} size={40} motion="bounce" />
-          <T v="title" style={{ textAlign: 'center' }}>{expired ? '맞춤 이용이 끝났어요' : '조건만 고르면\n받을 수 있는 지원금을 찾아드려요'}</T>
-          <T color={c.mutedForeground} style={{ textAlign: 'center' }}>{expired ? '내 조건에 맞는 지원금과 놓친 지원금은 이용 중에 볼 수 있어요. 접수한 내역은 계속 볼 수 있어요.' : '업종, 지역, 개업년도, 매출, 직원 수, 사업장 형태. 고르기만 하면 돼요.'}</T>
+          <T v="title" style={{ textAlign: 'center' }}>{expired ? '맞춤 이용이 끝났어요' : '조건만 고르면\n지원금을 찾아드려요'}</T>
+          <T color={c.mutedForeground} style={{ textAlign: 'center' }}>{expired ? '접수 내역은 계속 볼 수 있어요' : '1분이면 끝나요'}</T>
           <Btn label={expired ? '상담에 문의 남기기' : '내 사업자 지원금은 얼마일까?'} onPress={() => router.push((expired ? '/consult' : '/onboarding') as never)} testID="grants-start" style={{ alignSelf: 'stretch' }} />
         </View>
         {expired && open.length > 0 ? (
@@ -64,7 +64,7 @@ export default function Grants() {
   return (
     <Page tab title="지원금">
       <View accessibilityRole="tablist" style={{ flexDirection: 'row', backgroundColor: '#E5E8EB', borderRadius: 12, padding: 4 }}>
-        {([['now', '받을 수 있는 지원금', now.items.length], ['missed', '놓친 지원금', past.items.length]] as const).map(([k, l, n]) => {
+        {([['now', '받을 수 있는', now.items.length], ['missed', '놓친', past.items.length]] as const).map(([k, l, n]) => {
           const on = tab === k;
           return (
             <Pressable key={k} testID={`grants-tab-${k}`} accessibilityRole="tab" accessibilityState={{ selected: on }} onPress={() => setTab(k)}
@@ -75,18 +75,12 @@ export default function Grants() {
         })}
       </View>
 
-      <View testID={`grants-total-${tab}`} style={{ backgroundColor: tab === 'now' ? c.card : c.destructiveSoft, borderRadius: c.radius + 6, padding: 22, gap: 4 }}>
-        <T v="label" color={tab === 'now' ? c.mutedForeground : c.destructive}>{tab === 'now' ? '지금 받을 수 있는 지원금 총액' : '놓친 지원금 총액'}</T>
-        {cur.total > 0 ? <CountUp key={tab} to={Math.floor(cur.total / 10000)} color={color} style={{ fontSize: 40, lineHeight: 50 }} format={(n) => `최대 ${n.toLocaleString('ko-KR')}만원`} /> : <T v="hero" color={color}>{cur.items.length}건</T>}
-        <T v="small" color={tab === 'now' ? c.mutedForeground : c.destructive}>
-          {tab === 'now' ? '공고에 적힌 최대 금액 합계예요. 실제 지급액은 심사·예산에 따라 달라요.' : '내 조건으로 신청할 수 있었던 마감 공고의 최대 금액 합계예요. 올해는 놓치지 마세요.'}
-        </T>
-      </View>
+      <Total testID={`grants-total-${tab}`} tone={tab === 'now' ? 'blue' : 'red'} label={tab === 'now' ? '신청 가능 지원금' : '놓친 지원금'} count={cur.items.length} total={cur.total} note={tab === 'missed' ? '올해는 놓치지 마세요' : undefined} />
 
       {cur.items.length === 0 ? (
         <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, padding: 20, gap: 6 }}>
           <T v="h3">{tab === 'now' ? '지금 조건에 맞는 공고가 없어요' : '놓친 지원금이 없어요'}</T>
-          <T v="small" color={c.mutedForeground}>{tab === 'now' ? '새 공고가 올라오면 알려드릴게요.' : '아직 확인한 자료 안에서는 없어요.'}</T>
+          <T v="small" color={c.mutedForeground}>{tab === 'now' ? '새 공고가 뜨면 알려드릴게요' : '확인된 자료가 없어요'}</T>
         </View>
       ) : <GrantList items={cur.items} missed={tab === 'missed'} unlocked={acc.active} />}
 

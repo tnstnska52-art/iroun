@@ -13,9 +13,9 @@ import { newId } from '@/lib/util';
 import { kst, useServiceStateView } from '@/lib/service';
 
 const FAQ: [string, string][] = [
-  ['무료체험이 끝나면 돈이 나가나요?', '아니요. 3일이 지나도 자동으로 결제되지 않아요. 맞춤 목록만 잠기고, 접수한 내역은 계속 볼 수 있어요.'],
-  ['지원금은 누가 신청하나요?', '공고마다 정리된 순서대로 직접 신청하실 수 있어요. 어려우면 공고 화면에서 "회사에 신청 도움 요청"을 눌러 주세요.'],
-  ['조건을 잘못 골랐어요.', '홈이나 지원금 화면 아래의 "조건 다시 고르기"에서 언제든 바꿀 수 있어요.'],
+  ['무료체험이 끝나면 돈이 나가나요?', '아니요. 자동결제는 없어요.'],
+  ['지원금은 누가 신청하나요?', '순서대로 직접 신청하거나,\n"회사에 신청 도움 요청"을 누르세요.'],
+  ['조건을 잘못 골랐어요.', '홈 아래 "조건 다시 고르기"를 누르세요.'],
 ];
 
 /** 상담 탭: 문의를 남기면 나중에 답변이 도착한다. 실시간 상담은 하지 않는다. */
@@ -39,7 +39,7 @@ export default function Consult() {
     try {
       await createInquiry({ title: text.split('\n')[0].slice(0, 40), body: text, requestKey: key.current });
       key.current = newId(); setBody('');
-      setMsg({ t: 'ok', s: '문의를 남겼어요. 24시간 이내에 답변이 도착합니다.' });
+      setMsg({ t: 'ok', s: '문의를 남겼어요. 24시간 안에 답변드려요.' });
       await qc.invalidateQueries({ queryKey: getGetServiceStateQueryKey() });
     } catch (e) { setMsg({ t: 'error', s: `${apiErrorMessage(e, '문의를 보내지 못했어요. 다시 시도해 주세요.')}` }); }
     setBusy(false);
@@ -50,8 +50,8 @@ export default function Consult() {
       <View testID="consult-notice" style={{ backgroundColor: c.primarySoft, borderRadius: c.radius + 4, padding: 18, flexDirection: 'row', gap: 12, alignItems: 'center' }}>
         <Emoji char="💬" size={30} motion="bounce" />
         <View style={{ flex: 1, gap: 2 }}>
-          <T v="h3" color={c.primary}>문의를 남기면 24시간 이내에 답변이 도착합니다</T>
-          <T v="small" color={c.primary}>답변은 오전 9시~오후 6시 사이에 등록돼요. 답변이 오면 알림으로 알려드려요.</T>
+          <T v="h3" color={c.primary}>24시간 안에 답변드려요</T>
+          <T v="small" color={c.primary}>답변 시간 오전 9시~오후 6시</T>
         </View>
       </View>
 
@@ -71,7 +71,7 @@ export default function Consult() {
       <SectionHead title="문의 남기기" />
       {!acc.isLoaded || (acc.isSignedIn && acc.loading) ? <Pending onRetry={() => acc.refetch()} /> : !acc.isSignedIn ? (
         <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, padding: 18, gap: 10 }}>
-          <T>가입하면 문의를 남기고 답변을 받을 수 있어요.</T>
+          <T>가입하면 문의할 수 있어요</T>
           <Btn label="가입하고 문의하기" onPress={() => router.push('/auth?mode=signup&next=/consult' as never)} testID="consult-join" />
         </View>
       ) : error ? <QueryProblem error={error} next="/consult" onRetry={() => refetch()} /> : isLoading || !data ? <Pending onRetry={() => refetch()} /> : (
@@ -93,7 +93,7 @@ export default function Consult() {
               {q.replies.length === 0 ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Feather name="clock" size={16} color={c.mutedForeground} />
-                  <T v="small" color={c.mutedForeground}>답변을 기다리고 있어요 · 24시간 이내 도착</T>
+                  <T v="small" color={c.mutedForeground}>답변 대기 중</T>
                 </View>
               ) : q.replies.map((r, i) => (
                 <View key={i} style={{ alignSelf: 'flex-start', maxWidth: '92%', gap: 4 }}>

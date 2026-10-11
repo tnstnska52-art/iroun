@@ -89,33 +89,33 @@ export default function BenefitDetail() {
   ];
   const best = myRecs.find((r) => r.result === '조건 일치') ?? myRecs.find((r) => r.result === '추가 확인 필요');
   // 신청하기: 서버가 최신 조건으로 다시 판단한다. 되면 회사 접수함에 저장되고, 안 되면 이유를 보여준다.
-  const apply = (kind: '신청 지원' | '자격 확인') => confirmAsk(kind === '신청 지원' ? '회사에 신청 도움을 요청할까요?' : '담당자에게 자격 확인을 요청할까요?', '회사 담당자가 확인하고 도와드려요. 정부기관 신청 완료는 아니에요.', '요청하기', async () => {
+  const apply = (kind: '신청 지원' | '자격 확인') => confirmAsk(kind === '신청 지원' ? '회사에 신청 도움을 요청할까요?' : '담당자에게 자격 확인을 요청할까요?', '담당자가 확인하고 도와드려요.', '요청하기', async () => {
     if (applying) return;
     setApplying(true);
     const businessId = (myRecs.find((r) => r.result === '조건 일치') ?? myRecs.find((r) => r.result === '추가 확인 필요') ?? myRecs[0])?.businessId ?? '';
     try {
       const res = (await createServiceRequest({ benefitId: b.id, businessId, kind, confirmed: true })) as unknown as { id?: string; message?: string };
       await qc.invalidateQueries({ queryKey: getGetServiceStateQueryKey() });
-      setApplied({ ok: true, title: '회사에 요청이 접수됐어요', body: `${res.id ? `접수번호 ${res.id}. ` : ''}담당자를 배정하고 있어요. 정부기관 신청 완료는 아니에요.`, reasons: [] });
+      setApplied({ ok: true, title: '회사에 요청이 접수됐어요', body: `${res.id ? `접수번호 ${res.id}. ` : ''}담당자를 배정하고 있어요.\n기관 신청은 아직이에요.`, reasons: [] });
     } catch (e) {
       const detail = (e as { data?: { detail?: { result?: string; exclusions?: string[]; unknowns?: string[] } } }).data?.detail;
       if (errStatus(e) === 409 && detail?.result === '대상 제외') setApplied({ ok: false, title: '이 지원금은 신청할 수 없어요', body: '내 정보와 공고 조건이 달라요.', reasons: detail.exclusions ?? [] });
-      else if (errStatus(e) === 409 && detail) setApplied({ ok: false, title: '조건을 더 확인해야 해요', body: '아래 내용이 확인되지 않아 바로 접수하지 못했어요. 담당자에게 확인을 요청할 수 있어요.', reasons: (detail.unknowns ?? []).slice(0, 5), canAsk: true });
-      else setApplied({ ok: false, title: '요청하지 못했어요', body: errStatus(e) === 409 ? '마감됐거나 조건이 바뀌었어요. 화면을 다시 확인해 주세요.' : apiErrorMessage(e, '저장하지 못했어요. 다시 시도해 주세요.'), reasons: [] });
+      else if (errStatus(e) === 409 && detail) setApplied({ ok: false, title: '조건을 더 확인해야 해요', body: '아래 내용을 확인해야 해요.', reasons: (detail.unknowns ?? []).slice(0, 5), canAsk: true });
+      else setApplied({ ok: false, title: '요청하지 못했어요', body: errStatus(e) === 409 ? '마감됐거나 조건이 바뀌었어요.' : apiErrorMessage(e, '저장하지 못했어요. 다시 시도해 주세요.'), reasons: [] });
     }
     setApplying(false);
   });
   // 고객이 할 일을 순서대로. 공고 자료에 있는 내용만으로 만들고, 없는 내용은 공식 원문 확인으로 안내한다.
   const conditions = [...b.rules.map((r) => r.label), ...b.checks];
   const steps: { title: string; body: string }[] = closed ? [
-    { title: '마감된 공고예요', body: '지금은 신청할 수 없어요. 다시 열리는지는 기관 공지에서 확인해 주세요.' },
-    { title: '비슷한 공고 찾아보기', body: '전체혜택에서 지금 신청할 수 있는 공고를 확인해 보세요.' },
+    { title: '마감됐어요', body: '지금은 신청할 수 없어요' },
+    { title: '다른 지원금 보기', body: '지원금 탭에서 확인하세요' },
   ] : [
-    { title: '내가 대상인지 확인하기', body: conditions.length ? `${conditions.slice(0, 3).join(', ')}${conditions.length > 3 ? ` 외 ${conditions.length - 3}가지` : ''}을(를) 확인해 주세요.${best ? ` 내 입력정보 기준: ${best.result}.` : ''}` : '세부 자격은 공식 신청 페이지에서 확인해 주세요.' },
-    { title: '서류 준비하기', body: b.documents.length ? `${b.documents.join(', ')}. 아래 '필요 서류'에서 준비한 것을 체크해 두세요.` : '필요한 서류는 공식 신청 페이지에서 확인해 주세요.' },
-    { title: b.endsAt ? `${fmtDate(b.endsAt)}까지 신청하기` : '공식 신청 페이지에서 신청하기', body: `아래 '공식 신청 페이지' 버튼을 눌러 ${b.agency}에 직접 신청해요.${b.budgetStatus === '확인 필요' ? ' 예산이 먼저 소진될 수 있으니 서두르는 편이 좋아요.' : ''}` },
-    { title: '혼자 하기 어려우면 회사에 도움 요청', body: acc.active ? '담당자가 자격 확인과 서류 준비를 도와드려요. 회사 접수는 정부기관 신청 완료가 아니에요.' : '맞춤 이용 중이면 담당자가 자격 확인과 서류 준비를 도와드려요.' },
-    { title: '결과 확인하고 기록하기', body: `선정·지급 결과는 ${b.agency}에서 알려줘요.${acc.isSignedIn ? " 아래 '내 기록'에 진행 단계를 남겨 두세요." : ''}` },
+    { title: '대상 확인', body: conditions.length ? `${conditions.slice(0, 2).join('\n')}${conditions.length > 2 ? `\n외 ${conditions.length - 2}가지` : ''}` : '공식 페이지에서 확인' },
+    { title: '서류 준비', body: b.documents.length ? b.documents.join('\n') : '공식 페이지에서 확인' },
+    { title: b.endsAt ? `${fmtDate(b.endsAt)}까지 신청` : '신청하기', body: `아래 '공식 신청 페이지' 버튼${b.budgetStatus === '확인 필요' ? '\n예산이 먼저 끝날 수 있어요' : ''}` },
+    { title: '어려우면 도움 요청', body: "아래 '회사에 신청 도움 요청' 버튼" },
+    { title: '결과 확인', body: `${b.agency}에서 알려줘요` },
   ];
 
   return (
@@ -211,8 +211,7 @@ export default function BenefitDetail() {
             </View>
           ))}
           <View testID="detail-locked" style={{ backgroundColor: c.primarySoft, borderRadius: 10, padding: 14, gap: 8, marginTop: 4 }}>
-            <T v="label" color={c.primary}>필요 서류 {b.documents.length > 0 ? `${b.documents.length}가지와 ` : ''}신청 순서는 {expiredMember ? '맞춤 이용 중에' : '회원가입하면'} 볼 수 있어요</T>
-            <T v="small">무엇을 준비하고 어디에 어떻게 신청하는지 1번부터 순서대로 정리해 드려요.</T>
+            <T v="label" color={c.primary}>서류와 신청 순서는{'\n'}{expiredMember ? '이용 중에' : '가입하면'} 볼 수 있어요</T>
             <Btn label={expiredMember ? '계속 이용 문의하기' : '무료로 전체 보기'} onPress={() => router.push((expiredMember ? '/inquiries' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-access" />
           </View>
         </Box>
@@ -220,8 +219,8 @@ export default function BenefitDetail() {
 
       {b.summary ? <Box title="개요"><Collapsible text={b.summary} testID="summary-more" /></Box> : null}
       <Box title="지원내용">
-        <T>{b.support || '공식 출처에서 확인해 주세요.'}</T>
-        <T v="small" color={c.mutedForeground}>현금·현물 여부와 금액은 기관이 정해요. 이 앱은 금액을 계산하지 않습니다.</T>
+        <T>{b.support || '공식 페이지에서 확인'}</T>
+        <T v="small" color={c.mutedForeground}>금액은 기관이 정해요</T>
       </Box>
 
       {unlocked ? (
@@ -229,28 +228,28 @@ export default function BenefitDetail() {
       <Box title="내 조건과 비교">
         {acc.active ? (
           recs.isLoading ? <Loading rows={1} /> : recs.error ? <ErrorState message={apiErrorMessage(recs.error)} onRetry={() => recs.refetch()} /> : myRecs.length === 0 ? (
-            <T>아직 비교한 결과가 없어요. 내 정보를 더 입력하면 비교할 수 있어요.</T>
+            <T>아직 비교 결과가 없어요</T>
           ) : myRecs.map((r) => (
             <View key={`${r.benefitId}-${r.businessId}`} style={{ gap: 6 }}>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                 <Badge label={r.result} tone={tone(r.result)} />
                 {r.businessId ? <T v="small" style={{ fontWeight: '700' }}>{bizName(r.businessId)}</T> : null}
               </View>
-              {r.reasons.length > 0 ? <T v="label">내 조건과 맞는 점</T> : null}
+              {r.reasons.length > 0 ? <T v="label">맞는 점</T> : null}
               {r.reasons.map((x, i) => <T key={`r${i}`} v="small">• {x}</T>)}
-              {r.unknowns.length > 0 ? <T v="label">이 조건을 더 확인해 주세요</T> : null}
+              {r.unknowns.length > 0 ? <T v="label">확인할 점</T> : null}
               {r.unknowns.map((x, i) => <T key={`u${i}`} v="small">• {x}</T>)}
-              {r.exclusions.length > 0 ? <T v="label">조건과 다른 점</T> : null}
+              {r.exclusions.length > 0 ? <T v="label">다른 점</T> : null}
               {r.exclusions.map((x, i) => <T key={`e${i}`} v="small" color={c.destructive}>• {x}</T>)}
             </View>
           ))
         ) : (
           <>
-            <T>가입하면 내 조건과 이 공고의 조건을 하나씩 비교해 드려요.</T>
+            <T>가입하면 내 조건과 비교해 드려요</T>
             <Btn kind="secondary" label="무료로 비교해 보기" onPress={() => router.push((acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-access" />
           </>
         )}
-        <T v="small" color={c.mutedForeground}>조건이 맞아도 선정·예산·중복수혜에 따라 지급이 달라질 수 있어요.</T>
+        <T v="small" color={c.mutedForeground}>최종 선정은 기관이 정해요</T>
       </Box>
 
       <Box title="필요 서류">
@@ -265,7 +264,7 @@ export default function BenefitDetail() {
             </Pressable>
           ) : <T key={d}>• {d}</T>;
         })}
-        {b.documents.length > 0 ? <T v="small" color={c.mutedForeground}>{acc.isSignedIn ? '준비한 서류를 눌러 체크해 두세요. 발급처는 공식 원문에서 확인해 주세요.' : '로그인하면 준비한 서류를 체크해 둘 수 있어요.'}</T> : null}
+        {b.documents.length > 0 ? <T v="small" color={c.mutedForeground}>{acc.isSignedIn ? '준비한 서류는 눌러서 체크' : '가입하면 체크할 수 있어요'}</T> : null}
       </Box>
 
       <Box title="확인할 사항">
@@ -283,15 +282,14 @@ export default function BenefitDetail() {
         <Box title="내 기록">
           <T v="small" color={c.mutedForeground}>{USER_RECORD_NOTICE}</T>
           <Wrap>{STAGES.map((s) => <Chip key={s} label={s} selected={base.stage === s && !!cur} onPress={() => save({ stage: s }, `"${s}" 단계로 저장했어요.`)} testID={`stage-${s}`} />)}</Wrap>
-          <Toggle testID="reminder-toggle" label="마감 알림 받기" desc={!base.deadlineReminder && !acc.me?.preferences.notifications ? '내정보에서 알림 받기를 먼저 켜 주세요.' : '실제 휴대폰 알림은 아직 연결 전이에요.'} value={base.deadlineReminder} onChange={(v) => save({ deadlineReminder: v }, v ? '마감 알림을 저장했어요.' : '마감 알림을 해제했어요.')} disabled={busy || (!base.deadlineReminder && !acc.me?.preferences.notifications)} />
+          <Toggle testID="reminder-toggle" label="마감 알림 받기" desc={!base.deadlineReminder && !acc.me?.preferences.notifications ? '더보기에서 알림을 먼저 켜 주세요' : '휴대폰 알림은 준비 중이에요'} value={base.deadlineReminder} onChange={(v) => save({ deadlineReminder: v }, v ? '마감 알림을 저장했어요.' : '마감 알림을 해제했어요.')} disabled={busy || (!base.deadlineReminder && !acc.me?.preferences.notifications)} />
         </Box>
       ) : null}
 
       <Box title="공식 출처">
-        <T>{b.agency}의 공고예요. 신청과 선정은 기관이 합니다.</T>
-        <T v="small" color={c.mutedForeground}>자료 확인 {fmtDate(b.checkedAt)} · 출처 번호 {b.sourceId}</T>
-        <T v="small" color={c.mutedForeground} selectable>{b.sourceUrl}</T>
-        <T v="small" color={c.mutedForeground}>이로운사람들은 정부기관이 아니며, 회사 도움은 신청 준비를 돕는 별도 서비스예요.</T>
+        <T>{b.agency} 공고예요</T>
+        <T>신청과 선정은 기관이 합니다</T>
+        <T v="small" color={c.mutedForeground}>확인일 {fmtDate(b.checkedAt)}</T>
       </Box>
       <Disclaimer />
     </Page>

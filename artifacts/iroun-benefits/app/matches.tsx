@@ -76,7 +76,7 @@ function Body() {
       {period === 'past' ? (
         <Wrap>{[0, 1, 2].map((n) => <Chip key={n} label={n === 0 ? `올해(${thisYear}년)` : `${thisYear - n}년`} selected={year === thisYear - n} onPress={() => setYear(thisYear - n)} testID={`svc-year-${thisYear - n}`} />)}</Wrap>
       ) : null}
-      {period === 'past' ? <Notice tone="warn" title="지난 공고는 참고용입니다">올해 같은 지원이 같은 조건으로 열린다는 뜻이 아닙니다. 신청 요청은 현재 공고에서만 할 수 있습니다.</Notice> : null}
+      {period === 'past' ? <Notice tone="warn" title="지난 공고는 참고용이에요">올해도 열린다는 뜻은 아니에요</Notice> : null}
       <Wrap><Chip label="모두" selected={businessScope==='all'} onPress={()=>setBusinessScope('all')} /><Chip label="개인·가구" selected={businessScope==='personal'} onPress={()=>setBusinessScope('personal')} />{acc.me?.profile.businesses.map(b=><Chip key={b.id} label={b.name||'내 사업장'} selected={businessScope===b.id} onPress={()=>setBusinessScope(b.id)} />)}</Wrap>
       <Field label="지역으로 좁혀보기" value={regionQuery} onChangeText={setRegionQuery} placeholder="예: 부산, 김해 — 전국 혜택도 함께 보여요" testID="svc-match-region" />
       <Field label="업종으로 좁혀보기" value={industryQuery} onChangeText={setIndustryQuery} placeholder="업종 제한이 없는 혜택도 함께 보여요" testID="svc-match-industry" />

@@ -25,12 +25,12 @@ export const INDUSTRIES = ['음식점', '도소매', '서비스', '제조', '건
 const THIS_YEAR = new Date(Date.now() + 9 * 3600000).getUTCFullYear();
 const YEARS = [...Array.from({ length: THIS_YEAR - 2009 }, (_, i) => `${THIS_YEAR - i}년`), '2009년 이전'];
 const BIZ_Q: Q[] = [
-  { key: 'industry', title: '어떤 업종인가요?', hint: '가장 가까운 것을 골라 주세요.', kind: 'select', options: INDUSTRIES },
-  { key: 'province', title: '사업장은 어느 지역에 있나요?', hint: '사는 곳이 아니라 사업장 주소 기준이에요.', kind: 'select', options: PROVINCE_ORDER },
-  { key: 'district', title: '어느 시·군·구인가요?', hint: '시 단위까지 골라야 지역 지원금을 정확히 찾아요.', kind: 'select', options: [] },
-  { key: 'openedYear', title: '언제 개업하셨나요?', hint: '사업자등록증의 개업 연도를 골라 주세요.', kind: 'select', options: YEARS, toValue: (o) => parseInt(o, 10) },
-  { key: 'revenue', title: '지난해 매출은 어느 정도인가요?', hint: '1년 매출 합계예요. 정확한 금액은 묻지 않아요.', kind: 'select', options: ['1억 원 미만', '1억~3억 원', '3억~10억 원', '10억 원 이상'] },
-  { key: 'employeeBand', title: '고용보험에 가입된 직원은 몇 명인가요?', hint: '대표자 본인은 빼고 세어 주세요.', kind: 'select', options: ['없음', '1~4명', '5~9명', '10~29명', '30명 이상'] },
+  { key: 'industry', title: '어떤 업종인가요?', hint: '가장 가까운 것 하나', kind: 'select', options: INDUSTRIES },
+  { key: 'province', title: '사업장은 어느 지역에 있나요?', hint: '사업장 주소 기준', kind: 'select', options: PROVINCE_ORDER },
+  { key: 'district', title: '어느 시·군·구인가요?', hint: '시 단위까지 골라 주세요', kind: 'select', options: [] },
+  { key: 'openedYear', title: '언제 개업하셨나요?', hint: '사업자등록증 기준', kind: 'select', options: YEARS, toValue: (o) => parseInt(o, 10) },
+  { key: 'revenue', title: '지난해 매출은 어느 정도인가요?', hint: '1년 매출 합계', kind: 'select', options: ['1억 원 미만', '1억~3억 원', '3억~10억 원', '10억 원 이상'] },
+  { key: 'employeeBand', title: '고용보험에 가입된 직원은 몇 명인가요?', hint: '대표자 본인은 빼고', kind: 'select', options: ['없음', '1~4명', '5~9명', '10~29명', '30명 이상'] },
   { key: 'premises', title: '사업장은 임차인가요, 자가인가요?', kind: 'select', options: ['임차', '자가'] },
 ];
 const QUICK = BIZ_Q.length;
@@ -243,15 +243,16 @@ export default function Onboarding() {
 
   if (!biz && idx === 0) {
     return (
-      <Sheet title="내 사업자 지원금은 얼마일까?" hint="업종, 지역, 개업년도, 매출, 직원 수, 사업장 형태만 고르면 돼요. 1분이면 끝나요." step="시작하기" onClose={close} toast={toast}>
+      <Sheet title="내 사업자 지원금은 얼마일까?" hint="조건만 고르면 돼요. 1분이면 끝나요." step="시작하기" onClose={close} toast={toast}>
         <Pressable testID="consent-more" accessibilityRole="button" accessibilityState={{ expanded: more }} onPress={() => setMore(!more)} style={{ minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <T v="small" style={{ fontWeight: '700' }}>개인정보 수집·이용 안내</T>
           <Feather name={more ? 'chevron-up' : 'chevron-down'} size={18} color={c.mutedForeground} />
         </Pressable>
         {more ? (
           <View style={{ backgroundColor: c.secondary, borderRadius: 10, padding: 14, gap: 6 }}>
-            <T v="small">맞는 지원금을 찾기 위해 사업장 정보(업종·지역·매출 구간·직원 수·사업자 형태)를 입력받아요. 주민등록번호, 계좌, 사업자등록번호는 묻지 않습니다.</T>
-            <T v="small" color={c.mutedForeground}>가입 전에는 이 기기에만 임시 저장돼요. 언제든 고치거나 지울 수 있어요.</T>
+            <T v="small">업종, 지역, 개업년도, 매출, 직원 수, 사업장 형태를 받아요.</T>
+            <T v="small">주민번호, 계좌번호는 묻지 않아요.</T>
+            <T v="small">가입 전에는 이 휴대폰에만 저장돼요.</T>
           </View>
         ) : null}
         <Toggle testID="consent-toggle" label="위 내용에 동의합니다" value={consent} onChange={async (v) => { setConsent(v); if (!(await saveDraft({ profile, consent: v }, uid))) setSync({ t: 'error', s: '이 기기에 저장하지 못했어요. 저장 공간을 확인해 주세요.' }); else setSync(null); }} />
@@ -374,10 +375,10 @@ function Searching({ onDone }: { onDone: () => void }) {
     }, 40);
     return () => clearInterval(h);
   }, [onDone]);
-  const step = pct < 35 ? '업종과 지역 조건을 확인하고 있어요' : pct < 70 ? '매출과 직원 수 조건을 확인하고 있어요' : pct < 100 ? '지나간 공고도 살펴보고 있어요' : '다 찾았어요';
+  const step = pct < 35 ? '업종·지역 확인 중' : pct < 70 ? '매출·직원 수 확인 중' : pct < 100 ? '놓친 지원금 확인 중' : '다 찾았어요';
   return (
     <View testID="searching" style={{ flex: 1, backgroundColor: c.card, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 18 }}>
-      <T v="title" style={{ textAlign: 'center' }}>조건에 맞는 지원금과{'\n'}환급금을 찾고 있어요</T>
+      <T v="title" style={{ textAlign: 'center' }}>지원금과 환급금을{'\n'}찾고 있어요</T>
       <T v="hero" color={c.primary} style={{ fontSize: 56, lineHeight: 66 }} accessibilityRole="text">{pct}%</T>
       <View accessible accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: pct }} style={{ alignSelf: 'stretch', height: 14, borderRadius: 7, backgroundColor: c.secondary, overflow: 'hidden' }}>
         <View style={{ width: `${pct}%`, height: 14, borderRadius: 7, backgroundColor: c.primary }} />

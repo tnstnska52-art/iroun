@@ -72,7 +72,7 @@ function Body() {
 
   return (
     <>
-      {!data.pushDelivery?.enabled ? <Notice tone="warn" title="실제 푸시 발송은 아직 꺼져 있어요">운영자 푸시 자격증명·프로젝트 설정 전에는 휴대전화 상단 알림이 오지 않습니다. 알림에는 이름과 금액을 넣지 않습니다.</Notice> : null}
+      {!data.pushDelivery?.enabled ? <Notice tone="warn" title="휴대폰 알림은 준비 중이에요">지금은 앱 안 알림함에서 확인하세요</Notice> : null}
       {data.pushDelivery ? <Section title="내 계정의 휴대전화 알림 전송 상태">
         <Notice tone={data.pushDelivery.state === 'failed' || data.pushDelivery.state === 'unknown' ? 'warn' : 'info'}>
           {data.pushDelivery.message}

@@ -90,14 +90,14 @@ export default function AuthScreen() {
     if (signIn.status === 'complete') await signIn.finalize({ navigate: () => setPendingCompletion(true) });
   });
   const doSignUp = () => guard(async () => {
-    if (!accountConsent || !termsConsent) { setErr('계정 정보 수집 동의와 이용약관 확인이 필요해요.'); return; }
+    if (!accountConsent || !termsConsent) { setErr('동의 2가지가 필요해요.'); return; }
     if (!pwOk) { setErr('비밀번호는 8자 이상으로 입력해 주세요.'); return; }
     if (pw !== pw2) { setErr('비밀번호 두 칸이 서로 달라요.'); return; }
     const r = await signUp.password({ phoneNumber: e164, password: pw, firstName: name.trim(), unsafeMetadata: { carrier } });
     if (r.error) { setErr(clerkErrorMessage(r.error)); return; }
     const s = await signUp.verifications.sendPhoneCode();
     if (s.error) { setErr(clerkErrorMessage(s.error)); return; }
-    setStep('verify'); setInfo(IS_PREVIEW ? '미리보기에서는 문자를 보내지 않아요. 아무 숫자 6자리를 입력하면 됩니다.' : `${phone} 번호로 인증번호를 보냈어요.`);
+    setStep('verify'); setInfo(IS_PREVIEW ? '미리보기: 아무 숫자 6자리를 넣으세요' : `${phone} 번호로 인증번호를 보냈어요.`);
   });
   const verifySignUp = () => guard(async () => {
     const r = await signUp.verifications.verifyPhoneCode({ code: code.trim() });
@@ -123,7 +123,7 @@ export default function AuthScreen() {
 
   if (step !== 'form') {
     return (
-      <Page back title="휴대폰 인증" subtitle="문자로 받은 인증번호를 입력해 주세요.">
+      <Page back title="휴대폰 인증" >
         {info ? <Notice tone="ok">{info}</Notice> : null}
         <Field testID="code-input" label="인증번호" value={code} onChangeText={setCode} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" />
         {err ? <Notice tone="error">{err}</Notice> : null}
@@ -135,7 +135,7 @@ export default function AuthScreen() {
   }
 
   return (
-    <Page back title={mode === 'signin' ? '로그인' : '가입하기'} subtitle={mode === 'signin' ? '휴대폰 번호와 비밀번호를 입력하세요.' : '휴대폰 인증으로 가입해요. 문자로 인증번호를 보내드려요.'}>
+    <Page back title={mode === 'signin' ? '로그인' : '가입하기'} >
       {reauth ? <Notice tone="warn" title="본인 확인을 위해 다시 로그인해 주세요">최근 10분 안에 로그인한 기록이 있어야 회원 탈퇴를 진행할 수 있어요.</Notice> : null}
       <Pressable testID="auth-kakao" accessibilityRole="button" accessibilityLabel="카카오로 3초 만에 시작하기" disabled={fetching} onPress={doKakao}
         style={({ pressed }) => ({ minHeight: 58, borderRadius: 12, backgroundColor: '#FEE500', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: fetching ? 0.5 : pressed ? 0.85 : 1 })}>
@@ -156,16 +156,15 @@ export default function AuthScreen() {
             <Wrap>{CARRIERS.map((k) => <Chip key={k} label={k} selected={carrier === k} onPress={() => setCarrier(k)} testID={`carrier-${k}`} />)}</Wrap>
           </View>
         ) : null}
-        <Field testID="password-input" label="비밀번호" hint={mode === 'signup' ? '8자 이상이면 돼요.' : undefined} value={pw} onChangeText={setPw} secureTextEntry autoCapitalize="none" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} textContentType={mode === 'signup' ? 'newPassword' : 'password'} error={mode === 'signup' && pw.length > 0 && !pwOk ? `8자 이상으로 입력해 주세요. (지금 ${pw.length}자)` : undefined} />
+        <Field testID="password-input" label="비밀번호" hint={mode === 'signup' ? '8자 이상' : undefined} value={pw} onChangeText={setPw} secureTextEntry autoCapitalize="none" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} textContentType={mode === 'signup' ? 'newPassword' : 'password'} error={mode === 'signup' && pw.length > 0 && !pwOk ? `8자 이상으로 입력해 주세요. (지금 ${pw.length}자)` : undefined} />
         {mode === 'signup' ? <Field testID="password2-input" label="비밀번호 확인" value={pw2} onChangeText={setPw2} secureTextEntry autoCapitalize="none" /> : null}
         {mode === 'signup' ? <>
-          <Toggle testID="consent-account" label="계정 정보 수집·이용에 동의합니다" desc="계정 생성과 본인 확인을 위해 이름, 휴대폰 번호, 통신사와 인증 기록을 처리해요. 탈퇴하면 삭제 처리합니다." value={accountConsent} onChange={setAccountConsent} />
-          <Toggle testID="consent-terms" label="이용약관을 확인하고 동의합니다" value={termsConsent} onChange={setTermsConsent} />
+          <Toggle testID="consent-account" label="개인정보 수집·이용 동의" desc="이름, 번호, 통신사 · 탈퇴하면 삭제" value={accountConsent} onChange={setAccountConsent} />
+          <Toggle testID="consent-terms" label="이용약관 동의" value={termsConsent} onChange={setTermsConsent} />
         </> : null}
         {err ? <Notice tone="error">{err}</Notice> : null}
         <Btn testID="auth-submit" label={mode === 'signin' ? '로그인' : '인증번호 받기'} loading={fetching} disabled={!phoneOk || pw.length < 1 || (mode === 'signup' && (!name.trim() || !carrier || !pwOk || pw2.length < 1 || !accountConsent || !termsConsent))} onPress={mode === 'signin' ? doSignIn : doSignUp} />
       </Card>
-      {mode === 'signup' ? <T v="small" color={c.mutedForeground}>계정 동의와 내 조건 입력·알림 선택은 따로 받아요.</T> : null}
       <Btn kind="secondary" label={mode === 'signin' ? '처음이세요? 가입하기' : '이미 계정이 있어요. 로그인'} onPress={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setErr(null); }} testID="auth-toggle-mode" />
       <Btn kind="ghost" label="개인정보처리방침 읽기" onPress={() => router.push({ pathname: '/legal', params: { section: 'privacy' } })} />
       <Btn kind="ghost" label="이용약관 읽기" onPress={() => router.push({ pathname: '/legal', params: { section: 'terms' } })} />

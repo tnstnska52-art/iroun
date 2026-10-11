@@ -47,15 +47,14 @@ export default function Account() {
 
   const p = acc.me?.profile;
   const textToggle = (
-    <Toggle testID="large-text-toggle" label="큰 글씨 모드" desc="앱 안의 모든 글자를 더 크게 보여줍니다. 기기 설정의 글자 크기도 함께 반영됩니다." value={largeText} onChange={(v) => { setLargeText(v); if (acc.me) void setPref({ largeText: v }); }} />
+    <Toggle testID="large-text-toggle" label="큰 글씨 모드" desc="모든 글자를 더 크게" value={largeText} onChange={(v) => { setLargeText(v); if (acc.me) void setPref({ largeText: v }); }} />
   );
 
   return (
     <Page tab title="더보기">
       {!acc.isLoaded || (acc.isSignedIn && acc.loading) ? <Loading rows={2} /> : !acc.isSignedIn ? (
         <Card tone="soft">
-          <T v="h3">로그인하면 더 많이 쓸 수 있어요</T>
-          <T>저장, 서류 체크, 내 조건 입력은 로그인 후 사용합니다. 혜택 둘러보기는 로그인 없이 가능합니다.</T>
+          <T v="h3">가입하면 전체 지원금을 볼 수 있어요</T>
           <Btn label="로그인" icon="log-in" onPress={() => router.push('/auth')} testID="account-login" />
           <Btn kind="secondary" label="새로 가입" icon="user-plus" onPress={() => router.push({ pathname: '/auth', params: { mode: 'signup' } })} testID="account-signup" />
         </Card>
@@ -67,7 +66,7 @@ export default function Account() {
             <View style={{ height: 1, backgroundColor: c.border }} />
             <T v="label">회원 이용권</T>
             <T color={acc.active ? c.success : c.mutedForeground}>
-              {acc.active ? (acc.me.entitlement.grantActive && !acc.me.entitlement.subscriptionActive ? '무상 이용권 사용 중' : '이용 중') : '이용권 없음 (공지 열람은 무료)'}
+              {acc.active ? (acc.me.entitlement.grantActive && !acc.me.entitlement.subscriptionActive ? '무상 이용권 사용 중' : '이용 중') : '이용권 없음'}
             </T>
             <Btn kind="secondary" label="이용권 안내·관리" icon="award" onPress={() => router.push('/membership')} testID="account-membership" />
           </Card>
@@ -84,10 +83,10 @@ export default function Account() {
 
           <Section title="알림 설정">
             <Card>
-              <Toggle testID="pref-consent" label="개인정보 수집·이용 동의" desc="내 정보를 서버에 저장하려면 동의가 필요합니다." value={acc.me.preferences.privacyConsent} onChange={(v) => setPref({ privacyConsent: v })} disabled={saving} />
-              <Toggle testID="pref-notifications" label="알림 받기" desc="알림 수신 의사를 저장합니다." value={acc.me.preferences.notifications} onChange={(v) => setPref({ notifications: v })} disabled={saving} />
-              <Toggle testID="pref-personalized" label="맞춤 알림" desc={acc.active ? '내 조건과 맞는 새 지원을 알림 대상으로 표시합니다.' : '회원 이용권이 있을 때만 켤 수 있습니다.'} value={acc.me.preferences.personalizedAlerts && acc.active} onChange={(v) => setPref({ personalizedAlerts: v })} disabled={saving || !acc.active} />
-              <Notice tone="warn" title="실제 푸시 발송은 아직 꺼져 있어요">기기 등록과 서버 발송 코드는 준비되어 있지만 운영자 푸시 자격증명·프로젝트 설정 전에는 알림이 발송되지 않습니다. 실제 기기 수신은 아직 확인하지 않았습니다.</Notice>
+              <Toggle testID="pref-consent" label="개인정보 수집·이용 동의" desc="조건 저장에 필요해요" value={acc.me.preferences.privacyConsent} onChange={(v) => setPref({ privacyConsent: v })} disabled={saving} />
+              <Toggle testID="pref-notifications" label="알림 받기" value={acc.me.preferences.notifications} onChange={(v) => setPref({ notifications: v })} disabled={saving} />
+              <Toggle testID="pref-personalized" label="맞춤 알림" desc={acc.active ? '내 조건에 맞는 새 공고' : '이용 중에만 켤 수 있어요'} value={acc.me.preferences.personalizedAlerts && acc.active} onChange={(v) => setPref({ personalizedAlerts: v })} disabled={saving || !acc.active} />
+              <T v="small" color={c.mutedForeground}>휴대폰 알림은 준비 중이에요</T>
             </Card>
             {msg ? <Notice tone={msg.t}>{msg.s}</Notice> : null}
           </Section>

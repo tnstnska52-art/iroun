@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
-import { Btn, T } from '@/components/ui';
+import { Btn, CountUp, T } from '@/components/ui';
 import { FREE_COUNT, won, type EstimateItem } from '@/lib/estimate';
 import { useAccount } from '@/lib/session';
 import { dday } from '@/components/BenefitCard';
@@ -23,8 +23,8 @@ export function GrantRow({ item, missed, locked, last }: { item: EstimateItem; m
   const router = useRouter();
   const b = item.benefit;
   const dd = dday(b);
-  const amount = b.maxAmount ? `최대 ${won(b.maxAmount)}` : '금액 공고 확인';
-  const sub = missed ? `${b.endsAt ? `${fmtDate(b.endsAt)} 마감` : '마감'} · ${b.agency}` : `${item.result === '조건 일치' ? '조건 일치' : '조건 확인 필요'} · ${dd.label === '상시' || dd.label === '접수 중' || dd.label === '기간 확인' ? dd.label : `${dd.label.replace('D-', '')}일 남음`}`;
+  const amount = b.maxAmount ? won(b.maxAmount) : '금액 확인';
+  const sub = missed ? `${b.endsAt ? `${fmtDate(b.endsAt)} 마감` : '마감'} · ${b.agency}` : `${item.result === '조건 일치' ? '조건 일치' : '확인 필요'} · ${dd.label === '상시' || dd.label === '접수 중' || dd.label === '기간 확인' ? dd.label : `${dd.label.replace('D-', '')}일 남음`}`;
   return (
     <Pressable testID={`grant-${b.id}`} accessibilityRole="button" accessibilityLabel={locked ? '가입하면 볼 수 있는 지원금' : `${b.title}. ${amount}. 자세히 보기`} disabled={locked}
       onPress={() => router.push({ pathname: '/benefit/[id]', params: { id: b.id } })}
@@ -55,12 +55,27 @@ export function GrantList({ items, missed, unlocked }: { items: EstimateItem[]; 
         <View testID="grant-locked">
           {items.slice(FREE_COUNT, FREE_COUNT + 2).map((x, i) => <GrantRow key={x.benefit.id} item={x} missed={missed} locked last={i === Math.min(rest, 2) - 1} />)}
           <View style={{ paddingVertical: 16, gap: 10, borderTopWidth: 1, borderTopColor: c.border }}>
-            <T v="h3" style={{ textAlign: 'center' }}>나머지 {rest}건은 가입하면 바로 볼 수 있어요</T>
+            <T v="h3" style={{ textAlign: 'center' }}>{rest}건 더 있어요</T>
             <Btn label="무료로 전체 보기" onPress={() => router.push(join)} testID="grant-join" />
-            <T v="small" color={c.mutedForeground} style={{ textAlign: 'center' }}>3일 무료 · 카드 등록 없음 · 자동결제 없음</T>
+            <T v="small" color={c.mutedForeground} style={{ textAlign: 'center' }}>3일 무료 · 자동결제 없음</T>
           </View>
         </View>
       ) : null}
     </View>
+  );
+}
+
+/** 건수와 금액을 위아래로 크게 보여주는 카드. 한 줄에 한 가지 정보만 둔다. */
+export function Total({ label, count, total, tone = 'blue', note, onPress, testID, children }: { label: string; count: number; total: number; tone?: 'blue' | 'red'; note?: string; onPress?: () => void; testID?: string; children?: React.ReactNode }) {
+  const c = useColors();
+  const color = tone === 'red' ? c.destructive : c.primary;
+  return (
+    <Pressable testID={testID} accessibilityRole={onPress ? 'button' : 'summary'} disabled={!onPress} onPress={onPress}
+      style={({ pressed }) => ({ backgroundColor: tone === 'red' ? c.destructiveSoft : c.card, borderRadius: c.radius + 6, padding: 22, gap: 2, opacity: pressed ? 0.9 : 1 })}>
+      <T v="h3" color={tone === 'red' ? c.destructive : c.foreground}>{label} {count}건</T>
+      {total > 0 ? <CountUp key={`${label}${total}`} to={Math.floor(total / 10000)} color={color} style={{ fontSize: 44, lineHeight: 54 }} format={(n) => `${n.toLocaleString('ko-KR')}만원`} /> : null}
+      <T v="small" color={tone === 'red' ? c.destructive : c.mutedForeground}>{note ?? (total > 0 ? '공고 기준 최대 금액' : '금액은 공고에서 확인')}</T>
+      {children}
+    </Pressable>
   );
 }

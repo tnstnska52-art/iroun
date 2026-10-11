@@ -60,7 +60,7 @@ export function Pending({ onRetry }: { onRetry: () => void }) {
 }
 
 export function NotGovernment() {
-  return <View testID="svc-government-notice"><Notice tone="warn" title="정부 서비스가 아닙니다">이로운사람들이 제공하는 지원정보 서비스이며 정부기관을 대표하지 않습니다. 신청 전 공식 공고 원문을 꼭 확인하세요.</Notice></View>;
+  return <View testID="svc-government-notice"><Notice tone="warn" title="정부 서비스가 아닙니다">신청과 선정은 기관이 합니다</Notice></View>;
 }
 
 export function ContactButtons({ phone, kakao, prefix }: { phone?: string | null; kakao?: string | null; prefix: string }) {
