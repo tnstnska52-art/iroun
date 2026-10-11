@@ -45,6 +45,10 @@ describe("공고 자동 정리", () => {
     expect(y.missing).toEqual(expect.arrayContaining(["지원 지역", "신청기간", "세부 자격", "지원 금액", "필요 서류"]));
     expect(y.confidence).toBe(0);
   });
+  it("제목에 시·도만 있으면 본문의 시·군·구를 쓴다", () => {
+    expect(extractNotice({ title: "[경기] 소상공인 지원", text: "지원대상: 경기도 수원시에 사업장을 둔 소상공인" }, NOW).region).toBe("경기 수원시");
+    expect(extractNotice({ title: "[경기] 소상공인 지원", text: "서울특별시 강남구 소재 기업은 제외" }, NOW).region).toBe("경기");
+  });
   it("제외 업종 문장은 규칙으로 만들지 않고 주의로 남긴다", () => {
     const y = extractNotice({ title: "지원", text: "지원 제외 업종: 숙박업, 건설업" }, NOW);
     expect(y.rules.find((r) => r.field === "industry")).toBeUndefined();
@@ -71,5 +75,20 @@ describe("공고 자동 정리", () => {
     expect(clear.cautions).toEqual([]);
     expect(autoPublishable(clear, { IROUN_AUTO_PUBLISH_CONFIDENT: "true" })).toBe(true);
     expect(autoPublishable(clear, {})).toBe(false);
+  });
+});
+
+import { parseBizinfoRecord, structureBizinfo } from "./official-feed";
+describe("기업마당 응답 자동 정리", () => {
+  it("응답의 본문 항목으로 지역·기간·금액을 채우고 검토대기로 둔다", () => {
+    // 시험용 응답: 항목 이름만 실제 API와 같고 내용은 지어낸 것이다.
+    const raw = { pblancId: "PBLN_000000000999999", pblancNm: "[부산] 2026년 소상공인 온라인 판로 지원", jrsdInsttNm: "시험기관", pblancUrl: "/sii/siia/selectSIIA200Detail.do?pblancId=PBLN_000000000999999",
+      reqstBeginEndDe: "20261001 ~ 20261030", bsnsSumryCn: "부산광역시 소재 소상공인의 온라인 판로 개척을 위해 업체당 최대 200만원을 지원", trgetNm: "소상공인", reqstMthPapersCn: "온라인 접수. 제출서류: 신청서, 사업자등록증" };
+    const { benefit, extraction } = structureBizinfo(parseBizinfoRecord(raw, NOW.toISOString()), raw, NOW);
+    expect([benefit.region, benefit.startsAt, benefit.endsAt, benefit.status, benefit.maxAmount]).toEqual(["부산", "2026-10-01", "2026-10-30", "접수 중", 2_000_000]);
+    expect(benefit.reviewStatus).toBe("검토대기");
+    expect(benefit.documents).toEqual(["사업자등록증명", "신청서"]);
+    expect(benefit.extraction?.missing).toEqual(["세부 자격"]);
+    expect(extraction.confidence).toBe(80);
   });
 });

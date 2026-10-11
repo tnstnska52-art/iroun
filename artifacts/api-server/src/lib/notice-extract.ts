@@ -79,7 +79,11 @@ function findRegion(title: string, list: string[]) {
     return undefined;
   };
   const inTitle = tryIn(title, false);
-  if (inTitle) return { ...inTitle, quote: title };
+  if (inTitle) {
+    // 제목에는 시·도만 있고 본문에 같은 시·도의 시·군·구가 적힌 경우 본문 쪽이 더 정확하다.
+    if (!inTitle.guessedDistrict) for (const s of list) { const r = tryIn(s, true); if (r?.guessedDistrict && r.region.startsWith(`${inTitle.region} `)) return { ...r, quote: s }; }
+    return { ...inTitle, quote: title };
+  }
   for (const s of list) { const r = tryIn(s, true); if (r) return { ...r, quote: s }; }
   const nation = [title, ...list].find((s) => /전국(?!\s*최초)/.test(s) && /대상|소재|소상공인|중소기업|기업|모집|지원/.test(s));
   return nation ? { region: "전국", guessedDistrict: false, quote: nation } : undefined;

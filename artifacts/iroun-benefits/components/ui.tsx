@@ -14,6 +14,15 @@ import { KeyboardAwareScrollViewCompat } from './KeyboardAwareScrollViewCompat';
 /** 웹에서는 Pretendard를 쓴다. 기기 앱에서는 글꼴 파일을 넣기 전까지 기본 글꼴로 보인다. */
 export const FONT = Platform.OS === 'web' ? ({ fontFamily: 'Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif' } as const) : {};
 type Variant = 'hero' | 'title' | 'h2' | 'h3' | 'body' | 'small' | 'label';
+/** 휴대폰 앱: 굵기마다 글꼴 파일이 따로 있어서 굵기에 맞는 파일을 고른다. 웹은 그대로 둔다. */
+export function nativeFont(style: StyleProp<TextStyle>): StyleProp<TextStyle> {
+  if (Platform.OS === 'web') return style;
+  const flat = StyleSheet.flatten(style) ?? {};
+  if (flat.fontFamily) return flat;
+  const w = flat.fontWeight === 'bold' ? 700 : flat.fontWeight === 'normal' || flat.fontWeight === undefined ? 400 : Number(flat.fontWeight) || 400;
+  const face = w >= 800 ? 'ExtraBold' : w >= 700 ? 'Bold' : w >= 600 ? 'SemiBold' : w >= 500 ? 'Medium' : 'Regular';
+  return { ...flat, fontFamily: `Pretendard-${face}`, fontWeight: 'normal' };
+}
 const SIZES: Record<Variant, { s: number; w: TextStyle['fontWeight']; l: number }> = {
   hero: { s: 30, w: '800', l: 40 },
   title: { s: 24, w: '800', l: 33 },
@@ -36,7 +45,7 @@ export function T({ v = 'body', color, style, children, ...rest }: {
       maxFontSizeMultiplier={2}
       accessibilityRole={v === 'hero' || v === 'title' ? 'header' : rest.accessibilityRole}
       {...rest}
-      style={[FONT, { fontSize: z.s * scale, lineHeight: z.l * scale, fontWeight: z.w, color: color ?? c.foreground, flexShrink: 1 }, style]}
+      style={nativeFont([FONT, { fontSize: z.s * scale, lineHeight: z.l * scale, fontWeight: z.w, color: color ?? c.foreground, flexShrink: 1 }, style])}
     >
       {children}
     </Text>
@@ -150,10 +159,10 @@ export function Field({ label, error, hint, ...rest }: TextInputProps & { label:
         placeholderTextColor={c.mutedForeground}
         maxFontSizeMultiplier={2}
         {...rest}
-        style={[FONT, {
+        style={nativeFont([FONT, {
           minHeight: 56, borderWidth: 1, borderColor: error ? c.destructive : c.input, borderRadius: 10,
           paddingHorizontal: 14, paddingVertical: 12, fontSize: 17 * scale, color: c.foreground, backgroundColor: c.card,
-        }, rest.multiline ? { minHeight: 110, textAlignVertical: 'top' } : null]}
+        }, rest.multiline ? { minHeight: 110, textAlignVertical: 'top' } : null])}
       />
       {error ? <T v="small" color={c.destructive} accessibilityRole="text">{error}</T> : null}
     </View>

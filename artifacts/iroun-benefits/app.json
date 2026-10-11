@@ -6,18 +6,42 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "iroun-benefits",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleDevelopmentRegion": "ko"
+      }
     },
-    "android": {},
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ]
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
-    "plugins": ["expo-router", "expo-secure-store", "expo-notifications"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-notifications"
+    ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "splash": {
+      "backgroundColor": "#FFFFFF",
+      "resizeMode": "contain",
+      "image": "./assets/images/icon.png"
+    },
+    "locales": {
+      "ko": "./assets/locales/ko.json"
     }
   }
 }

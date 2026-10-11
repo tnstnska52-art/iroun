@@ -18,7 +18,7 @@ import {
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { View,Text,ActivityIndicator } from 'react-native';
+import { View,Text,ActivityIndicator,Platform } from 'react-native';
 import { SettingsProvider } from '@/lib/settings';
 import { AuthBridge, PERSONAL_KEYS } from '@/lib/session';
 import { T } from '@/components/ui';
@@ -76,6 +76,14 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
+    // 휴대폰 앱에서는 Pretendard를 파일로 싣는다(웹 미리보기는 따로 불러온다).
+    ...(Platform.OS !== 'web' ? {
+      'Pretendard-Regular': require('../assets/fonts/Pretendard-Regular.otf'),
+      'Pretendard-Medium': require('../assets/fonts/Pretendard-Medium.otf'),
+      'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
+      'Pretendard-Bold': require('../assets/fonts/Pretendard-Bold.otf'),
+      'Pretendard-ExtraBold': require('../assets/fonts/Pretendard-ExtraBold.otf'),
+    } : {}),
   });
 
   useEffect(() => {
