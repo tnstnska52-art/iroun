@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+.git
+.cache
+generated-artifacts
+HANDOFF
+artifacts/iroun-benefits/credentials
+**/*.p8
+**/*.p12
+**/*.keystore
+**/*.jks
+**/.env*
