@@ -6,7 +6,11 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bHVja3ktc25pcGUtNTY5Mi5jbGVyay5hY2NvdW50cy5kZXYk",
+        "EXPO_PUBLIC_API_URL": "https://iroun-api.onrender.com"
+      }
     },
     "preview": {
       "distribution": "internal",
@@ -14,13 +18,15 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://iroun-api.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://iroun-api.onrender.com",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bHVja3ktc25pcGUtNTY5Mi5jbGVyay5hY2NvdW50cy5kZXYk"
       }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://iroun-api.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://iroun-api.onrender.com",
+        "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bHVja3ktc25pcGUtNTY5Mi5jbGVyay5hY2NvdW50cy5kZXYk"
       }
     }
   },
