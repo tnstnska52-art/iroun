@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { BackHandler, Platform, Pressable, ScrollView, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useUser } from '@clerk/expo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -27,6 +27,7 @@ type Step =
   | { id: string; kind: 'select'; title: string; hint?: string; options: string[]; value?: string; set: (a: Answers, v: string) => Answers }
   | { id: 'loans' | 'issues' | 'contact'; kind: 'custom'; title: string; hint?: string };
 
+let kept: { a: Answers; i: number } | null = null;
 const phoneOk = (s: string) => /^01[016789]-?\d{3,4}-?\d{4}$/.test(s.trim());
 
 /** 정책자금 진단: 고르기만 하면 되는 질문을 하나씩 보여주고, 끝나면 회사 담당자에게 전달한다. 한도·금리는 앱이 계산하지 않는다. */
@@ -36,8 +37,10 @@ export default function FundCheck() {
   const acc = useAccount();
   const { user } = useUser();
   const first = acc.me?.profile.businesses[0];
-  const [a, setA] = useState<Answers>(() => ({ revenue: {}, loans: [], issues: [], businessName: '', name: '', phone: '' }));
-  const [i, setI] = useState(0);
+  // 밀어서 화면을 나갔다가 돌아와도 고르던 자리에서 이어지도록, 답을 화면 밖에 잠시 보관한다(앱을 끄면 사라진다).
+  const [a, setA] = useState<Answers>(() => kept?.a ?? { revenue: {}, loans: [], issues: [], businessName: '', name: '', phone: '' });
+  const [i, setI] = useState(() => kept?.i ?? 0);
+  useEffect(() => { kept = { a, i }; }, [a, i]);
   const [lender, setLender] = useState<string | null>(null);
   const [consent, setConsent] = useState(false);
   const [phase, setPhase] = useState<'form' | 'sending' | 'done'>('form');
@@ -87,6 +90,16 @@ export default function FundCheck() {
   const go = (n: number) => { setErr(null); setLender(null); setI(Math.max(0, Math.min(steps.length - 1, n))); scroll.current?.scrollTo({ y: 0, animated: false }); };
   const back = () => (idx === 0 ? (router.canGoBack() ? router.back() : router.replace('/funds' as never)) : go(idx - 1));
 
+  // 뒤로 가기(갤럭시 뒤로 동작, 웹에서 밀기)는 화면을 나가지 않고 이전 질문으로 돌아간다. 첫 질문에서는 나간다.
+  const backRef = useRef(back); backRef.current = back;
+  useEffect(() => {
+    if (phase !== 'form') return;
+    const sub = Platform.OS === 'web' ? { remove: () => {} } : BackHandler.addEventListener('hardwareBackPress', () => { backRef.current(); return true; });
+    const onSwipe = (e: Event) => { e.preventDefault(); backRef.current(); };
+    if (Platform.OS === 'web' && typeof window !== 'undefined') window.addEventListener('iroun:back', onSwipe);
+    return () => { sub.remove(); if (Platform.OS === 'web' && typeof window !== 'undefined') window.removeEventListener('iroun:back', onSwipe); };
+  }, [phase]);
+
   const submit = async () => {
     if (!a.businessName.trim() || !a.name.trim()) { setErr('상호명과 이름을 적어 주세요.'); return; }
     if (!phoneOk(a.phone)) { setErr('휴대폰 번호를 확인해 주세요.'); return; }
@@ -100,6 +113,7 @@ export default function FundCheck() {
     const started = Date.now();
     try {
       await requestFundDiagnosis(body);
+      kept = null;
       await AsyncStorage.setItem(FUND_DONE_KEY, new Date().toISOString()).catch(() => {});
       setTimeout(() => setPhase('done'), Math.max(0, 2800 - (Date.now() - started)));
     } catch (e) { setPhase('form'); setErr(apiErrorMessage(e, '전달하지 못했어요. 다시 시도해 주세요.')); }

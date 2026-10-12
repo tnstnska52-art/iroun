@@ -15,7 +15,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from '@expo-google-fonts/inter';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { View,Text,ActivityIndicator,Platform } from 'react-native';
@@ -60,8 +60,9 @@ const queryClient: QueryClient = new QueryClient({
 });
 
 function RootLayoutNav() {
+  useWebSwipeBack();
   return (
-    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+    <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', gestureEnabled: true, fullScreenGestureEnabled: true }}>
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="onboarding" options={{ presentation: 'transparentModal', animation: 'slide_from_bottom', contentStyle: { backgroundColor: 'transparent' } }} />
     </Stack>
@@ -130,4 +131,34 @@ function Startup(){
     <ActivityIndicator size="large" color="#155eef" accessibilityLabel="화면 준비 중" />
     <Text style={{fontSize:20,lineHeight:30,color:'#334155',textAlign:'center'}}>화면을 준비하고 있습니다.{'\n'}시간이 오래 걸리면 인터넷 연결을 확인해 주세요.</Text>
   </View>;
+}
+
+/**
+ * 웹 화면에서도 휴대폰처럼 화면 왼쪽 끝에서 오른쪽으로 밀면 이전 화면으로 돌아간다.
+ * (아이폰·갤럭시 앱에서는 기기 자체의 밀기 동작이 그대로 작동한다.)
+ * 화면이 직접 처리하고 싶으면 'iroun:back' 이벤트를 막으면 된다(예: 질문을 한 단계 뒤로).
+ */
+export function useWebSwipeBack() {
+  const router = useRouter();
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    let sx = 0, sy = 0, st = 0, on = false, popped = false;
+    // 브라우저가 스스로 뒤로 가는 경우(아이폰 사파리 등)에는 두 번 가지 않도록 기다렸다가 확인한다.
+    const pop = () => { popped = true; };
+    const start = (e: TouchEvent) => { const t = e.touches[0]; on = e.touches.length === 1 && t.clientX <= 36; sx = t.clientX; sy = t.clientY; st = Date.now(); popped = false; };
+    const end = (e: TouchEvent) => {
+      if (!on) return; on = false;
+      const t = e.changedTouches[0], dx = t.clientX - sx, dy = Math.abs(t.clientY - sy);
+      if (dx < 70 || dy > 60 || Date.now() - st > 900) return;
+      setTimeout(() => {
+        if (popped) return;
+        const ev = new Event('iroun:back', { cancelable: true });
+        if (window.dispatchEvent(ev) && router.canGoBack()) router.back();
+      }, 320);
+    };
+    document.addEventListener('touchstart', start, { passive: true });
+    document.addEventListener('touchend', end, { passive: true });
+    window.addEventListener('popstate', pop);
+    return () => { document.removeEventListener('touchstart', start); document.removeEventListener('touchend', end); window.removeEventListener('popstate', pop); };
+  }, [router]);
 }
