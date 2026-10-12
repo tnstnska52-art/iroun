@@ -219,6 +219,8 @@ export interface Profile {
   personal: Personal;
   businesses: Business[];
   step: number;
+  /** 고객이 정보 추가에서 직접 답한 조건. 같은 조건은 다시 묻지 않는다 */
+  confirmations?: { [key: string]: { answer: '예' | '아니오'; label: string } };
 }
 
 export interface Preferences {

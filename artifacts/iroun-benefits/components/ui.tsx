@@ -3,6 +3,7 @@ import {
   ActivityIndicator, Animated, Easing, Platform, Pressable, ScrollView, StyleProp, StyleSheet, Text, TextInput,
   TextInputProps, TextStyle, View, ViewStyle,
 } from 'react-native';
+import { TopIcons } from '@/components/TopIcons';
 import { Feather } from '@expo/vector-icons';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,9 +53,10 @@ export function T({ v = 'body', color, style, children, ...rest }: {
   );
 }
 
-export function Page({ title, subtitle, back, children, tab, right, footer, flush }: {
+export function Page({ title, subtitle, back, children, tab, right, footer, flush, header }: {
   title?: string; subtitle?: string; back?: boolean; children: React.ReactNode; tab?: boolean; right?: React.ReactNode;
   /** 화면 아래에 고정되는 대표 행동 영역 */ footer?: React.ReactNode; /** 좌우 여백 없이 꽉 채우는 머리 영역을 직접 그릴 때 */ flush?: boolean;
+  /** 위쪽 고정 줄의 왼쪽에 넣을 내용(홈의 앱 이름 등). 없으면 뒤로 가기나 화면 제목이 들어간다 */ header?: React.ReactNode;
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -64,38 +66,40 @@ export function Page({ title, subtitle, back, children, tab, right, footer, flus
     setFocused(true);
     return ()=>setFocused(false);
   },[]));
-  const top = flush ? 0 : Platform.OS === 'web' ? 16 : insets.top + 8;
+  const top = flush ? 0 : Platform.OS === 'web' ? 10 : insets.top + 4;
   const bottom = footer ? 24 : Platform.OS === 'web' ? 32 : insets.bottom + (tab ? 24 : 40);
+  // 탭 화면은 제목을 고정 줄에 두고, 그 밖의 화면은 뒤로 가기를 고정 줄에 둔다.
+  const barTitle = !header && tab && !back ? title : undefined;
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
+    {!flush ? (
+      <View accessibilityElementsHidden={!focused} importantForAccessibility={focused ? 'auto' : 'no-hide-descendants'} aria-hidden={!focused}
+        style={{ paddingTop: top, paddingHorizontal: 16, minHeight: top + 48, flexDirection: 'row', alignItems: 'center', gap: 8, maxWidth: 720, width: '100%', alignSelf: 'center', backgroundColor: c.background }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', minHeight: 44 }}>
+          {header ? header : back ? (
+            <Pressable testID="back-button" accessibilityRole="button" accessibilityLabel="이전 화면으로 돌아가기" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={styles.back}>
+              <Feather name="chevron-left" size={28} color={c.foreground} />
+            </Pressable>
+          ) : barTitle ? <T v="title" style={{ flex: 1 }}>{barTitle}</T> : null}
+        </View>
+        {right}
+        <TopIcons />
+      </View>
+    ) : null}
     <KeyboardAwareScrollViewCompat
       accessibilityElementsHidden={!focused}
       importantForAccessibility={focused ? 'auto' : 'no-hide-descendants'}
       aria-hidden={!focused}
       style={{ flex: 1, backgroundColor: c.background }}
-      contentContainerStyle={{ paddingTop: top, paddingBottom: bottom, paddingHorizontal: flush ? 0 : 16, gap: 12, maxWidth: 720, width: '100%', alignSelf: 'center' }}
+      contentContainerStyle={{ paddingTop: flush ? 0 : 6, paddingBottom: bottom, paddingHorizontal: flush ? 0 : 16, gap: 12, maxWidth: 720, width: '100%', alignSelf: 'center' }}
       bottomOffset={24}
     >
-      {back ? (
-        <Pressable
-          testID="back-button"
-          accessibilityRole="button"
-          accessibilityLabel="이전 화면으로 돌아가기"
-          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          style={styles.back}
-        >
-          <Feather name="chevron-left" size={28} color={c.foreground} />
-        </Pressable>
-      ) : null}
-      {title ? (
+      {title && !barTitle ? (
         <View style={{ gap: 4 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <T v="title" style={{ flex: 1 }}>{title}</T>
-            {right}
-          </View>
+          <T v="title">{title}</T>
           {subtitle ? <T v="small" color={c.mutedForeground}>{subtitle}</T> : null}
         </View>
-      ) : null}
+      ) : subtitle ? <T v="small" color={c.mutedForeground}>{subtitle}</T> : null}
       {children}
     </KeyboardAwareScrollViewCompat>
     {footer ? (

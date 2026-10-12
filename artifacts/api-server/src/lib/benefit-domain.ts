@@ -36,6 +36,9 @@ export const profileSchema = z.object({
   unknownAnswers: z.array(z.string().min(1).max(120)).max(500).optional(),
   personal: personalSchema, businesses: z.array(businessSchema).max(30),
   step: z.number().int().min(0).max(500),
+  // 고객이 "정보 추가"에서 직접 답한 조건. 같은 조건은 다른 공고에서 다시 묻지 않는다.
+  confirmations: z.record(z.string().max(300), z.object({answer: z.enum(["예","아니오"]), label: z.string().max(200)}).strict())
+    .refine(v => Object.keys(v).length <= 500, "저장할 수 있는 답변 수를 넘었습니다.").optional(),
 }).strict().refine(p => new Set(p.businesses.map(b => b.id)).size === p.businesses.length, "사업장 식별자는 중복될 수 없습니다.");
 export const preferencesSchema = z.object({
   largeText: z.boolean(), notifications: z.boolean(), privacyConsent: z.boolean(), personalizedAlerts: z.boolean(),
@@ -129,6 +132,42 @@ function compare(actual: unknown, op: string, expected: unknown): boolean | unde
   }
   return undefined;
 }
+type Rule = z.infer<typeof ruleSchema>;
+/** 같은 조건인지 알아보는 열쇠. 공고가 달라도 조건이 같으면 같은 열쇠가 된다. */
+export const ruleKey = (r: Pick<Rule,"scope"|"field"|"operator"|"value">) => `${r.scope}.${r.field}.${r.operator}.${JSON.stringify(r.value)}`.slice(0, 300);
+/**
+ * 규칙 한 건을 고객 정보와 비교한다.
+ * result: true 일치 / false 불일치 / undefined 아직 모름.
+ * missing: 그 항목 자체가 비어 있어서 모르는 경우(값을 고르면 풀린다). false 면 값은 있지만 구간이 걸쳐 있는 경우다.
+ */
+export function evalRule(r: Rule, business: Record<string, unknown>, p: Profile, year: number): {result: boolean|undefined; missing: boolean} {
+  const subject: Record<string, unknown> = r.scope === "business" ? business : p.personal;
+  let actual = r.field === "age" && p.personal.birthYear ? year - p.personal.birthYear - 1 : subject[r.field];
+  let expected=r.value;
+  if(r.field==="province"){
+    if(typeof actual==="string") actual=provinceKey(actual)??actual;
+    expected=Array.isArray(expected)?expected.map(v=>typeof v==="string"?provinceKey(v)??v:v):typeof expected==="string"?provinceKey(expected)??expected:expected;
+  }
+  const empty = actual===undefined||actual===null||actual===""||actual==="잘 모르겠어요"||actual==="모름";
+  const biz = business as {employeeBand?:string;openedYear?:number};
+  const banded = r.scope==="business" && empty ? (
+    r.field==="employees" && biz.employeeBand && BAND_RANGE[biz.employeeBand] ? rangeCompare(BAND_RANGE[biz.employeeBand]![0],BAND_RANGE[biz.employeeBand]![1],r.operator,expected)
+    : r.field==="openedAt" && biz.openedYear && typeof expected==="string" && Number.isFinite(Date.parse(expected)) ? rangeCompare(biz.openedYear<=2009?Date.parse("1900-01-01T00:00:00+09:00"):Date.parse(`${biz.openedYear}-01-01T00:00:00+09:00`),Date.parse(`${biz.openedYear}-12-31T23:59:59+09:00`),r.operator,Date.parse(expected))
+    : null) : r.scope==="business" && r.field==="revenue" && typeof actual==="string" && REVENUE_RANGE[actual] && typeof expected==="number"
+    ? rangeCompare(REVENUE_RANGE[actual]![0],REVENUE_RANGE[actual]![1],r.operator,expected) : null;
+  // Only birth year is collected: exact age near a cutoff cannot be guaranteed.
+  let result = banded!==null ? banded : r.field === "age" && p.personal.birthYear && typeof r.value === "number" && Math.abs(year - p.personal.birthYear - r.value) <= 1 ? undefined : compare(actual, r.operator, expected);
+  // 고객이 직접 답한 조건이 있으면 그 답을 쓴다.
+  const said = result===undefined ? p.confirmations?.[ruleKey(r)]?.answer : undefined;
+  if (said) result = said==="예";
+  return {result, missing: result===undefined && empty && banded===null};
+}
+/** 이 공고를 판단하려면 고객에게 더 물어야 하는 조건들. 이미 답했거나 정보가 있는 조건은 빠진다. */
+export function openRules(b: Benefit, p: Profile, businessId: string, now = new Date()) {
+  const year=new Date(now.getTime()+9*3600000).getUTCFullYear();
+  const business = (p.businesses.find(x => x.id === businessId) ?? {id: businessId}) as Record<string, unknown>;
+  return b.rules.map(rule => ({rule, key: ruleKey(rule), ...evalRule(rule, business, p, year)})).filter(x => x.result === undefined);
+}
 export function matchBenefit(b: Benefit, p: Profile, now = new Date()) {
   const year=new Date(now.getTime()+9*3600000).getUTCFullYear();
   const businesses = b.audience === "사업" || b.rules.some(r => r.scope === "business") ? (p.businesses.length ? p.businesses : [{id: ""}]) : [{id: ""}];
@@ -157,21 +196,7 @@ export function matchBenefit(b: Benefit, p: Profile, now = new Date()) {
     if (b.budgetStatus === "확인 필요") unknowns.push("예산 잔여를 확인해 주세요.");
     if (!b.rules.length) unknowns.push("세부 자격은 공식 신청처에서 확인해야 합니다.");
     for (const r of b.rules) {
-      const subject: Record<string, unknown> = r.scope === "business" ? business : p.personal;
-      let actual = r.field === "age" && p.personal.birthYear ? year - p.personal.birthYear - 1 : subject[r.field];
-      let expected=r.value;
-      if(r.field==="province"){
-        if(typeof actual==="string") actual=provinceKey(actual)??actual;
-        expected=Array.isArray(expected)?expected.map(v=>typeof v==="string"?provinceKey(v)??v:v):typeof expected==="string"?provinceKey(expected)??expected:expected;
-      }
-      // Only birth year is collected: exact age near a cutoff cannot be guaranteed.
-      const biz = business as {employeeBand?:string;openedYear?:number};
-      const banded = r.scope==="business" && (actual===undefined||actual===null||actual==="") ? (
-        r.field==="employees" && biz.employeeBand && BAND_RANGE[biz.employeeBand] ? rangeCompare(BAND_RANGE[biz.employeeBand]![0],BAND_RANGE[biz.employeeBand]![1],r.operator,expected)
-        : r.field==="openedAt" && biz.openedYear && typeof expected==="string" && Number.isFinite(Date.parse(expected)) ? rangeCompare(biz.openedYear<=2009?Date.parse("1900-01-01T00:00:00+09:00"):Date.parse(`${biz.openedYear}-01-01T00:00:00+09:00`),Date.parse(`${biz.openedYear}-12-31T23:59:59+09:00`),r.operator,Date.parse(expected))
-        : null) : r.scope==="business" && r.field==="revenue" && typeof actual==="string" && REVENUE_RANGE[actual] && typeof expected==="number"
-        ? rangeCompare(REVENUE_RANGE[actual]![0],REVENUE_RANGE[actual]![1],r.operator,expected) : null;
-      const result = banded!==null ? banded : r.field === "age" && p.personal.birthYear && typeof r.value === "number" && Math.abs(year - p.personal.birthYear - r.value) <= 1 ? undefined : compare(actual, r.operator, expected);
+      const {result} = evalRule(r, business, p, year);
       if (result === true) reasons.push(`${r.label}: 입력 조건과 일치합니다.`);
       else if (result === false) exclusions.push(`${r.label}: 입력 조건과 다릅니다.`);
       else unknowns.push(`${r.label}: 추가 확인이 필요합니다.`);

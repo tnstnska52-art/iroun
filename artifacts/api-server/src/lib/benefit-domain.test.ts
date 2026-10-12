@@ -63,3 +63,40 @@ describe("공개자료와 금지 범위",()=>{
   it("프로필로 권한 변경 불가",()=>expect(profileSchema.safeParse({personal:{},businesses:[],step:0,role:"admin"}).success).toBe(false));
   it("민감정보 수집 차단",()=>expect(profileSchema.safeParse({personal:{residentNumber:"123"},businesses:[],step:0}).success).toBe(false));
 });
+
+import { openRules, ruleKey, profileSchema as profileSchema2, benefitSchema as benefitSchema2, matchBenefit as match2 } from "./benefit-domain";
+describe("정보 추가: 더 물을 조건과 답변 재사용", () => {
+  const now = new Date("2026-10-12T09:00:00+09:00");
+  const notice = (id: string, rules: unknown[]) => benefitSchema2.parse({ id, title: "시험", kind: "지원금", audience: "사업", category: "경영", region: "전국", agency: "시험", sourceUrl: "https://www.bizinfo.go.kr/", sourceId: id, summary: "", support: "", calculation: "", checks: [], documents: [], startsAt: "", endsAt: "", checkedAt: now.toISOString(), budgetStatus: "해당 없음", status: "접수 중", reviewStatus: "공개", isTest: false, rules });
+  const emp = { scope: "business", field: "employees", operator: "lte", value: 4, label: "직원 5명 미만" };
+  const rev = { scope: "business", field: "revenue", operator: "lte", value: 200_000_000, label: "연매출 2억 원 이하" };
+  const dup = { scope: "personal", field: "duplicateBenefit", operator: "eq", value: "없음", label: "같은 지원을 받은 적 없음" };
+  const a = notice("a", [emp, rev, dup]), b = notice("b", [rev, dup, { scope: "business", field: "industry", operator: "in", value: ["음식점"], label: "업종: 음식점" }]);
+  const base = { personal: {}, step: 9, businesses: [{ id: "biz", revenue: "1억~3억 원" }] };
+
+  it("비어 있는 항목은 값을 물어야 하고(missing), 구간이 걸친 항목은 예·아니오로 물어야 한다", () => {
+    const open = openRules(a, profileSchema2.parse(base), "biz", now);
+    expect(open.map((x) => [x.rule.field, x.missing])).toEqual([["employees", true], ["revenue", false], ["duplicateBenefit", true]]);
+  });
+  it("값을 고르면 그 조건은 다시 묻지 않는다", () => {
+    const p = profileSchema2.parse({ ...base, businesses: [{ id: "biz", revenue: "1억~3억 원", employeeBand: "1~4명" }] });
+    expect(openRules(a, p, "biz", now).map((x) => x.rule.field)).toEqual(["revenue", "duplicateBenefit"]);
+  });
+  it("한 공고에서 답한 조건은 같은 조건의 다른 공고에서도 쓰인다", () => {
+    const p = profileSchema2.parse({ ...base, businesses: [{ id: "biz", revenue: "1억~3억 원", employeeBand: "1~4명" }],
+      confirmations: { [ruleKey(rev as never)]: { answer: "예", label: rev.label }, [ruleKey(dup as never)]: { answer: "예", label: dup.label } } });
+    expect(openRules(a, p, "biz", now)).toEqual([]);
+    expect(match2(a, p, now)[0]!.result).toBe("조건 일치");
+    // 다른 공고: 매출·중복수혜는 이미 답했으므로 업종만 남는다.
+    expect(openRules(b, p, "biz", now).map((x) => x.rule.field)).toEqual(["industry"]);
+  });
+  it("'아니오'로 답하면 그 공고는 대상에서 빠진다(가능 지원금이 줄어든다)", () => {
+    const p = profileSchema2.parse({ ...base, confirmations: { [ruleKey(rev as never)]: { answer: "아니오", label: rev.label } } });
+    expect(match2(a, p, now)[0]!.result).toBe("대상 제외");
+    expect(match2(b, p, now)[0]!.result).toBe("대상 제외");
+  });
+  it("값이 분명하면 답변보다 값이 우선한다", () => {
+    const p = profileSchema2.parse({ ...base, businesses: [{ id: "biz", revenue: "10억 원 이상" }], confirmations: { [ruleKey(rev as never)]: { answer: "예", label: rev.label } } });
+    expect(match2(a, p, now)[0]!.exclusions.join()).toContain("연매출");
+  });
+});

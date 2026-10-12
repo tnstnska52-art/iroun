@@ -22,8 +22,7 @@ export function OfficeContact({ o, refresh }: OfficeProps) {
       <T v="h3">회사 연락처</T>
       {o.admin ? (
         <>
-          <Field label="대표 전화" value={phone} onChangeText={setPhone} keyboardType="phone-pad" testID="office-company-phone" />
-          <Field label="카카오톡 링크 (https://)" value={kakao} onChangeText={setKakao} autoCapitalize="none" testID="office-company-kakao" />
+          <Field label="카카오톡 채널 채팅 주소" hint="예: https://pf.kakao.com/_채널아이디/chat" placeholder="https://pf.kakao.com/_xxxxx/chat" value={kakao} onChangeText={setKakao} autoCapitalize="none" testID="office-company-kakao" />
           <Field label="웹사이트 (https://)" value={web} onChangeText={setWeb} autoCapitalize="none" testID="office-company-web" />
           {msg ? <Notice tone={msg.t}>{msg.s}</Notice> : null}
           <Btn label="연락처 저장" icon="save" loading={busy} onPress={save} testID="office-company-save" />

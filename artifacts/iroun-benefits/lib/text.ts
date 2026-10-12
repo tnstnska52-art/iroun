@@ -43,3 +43,6 @@ export function clerkErrorMessage(e: unknown): string {
   if (code && CLERK[code]) return CLERK[code];
   return '처리 중 문제가 생겼습니다. 입력한 내용을 확인하고 다시 시도해 주세요.';
 }
+
+/** 회사 문의 메일. 전화 문의는 받지 않는다. */
+export const COMPANY_EMAIL = 'tnstnska52@naver.com';

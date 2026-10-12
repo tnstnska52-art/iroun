@@ -81,7 +81,7 @@ export function AccountView({ settings }: { settings: boolean }) {
               {p && p.businesses.length > 0 ? p.businesses.map((b) => (
                 <T key={b.id}>{[b.industry, b.province && `${b.province} ${b.district ?? ''}`.trim(), b.openedYear && (b.openedYear <= 2009 ? '2009년 이전 개업' : `${b.openedYear}년 개업`), b.revenue, b.employeeBand && `직원 ${b.employeeBand}`, b.premises].filter(Boolean).join(' · ') || '고른 조건 없음'}</T>
               )) : <T>아직 고르지 않았어요</T>}
-              <Btn label={p && p.businesses.length ? '조건 다시 고르기' : '내 사업자 지원금은 얼마일까?'} icon="edit-3" onPress={() => router.push('/onboarding')} testID="account-edit-profile" />
+              <Btn label={p && p.businesses.length ? '조건 수정하기' : '내 사업자 지원금은 얼마일까?'} icon="edit-3" onPress={() => router.push('/onboarding')} testID="account-edit-profile" />
             </Card>
           </Section>
           </> : null}

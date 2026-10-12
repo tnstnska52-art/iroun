@@ -1,4 +1,5 @@
 import React from 'react';
+import { COMPANY_EMAIL } from '@/lib/text';
 import { Linking, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Btn, Card, ErrorState, Loading, Notice, T } from '@/components/ui';
@@ -63,15 +64,14 @@ export function NotGovernment() {
   return <View testID="svc-government-notice"><Notice tone="warn" title="정부 서비스가 아닙니다">신청과 선정은 기관이 합니다</Notice></View>;
 }
 
-export function ContactButtons({ phone, kakao, prefix }: { phone?: string | null; kakao?: string | null; prefix: string }) {
-  const c = useColors();
-  const okP = validPhone(phone), okK = validLink(kakao);
-  if (!okP && !okK) return <T v="small" color={c.mutedForeground}>연락처가 아직 등록되지 않았습니다.</T>;
+/** 회사 연락: 전화는 받지 않는다. 카카오톡 채널 채팅과 메일로만 연락한다. */
+export function ContactButtons({ kakao, prefix }: { phone?: string | null; kakao?: string | null; prefix: string }) {
+  const okK = validLink(kakao);
   return (
     <View style={{ gap: 10 }}>
-      {okP ? <T selectable>{phone}</T> : null}
-      {okP ? <Btn kind="secondary" icon="phone" label="전화 걸기" testID={`${prefix}-call`} hint="누르면 전화 화면이 열립니다. 자동으로 걸리지 않습니다." onPress={() => Linking.openURL(`tel:${(phone as string).replace(/[^0-9+]/g, '')}`)} /> : null}
-      {okK ? <Btn kind="secondary" icon="message-circle" label="카카오톡 열기" testID={`${prefix}-kakao`} onPress={() => Linking.openURL((kakao as string).trim())} /> : null}
+      {okK ? <Btn kind="secondary" icon="message-circle" label="카카오톡 채널로 문의" testID={`${prefix}-kakao`} hint="카카오톡 채널 채팅이 열립니다" onPress={() => Linking.openURL((kakao as string).trim())} /> : null}
+      <Btn kind="secondary" icon="mail" label="메일 보내기" testID={`${prefix}-mail`} hint={COMPANY_EMAIL} onPress={() => Linking.openURL(`mailto:${COMPANY_EMAIL}`)} />
+      <T v="small" selectable>{COMPANY_EMAIL}</T>
     </View>
   );
 }

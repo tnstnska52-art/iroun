@@ -64,26 +64,12 @@ export default function Home() {
   const shown = est ? (acc.active ? est.items.slice(0, 5) : est.items.slice(0, FREE_COUNT)) : [];
 
   return (
-    <Page tab>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
-        <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: c.primary, alignItems: 'center', justifyContent: 'center' }}>
+    <Page tab header={<>
+        <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: c.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
           <Feather name="check" size={19} color={c.primaryForeground} />
         </View>
         <T v="h2" style={{ flex: 1, fontWeight: '800' }}>이로운사람들</T>
-        <Pressable testID="nav-me" accessibilityRole="button" accessibilityLabel="내 정보" onPress={() => router.push('/account' as never)}
-          style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-          <Feather name="user" size={24} color={c.foreground} />
-        </Pressable>
-        <Pressable testID="nav-alerts" accessibilityRole="button" accessibilityLabel={`알림. 지금 신청 가능 ${alertCount}건`} onPress={() => router.push('/alerts' as never)}
-          style={({ pressed }) => ({ width: 44, height: 44, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 })}>
-          <Feather name="bell" size={24} color={c.foreground} />
-          {alertCount > 0 ? (
-            <View style={{ position: 'absolute', top: 3, right: 0, minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, backgroundColor: c.destructive, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: c.background }}>
-              <T v="small" color="#FFFFFF" style={{ fontSize: 11, lineHeight: 14, fontWeight: '800' }}>{alertCount > 99 ? '99+' : alertCount}</T>
-            </View>
-          ) : null}
-        </Pressable>
-      </View>
+      </>}>
 
       {benefits.isLoading ? <Loading rows={2} /> : benefits.error ? <ErrorState message={apiErrorMessage(benefits.error)} onRetry={() => benefits.refetch()} /> : !est ? (
         <>

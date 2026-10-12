@@ -5,7 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 import {
-  createServiceRequest, getListBenefitsQueryKey, useListBenefits, getGetBenefitQueryKey, getGetRecommendationsQueryKey, getGetServiceStateQueryKey, getListTrackingQueryKey, saveTracking,
+  createServiceRequest, getGetMeQueryKey, saveProfile, type Profile, getListBenefitsQueryKey, useListBenefits, getGetBenefitQueryKey, getGetRecommendationsQueryKey, getGetServiceStateQueryKey, getListTrackingQueryKey, saveTracking,
   useGetBenefit, useGetRecommendations, useListTracking, type TrackingInput,
 } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
@@ -18,6 +18,7 @@ import { freeIds, hasConditions, useDraftProfile, won } from '@/lib/estimate';
 import { confirmAsk } from '@/lib/confirm';
 import { errStatus } from '@/lib/util';
 import { Collapsible, dday } from '@/components/BenefitCard';
+import { InfoAdd, nextQuestion } from '@/components/InfoAdd';
 
 export default function BenefitDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,7 +35,8 @@ export default function BenefitDetail() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ t: 'ok' | 'error'; s: string } | null>(null);
   const [applying, setApplying] = useState(false);
-  const [applied, setApplied] = useState<{ ok: boolean; title: string; body: string; reasons: string[]; canAsk?: boolean } | null>(null);
+  const [applied, setApplied] = useState<{ ok: boolean; title: string; body: string; reasons: string[]; needInfo?: boolean } | null>(null);
+  const [asking, setAsking] = useState(false);
 
   const b = q.data;
   const cur = tracks.data?.find((t) => t.benefitId === id);
@@ -89,22 +91,41 @@ export default function BenefitDetail() {
   const amountText = !unlocked ? '가입 후 확인' : b.maxAmount ? `최대 ${won(b.maxAmount)}` : '공고에서 확인';
   const best = myRecs.find((r) => r.result === '조건 일치') ?? myRecs.find((r) => r.result === '추가 확인 필요');
   // 신청하기: 서버가 최신 조건으로 다시 판단한다. 되면 회사 접수함에 저장되고, 안 되면 이유를 보여준다.
-  const apply = (kind: '신청 지원' | '자격 확인') => confirmAsk(kind === '신청 지원' ? '회사에 신청 도움을 요청할까요?' : '담당자에게 자격 확인을 요청할까요?', '담당자가 확인하고 도와드려요.', '요청하기', async () => {
-    if (applying) return;
-    setApplying(true);
-    const businessId = (myRecs.find((r) => r.result === '조건 일치') ?? myRecs.find((r) => r.result === '추가 확인 필요') ?? myRecs[0])?.businessId ?? '';
+  // 회사 신청 도움: 이 공고에 꼭 필요한 정보가 비어 있으면 먼저 "정보 추가"로 고르게 한다.
+  // 고른 정보는 고객 정보에 쌓여서 다른 공고에서는 다시 묻지 않는다.
+  const helpBusinessId = (myRecs.find((r) => r.result === '조건 일치') ?? myRecs.find((r) => r.result === '추가 확인 필요') ?? myRecs[0])?.businessId ?? acc.me?.profile.businesses[0]?.id ?? '';
+  const send = async (kind: '신청 지원' | '자격 확인'): Promise<void> => {
     try {
-      const res = (await createServiceRequest({ benefitId: b.id, businessId, kind, confirmed: true })) as unknown as { id?: string; message?: string };
+      const res = (await createServiceRequest({ benefitId: b.id, businessId: helpBusinessId, kind, confirmed: true })) as unknown as { id?: string; message?: string };
       await qc.invalidateQueries({ queryKey: getGetServiceStateQueryKey() });
-      setApplied({ ok: true, title: '회사에 요청이 접수됐어요', body: `${res.id ? `접수번호 ${res.id}. ` : ''}담당자를 배정하고 있어요.\n기관 신청은 아직이에요.`, reasons: [] });
+      setApplied({ ok: true, title: '회사에 요청이 접수됐어요', body: `${res.id ? `접수번호 ${res.id}. ` : ''}${kind === '자격 확인' ? '담당자가 나머지 조건을 확인해요.' : '담당자를 배정하고 있어요.'}\n기관 신청은 아직이에요.`, reasons: [] });
     } catch (e) {
       const detail = (e as { data?: { detail?: { result?: string; exclusions?: string[]; unknowns?: string[] } } }).data?.detail;
       if (errStatus(e) === 409 && detail?.result === '대상 제외') setApplied({ ok: false, title: '이 지원금은 신청할 수 없어요', body: '내 정보와 공고 조건이 달라요.', reasons: detail.exclusions ?? [] });
-      else if (errStatus(e) === 409 && detail) setApplied({ ok: false, title: '조건을 더 확인해야 해요', body: '아래 내용을 확인해야 해요.', reasons: (detail.unknowns ?? []).slice(0, 5), canAsk: true });
+      // 고객이 답할 수 없는 확인 사항(예산·접수 상태 등)만 남았으면 담당자 확인으로 넘긴다.
+      else if (errStatus(e) === 409 && detail && kind === '신청 지원') await send('자격 확인');
       else setApplied({ ok: false, title: '요청하지 못했어요', body: errStatus(e) === 409 ? '마감됐거나 조건이 바뀌었어요.' : apiErrorMessage(e, '저장하지 못했어요. 다시 시도해 주세요.'), reasons: [] });
     }
+  };
+  const startHelp = () => {
+    const me = acc.me;
+    if (!me || applying) return;
+    if (!me.profile.businesses.length) { router.push('/onboarding'); return; }
+    const need = nextQuestion(b, me.profile, helpBusinessId).left;
+    if (need > 0) { setAsking(false); setApplied({ ok: false, title: '정보를 조금만 더 알려 주세요', body: `${need}가지만 고르면 돼요`, reasons: [], needInfo: true }); return; }
+    confirmAsk('회사에 신청 도움을 요청할까요?', '담당자가 확인하고 도와드려요.', '요청하기', async () => { setApplying(true); await send('신청 지원'); setApplying(false); });
+  };
+  const infoDone = async (next: Profile) => {
+    setApplying(true);
+    try {
+      await saveProfile(next);
+      await qc.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      await qc.invalidateQueries({ queryKey: getGetRecommendationsQueryKey() });
+      setAsking(false);
+      await send('신청 지원');
+    } catch (e) { setApplied({ ok: false, title: '저장하지 못했어요', body: apiErrorMessage(e, '다시 시도해 주세요.'), reasons: [], needInfo: true }); }
     setApplying(false);
-  });
+  };
   // 고객이 할 일을 순서대로. 공고 자료에 있는 내용만으로 만들고, 없는 내용은 공식 원문 확인으로 안내한다.
   const conditions = [...b.rules.map((r) => r.label), ...b.checks];
   // 회사 신청 도움은 계약 고객만 요청할 수 있다.
@@ -122,16 +143,8 @@ export default function BenefitDetail() {
 
   return (
     <Page
-      footer={<>
-        {!closed && contract ? <Btn kind="secondary" label="회사에 신청 도움 요청" icon="send" loading={applying} onPress={() => apply('신청 지원')} testID="detail-company-help" /> : null}
-        {!closed && !acc.active ? <Btn kind="secondary" label={expiredMember ? '계속 이용하기' : '무료로 전체 보기'} onPress={() => router.push((expiredMember ? '/membership' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-join" /> : null}
-        <Btn label="공식 신청 페이지" icon="external-link" onPress={() => Linking.openURL(b.sourceUrl)} testID="open-source" hint="브라우저에서 공식 페이지가 열립니다" />
-      </>}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44, marginHorizontal: -6 }}>
-        <Pressable testID="back-button" accessibilityRole="button" accessibilityLabel="이전 화면으로 돌아가기" onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
-          <Feather name="chevron-left" size={28} color={c.foreground} />
-        </Pressable>
+      back
+      right={
         <View style={{ flexDirection: 'row' }}>
           {acc.isSignedIn ? (
             <Pressable testID="save-toggle" accessibilityRole="button" accessibilityLabel={base.saved ? '저장함. 눌러서 해제' : '이 공고 저장하기'} accessibilityState={{ selected: base.saved }} disabled={busy}
@@ -143,7 +156,13 @@ export default function BenefitDetail() {
             <Feather name="share-2" size={22} color={c.foreground} />
           </Pressable>
         </View>
-      </View>
+      }
+      footer={<>
+        {!closed && contract ? <Btn kind="secondary" label="회사에 신청 도움 요청" icon="send" loading={applying} onPress={startHelp} testID="detail-company-help" /> : null}
+        {!closed && !acc.active ? <Btn kind="secondary" label={expiredMember ? '계속 이용하기' : '무료로 전체 보기'} onPress={() => router.push((expiredMember ? '/membership' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-join" /> : null}
+        <Btn label="공식 신청 페이지" icon="external-link" onPress={() => Linking.openURL(b.sourceUrl)} testID="open-source" hint="브라우저에서 공식 페이지가 열립니다" />
+      </>}
+    >
 
       <View style={{ gap: 8 }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -155,14 +174,15 @@ export default function BenefitDetail() {
         <T v="label" color={dd.urgent ? c.destructive : c.primary}>{dd.label}</T>
       </View>
       {msg ? <Notice tone={msg.t}>{msg.s}</Notice> : null}
-      {applied ? (
-        <View testID="apply-result" accessibilityLiveRegion="polite" style={{ backgroundColor: applied.ok ? c.successSoft : c.destructiveSoft, borderRadius: c.radius, padding: 16, gap: 6 }}>
-          <T v="h3" color={applied.ok ? c.success : c.destructive}>{applied.title}</T>
+      {asking && acc.me ? <InfoAdd benefit={b} profile={acc.me.profile} businessId={helpBusinessId} busy={applying} onDone={infoDone} onCancel={() => setAsking(false)} /> : null}
+      {applied && !asking ? (
+        <View testID="apply-result" accessibilityLiveRegion="polite" style={{ backgroundColor: applied.ok ? c.successSoft : applied.needInfo ? c.primarySoft : c.destructiveSoft, borderRadius: c.radius, padding: 16, gap: 6 }}>
+          <T v="h3" color={applied.ok ? c.success : applied.needInfo ? c.primary : c.destructive}>{applied.title}</T>
           <T v="small">{applied.body}</T>
           {applied.reasons.map((x, i) => <T key={i} v="small">• {x}</T>)}
           {applied.ok ? <Btn kind="secondary" label="접수 내역 보기" onPress={() => router.push('/company-progress')} testID="apply-progress" /> : null}
-          {!applied.ok && applied.canAsk && contract ? <Btn kind="secondary" label="담당자에게 자격 확인 요청" loading={applying} onPress={() => apply('자격 확인')} testID="apply-ask" /> : null}
-          {!applied.ok ? <Btn kind="ghost" label="정보 수정" onPress={() => router.push('/onboarding')} testID="apply-fix" /> : null}
+          {applied.needInfo && !asking ? <Btn label="정보 추가" icon="plus" onPress={() => setAsking(true)} testID="apply-add-info" /> : null}
+          {!applied.ok && !applied.needInfo ? <Btn kind="ghost" label="정보 수정" onPress={() => router.push('/onboarding')} testID="apply-fix" /> : null}
         </View>
       ) : null}
 

@@ -28,6 +28,12 @@ export function OfficeCustomers({ o }: OfficeProps) {
             </Pressable>
             {on ? (
               <View style={{ gap: 8, borderTopWidth: 1, borderTopColor: c.border, paddingTop: 10 }}>
+                {Object.keys(u.profile?.confirmations ?? {}).length ? (
+                  <>
+                    <T v="label">고객이 추가로 답한 조건</T>
+                    {Object.entries(u.profile?.confirmations ?? {}).map(([k, v]) => <T key={k} v="small">• {v.label}: {v.answer}</T>)}
+                  </>
+                ) : null}
                 <T v="label">지금 가능한 지원금·환급금</T>
                 <CustomerMatches userId={u.id} period="current" />
                 <T v="label">올해 지나간 공고 (당시 조건 확인 필요)</T>
