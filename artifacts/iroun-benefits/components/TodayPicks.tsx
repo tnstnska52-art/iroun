@@ -8,14 +8,14 @@ import { dday } from '@/components/BenefitCard';
 import { useColors } from '@/hooks/useColors';
 import { won } from '@/lib/estimate';
 
-/** 오늘 받기 쉬운 지원금을 한 건씩 5초마다 왼쪽으로 넘기며 보여준다. */
+/** 오늘 받기 쉬운 지원금을 한 건씩 5초마다 위로 올리며 보여준다. */
 export function TodayPicks({ items }: { items: { benefit: Benefit; result: string }[] }) {
   const c = useColors();
   const router = useRouter();
   const [i, setI] = useState(0);
-  // 5초마다 지금 것은 왼쪽으로 밀려 나가고 다음 것이 오른쪽에서 들어온다.
+  // 5초마다 지금 것은 위로 올라가 사라지고 다음 것이 아래에서 올라온다.
   const x = useRef(new Animated.Value(0)).current;
-  const [w, setW] = useState(320);
+  const [w, setW] = useState(56);
   const n = items.length;
   useEffect(() => {
     if (n < 2) return;
@@ -43,8 +43,8 @@ export function TodayPicks({ items }: { items: { benefit: Benefit; result: strin
         <T v="label" color={c.primary} style={{ flex: 1 }}>오늘 받기 쉬운 지원금</T>
         <T v="small" color={c.mutedForeground}>{(i % n) + 1} / {n}</T>
       </View>
-      <View style={{ overflow: 'hidden' }} onLayout={(e) => setW(Math.max(120, e.nativeEvent.layout.width))}>
-      <Animated.View style={{ transform: [{ translateX: x }], flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52 }}>
+      <View style={{ overflow: 'hidden' }} onLayout={(e) => setW(Math.max(40, e.nativeEvent.layout.height))}>
+      <Animated.View style={{ transform: [{ translateY: x }], flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52 }}>
         <View style={{ flex: 1, gap: 2 }}>
           <T v="h3" numberOfLines={1} testID="home-pick-title">{b.title}</T>
           <T v="small" color={dd.urgent ? c.destructive : c.mutedForeground} numberOfLines={1}>{cur.result === '조건 일치' ? '조건 일치 · ' : ''}오늘 신청 가능 · {tail}</T>
