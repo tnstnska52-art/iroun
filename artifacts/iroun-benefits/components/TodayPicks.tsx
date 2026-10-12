@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Platform, Pressable, View } from 'react-native';
+import { Animated, Easing, PanResponder, Platform, Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import type { Benefit } from '@workspace/api-client-react';
@@ -8,11 +8,47 @@ import { dday } from '@/components/BenefitCard';
 import { useColors } from '@/hooks/useColors';
 import { won } from '@/lib/estimate';
 
-/** 오늘 받기 쉬운 지원금을 한 건씩 5초마다 위로 올리며 보여준다. */
-export function TodayPicks({ items }: { items: { benefit: Benefit; result: string }[] }) {
+/**
+ * 한 건씩 5초마다 위로 올리며 보여주는 카드. 손가락으로 왼쪽으로 밀면 다음, 오른쪽으로 밀면 이전.
+ * 홈의 '놓치기 쉬운 지원금'·'놓치기 쉬운 환급금'에 쓴다.
+ */
+export function TodayPicks({ items, title = '놓치기 쉬운 지원금', emoji = '🎯', testID = 'home-picks', note = '오늘 신청 가능' }: { items: { benefit: Benefit; result: string }[]; title?: string; emoji?: string; testID?: string; note?: string }) {
   const c = useColors();
   const router = useRouter();
   const [i, setI] = useState(0);
+  const [restart, setRestart] = useState(0); // 손으로 넘기면 5초를 다시 센다
+  const sx = useRef(new Animated.Value(0)).current;
+  const busy = useRef(false);
+  const swiped = useRef(false);
+  const nRef = useRef(items.length);
+  nRef.current = items.length;
+  const go = (dir: 1 | -1) => {
+    const n = nRef.current;
+    if (n < 2 || busy.current) { Animated.spring(sx, { toValue: 0, useNativeDriver: Platform.OS !== 'web' }).start(); return; }
+    busy.current = true;
+    const native = Platform.OS !== 'web';
+    Animated.timing(sx, { toValue: -dir * 360, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: native }).start(() => {
+      setI((k) => (k + dir + n) % n);
+      sx.setValue(dir * 360);
+      Animated.timing(sx, { toValue: 0, duration: 240, easing: Easing.out(Easing.cubic), useNativeDriver: native }).start(() => { busy.current = false; });
+    });
+    setRestart((r) => r + 1);
+  };
+  const pan = useRef(PanResponder.create({
+    // 옆으로 미는 움직임만 잡는다(위아래 스크롤은 그대로).
+    onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dx) > 10 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    onMoveShouldSetPanResponderCapture: (_e, g) => Math.abs(g.dx) > 10 && Math.abs(g.dx) > Math.abs(g.dy) * 1.5,
+    onPanResponderTerminationRequest: () => false,
+    onPanResponderGrant: () => { swiped.current = true; },
+    onPanResponderMove: (_e, g) => { if (!busy.current) sx.setValue(g.dx); },
+    onPanResponderRelease: (_e, g) => {
+      if (g.dx < -40 || g.vx < -0.4) go(1);
+      else if (g.dx > 40 || g.vx > 0.4) go(-1);
+      else Animated.spring(sx, { toValue: 0, useNativeDriver: Platform.OS !== 'web' }).start();
+      setTimeout(() => { swiped.current = false; }, 50);
+    },
+    onPanResponderTerminate: () => { Animated.spring(sx, { toValue: 0, useNativeDriver: Platform.OS !== 'web' }).start(); swiped.current = false; },
+  })).current;
   // 5초마다 지금 것은 위로 올라가 사라지고 다음 것이 아래에서 올라온다.
   const x = useRef(new Animated.Value(0)).current;
   const [w, setW] = useState(56);
@@ -28,26 +64,29 @@ export function TodayPicks({ items }: { items: { benefit: Benefit; result: strin
       });
     }, 5000);
     return () => clearInterval(h);
-  }, [n, x, w]);
+  }, [n, x, w, restart]);
   if (n === 0) return null;
   const cur = items[i % n];
   const b = cur.benefit;
   const dd = dday(b);
   const tail = dd.label;
   return (
-    <Pressable testID="home-picks" accessibilityRole="button" accessibilityLabel={`오늘 받기 쉬운 지원금 ${(i % n) + 1}번째. ${b.title}. 자세히 보기`}
-      onPress={() => router.push({ pathname: '/benefit/[id]', params: { id: b.id } })}
+    <View {...pan.panHandlers}>
+    <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={`${title} ${(i % n) + 1}번째. ${b.title}. 자세히 보기. 옆으로 밀면 다음 건`}
+      accessibilityActions={[{ name: 'increment', label: '다음' }, { name: 'decrement', label: '이전' }]}
+      onAccessibilityAction={(e) => go(e.nativeEvent.actionName === 'decrement' ? -1 : 1)}
+      onPress={() => { if (!swiped.current) router.push({ pathname: '/benefit/[id]', params: { id: b.id } }); }}
       style={({ pressed }) => ({ backgroundColor: c.card, borderRadius: c.radius + 6, padding: 18, gap: 10, borderWidth: 1.5, borderColor: c.primary, opacity: pressed ? 0.9 : 1 })}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <Emoji char="🎯" size={18} motion="pulse" />
-        <T v="label" color={c.primary} style={{ flex: 1 }}>오늘 받기 쉬운 지원금</T>
+        <Emoji char={emoji} size={18} motion="pulse" />
+        <T v="label" color={c.primary} style={{ flex: 1 }}>{title}</T>
         <T v="small" color={c.mutedForeground}>{(i % n) + 1} / {n}</T>
       </View>
       <View style={{ overflow: 'hidden' }} onLayout={(e) => setW(Math.max(40, e.nativeEvent.layout.height))}>
-      <Animated.View style={{ transform: [{ translateY: x }], flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52 }}>
+      <Animated.View style={{ transform: [{ translateY: x }, { translateX: sx }], flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52 }}>
         <View style={{ flex: 1, gap: 2 }}>
-          <T v="h3" numberOfLines={1} testID="home-pick-title">{b.title}</T>
-          <T v="small" color={dd.urgent ? c.destructive : c.mutedForeground} numberOfLines={1}>{cur.result === '조건 일치' ? '조건 일치 · ' : ''}오늘 신청 가능 · {tail}</T>
+          <T v="h3" numberOfLines={1} testID={`${testID}-title`}>{b.title}</T>
+          <T v="small" color={dd.urgent ? c.destructive : c.mutedForeground} numberOfLines={1}>{cur.result === '조건 일치' ? '조건 일치 · ' : ''}{note} · {tail}</T>
         </View>
         <T v="label" color={c.primary}>{b.maxAmount ? won(b.maxAmount) : '금액 확인'}</T>
         <Feather name="chevron-right" size={20} color={c.mutedForeground} />
@@ -57,5 +96,6 @@ export function TodayPicks({ items }: { items: { benefit: Benefit; result: strin
         {items.map((x, k) => <View key={x.benefit.id} style={{ width: k === i % n ? 16 : 6, height: 6, borderRadius: 3, backgroundColor: k === i % n ? c.primary : c.border }} />)}
       </View>
     </Pressable>
+    </View>
   );
 }

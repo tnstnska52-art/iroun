@@ -6,7 +6,7 @@ import { Feather } from '@expo/vector-icons';
 import { useUnreadReplies } from '@/lib/replies';
 import { TodayPicks } from '@/components/TodayPicks';
 import { RotatingRows } from '@/components/RotatingRows';
-import { easyToMiss, todayPicks } from '@/lib/picks';
+import { refundLike, todayPicks } from '@/lib/picks';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
 import { BigMoney, Btn, CountUp, Disclaimer, Emoji, ErrorState, FooterLinks, Loading, Page, SectionHead, T, useBeat } from '@/components/ui';
@@ -48,19 +48,13 @@ export default function Home() {
   const within30 = (b: { endsAt: string }) => { const d = daysLeft(b.endsAt); return d !== null && d >= 0 && d <= 30; };
   // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 마감 7일 안쪽을 보여준다.
   const closing = (est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }))).filter((x) => within30(x.benefit)).sort((x, y) => (daysLeft(x.benefit.endsAt) ?? 0) - (daysLeft(y.benefit.endsAt) ?? 0)).slice(0, 5);
-  // 홈 목록: '놓치기 쉬운 지원금'과 '지금 신청 가능한 지원금'은 서로 겹치지 않게 나눈다.
+  // 홈 목록: '놓치기 쉬운 지원금'(카드) · '놓치기 쉬운 환급금'(카드) · '지금 신청 가능한 지원금'(목록)은 서로 겹치지 않게 나눈다.
   const pool = est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }));
-  const missable = pool.filter((x) => easyToMiss(x.benefit)).slice(0, 5);
-  const missIds = new Set(missable.map((x) => x.benefit.id));
-  const nowList = pool.filter((x) => !missIds.has(x.benefit.id)).slice(0, 10);
-  const missBlock = missable.length > 0 ? (
-    <>
-      <SectionHead emoji="👀" motion="wiggle" title="놓치기 쉬운 지원금" onMore={() => router.push('/benefits')} testID="home-miss-more" />
-      <View testID="home-missable" style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
-        {missable.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === missable.length - 1} />)}
-      </View>
-    </>
-  ) : null;
+  const refunds = pool.filter((x) => refundLike(x.benefit)).slice(0, 5);
+  const picks = todayPicks(pool.filter((x) => !refundLike(x.benefit)));
+  const used = new Set([...refunds, ...picks].map((x) => x.benefit.id));
+  const nowList = pool.filter((x) => !used.has(x.benefit.id)).slice(0, 10);
+  const missBlock = refunds.length > 0 ? <TodayPicks items={refunds} title="놓치기 쉬운 환급금" emoji="🎁" testID="home-refund-picks" note="신청 가능" /> : null;
   // 지금 신청 가능한 지원금: 최대 10건을 3줄씩 보여주며 천천히 한 줄씩 위로 올린다.
   const nowBlock = nowList.length > 0 ? (
     <>
@@ -70,8 +64,6 @@ export default function Home() {
       </View>
     </>
   ) : null;
-  // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 오늘 받기 쉬운 5건을 고른다.
-  const picks = todayPicks(est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' })));
   // 7일 안에 마감되는 것이 없어도 자리는 항상 보여준다(사라진 것처럼 보이지 않게).
   const closingBlock = (
     <>

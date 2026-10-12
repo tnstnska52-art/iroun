@@ -42,3 +42,8 @@ export function todayPicks(items: Item[], count = 5): Item[] {
 export function easyToMiss(b: Benefit) {
   return b.kind === '환급금' || b.status === '상시 조회' || EASY_MONEY.test(`${b.title} ${b.category}`) || difficulty(b) <= 1;
 }
+
+/** 환급금 카드에 넣을 것: 환급금 종류이거나, 국세청 근로·자녀장려금처럼 신청하면 돌려받는 돈. */
+export function refundLike(b: Benefit) {
+  return b.kind === '환급금' || /환급|장려금|돌려받/.test(b.title);
+}
