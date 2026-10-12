@@ -1,0 +1,30 @@
+# Render 한 번에 만들기(Blueprint): 데이터베이스 + 앱 서버, 싱가포르.
+# 키 값은 여기 넣지 않는다. 처음 만들 때 Render 화면이 물어보면 그 칸에 넣는다(비워 두고 나중에 넣어도 됨).
+databases:
+  - name: iroun-db
+    region: singapore
+    plan: 0.1c-256mb
+    databaseName: iroun
+    user: iroun
+services:
+  - type: web
+    name: iroun-api
+    runtime: docker
+    region: singapore
+    plan: 0.5c-512mb
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/healthz
+    autoDeploy: true
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: iroun-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CRM_APP_INBOUND_SECRET
+        sync: false

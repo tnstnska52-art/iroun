@@ -2,6 +2,8 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { startServiceScheduler } from "./lib/service-scheduler";
 import { runMigrations } from "./lib/migrate";
+import { seedOfficial } from "./lib/official-seed";
+import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -17,7 +19,14 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-if(process.env.IROUN_AUTO_MIGRATE!=="false")await runMigrations();
+if(process.env.IROUN_AUTO_MIGRATE!=="false"){
+  await runMigrations();
+  // 새 DB(공고 0건)일 때만 공식 기본 자료를 넣는다.
+  if(!(await pool.query("SELECT 1 FROM iroun_benefits LIMIT 1")).rowCount){
+    const added=await seedOfficial();
+    logger.info({added},"공식 기본 자료 등록");
+  }
+}
 
 const server=app.listen(port, (err) => {
   if (err) {
