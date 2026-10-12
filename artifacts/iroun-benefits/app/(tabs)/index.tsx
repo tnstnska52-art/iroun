@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { Animated, Pressable, View } from 'react-native';
+import { Animated, Pressable, View, Image } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getListBenefitsQueryKey, useListBenefits } from '@workspace/api-client-react';
 import { Feather } from '@expo/vector-icons';
@@ -65,9 +65,7 @@ export default function Home() {
 
   return (
     <Page tab header={<>
-        <View style={{ width: 30, height: 30, borderRadius: 10, backgroundColor: c.primary, alignItems: 'center', justifyContent: 'center', marginRight: 8 }}>
-          <Feather name="check" size={19} color={c.primaryForeground} />
-        </View>
+        <Image source={require('../../assets/images/logo-small.png')} accessibilityIgnoresInvertColors style={{ width: 32, height: 32, borderRadius: 9, marginRight: 8 }} />
         <T v="h2" style={{ flex: 1, fontWeight: '800' }}>이로운사람들</T>
       </>}>
 
