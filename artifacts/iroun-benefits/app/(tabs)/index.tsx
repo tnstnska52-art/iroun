@@ -5,7 +5,8 @@ import { getListBenefitsQueryKey, useListBenefits } from '@workspace/api-client-
 import { Feather } from '@expo/vector-icons';
 import { useUnreadReplies } from '@/lib/replies';
 import { TodayPicks } from '@/components/TodayPicks';
-import { todayPicks } from '@/lib/picks';
+import { RotatingRows } from '@/components/RotatingRows';
+import { easyToMiss, todayPicks } from '@/lib/picks';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
 import { BigMoney, Btn, CountUp, Disclaimer, Emoji, ErrorState, FooterLinks, Loading, Page, SectionHead, T, useBeat } from '@/components/ui';
@@ -44,24 +45,44 @@ export default function Home() {
   const alertCount = est ? est.items.length : list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0).length;
   const showStat = IS_PREVIEW || HEADLINE_STAT.verified;
   const open = list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0);
-  const within7 = (b: { endsAt: string }) => { const d = daysLeft(b.endsAt); return d !== null && d >= 0 && d <= 7; };
+  const within30 = (b: { endsAt: string }) => { const d = daysLeft(b.endsAt); return d !== null && d >= 0 && d <= 30; };
   // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 마감 7일 안쪽을 보여준다.
-  const closing = (est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }))).filter((x) => within7(x.benefit)).sort((x, y) => (daysLeft(x.benefit.endsAt) ?? 0) - (daysLeft(y.benefit.endsAt) ?? 0)).slice(0, 5);
-  const nowOpen = open.filter((b) => !within7(b)).slice(0, 5).map((b) => ({ benefit: b, result: '추가 확인 필요' as const }));
+  const closing = (est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }))).filter((x) => within30(x.benefit)).sort((x, y) => (daysLeft(x.benefit.endsAt) ?? 0) - (daysLeft(y.benefit.endsAt) ?? 0)).slice(0, 5);
+  // 홈 목록: '놓치기 쉬운 지원금'과 '지금 신청 가능한 지원금'은 서로 겹치지 않게 나눈다.
+  const pool = est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }));
+  const missable = pool.filter((x) => easyToMiss(x.benefit)).slice(0, 5);
+  const missIds = new Set(missable.map((x) => x.benefit.id));
+  const nowList = pool.filter((x) => !missIds.has(x.benefit.id)).slice(0, 10);
+  const missBlock = missable.length > 0 ? (
+    <>
+      <SectionHead emoji="👀" motion="wiggle" title="놓치기 쉬운 지원금" onMore={() => router.push('/benefits')} testID="home-miss-more" />
+      <View testID="home-missable" style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
+        {missable.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === missable.length - 1} />)}
+      </View>
+    </>
+  ) : null;
+  // 지금 신청 가능한 지원금: 최대 10건을 3줄씩 보여주며 천천히 한 줄씩 위로 올린다.
+  const nowBlock = nowList.length > 0 ? (
+    <>
+      <SectionHead emoji="👉" motion="wiggle" title="지금 신청 가능한 지원금" onMore={() => router.push('/benefits')} testID="home-list-more" />
+      <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
+        <RotatingRows items={nowList} visible={3} interval={3500} testID="home-open-rows" />
+      </View>
+    </>
+  ) : null;
   // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 오늘 받기 쉬운 5건을 고른다.
   const picks = todayPicks(est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' })));
   // 7일 안에 마감되는 것이 없어도 자리는 항상 보여준다(사라진 것처럼 보이지 않게).
   const closingBlock = (
     <>
-      <SectionHead emoji="🚨" motion="pulse" title="마감 7일 전 지원금" />
+      <SectionHead emoji="🚨" motion="pulse" title="30일 안에 마감되는 지원금" />
       <View testID="home-closing" style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
         {closing.length > 0
           ? closing.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === closing.length - 1} />)
-          : <View style={{ minHeight: 64, justifyContent: 'center' }}><T color={c.mutedForeground}>7일 안에 마감되는 지원금이 없어요</T></View>}
+          : <View style={{ minHeight: 64, justifyContent: 'center' }}><T color={c.mutedForeground}>30일 안에 마감되는 지원금이 없어요</T></View>}
       </View>
     </>
   );
-  const shown = est ? (acc.active ? est.items.slice(0, 5) : est.items.slice(0, FREE_COUNT)) : [];
 
   return (
     <Page tab header={<>
@@ -93,14 +114,8 @@ export default function Home() {
             </Animated.View>
           ) : <Btn label="계속 이용하기" onPress={() => router.push('/membership' as never)} testID="home-continue" />}
           <TodayPicks items={picks} />
-          {nowOpen.length > 0 ? (
-            <>
-              <SectionHead emoji="👉" motion="wiggle" title="지금 신청 가능한 지원금" onMore={() => router.push('/benefits')} testID="home-easy-more" />
-              <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
-                {nowOpen.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === nowOpen.length - 1} />)}
-              </View>
-            </>
-          ) : null}
+          {missBlock}
+          {nowBlock}
           {closingBlock}
         </>
       ) : (
@@ -131,15 +146,13 @@ export default function Home() {
           ) : null}
 
           <TodayPicks items={picks} />
-          <SectionHead emoji="👉" motion="wiggle" title="지금 신청 가능한 지원금" onMore={() => router.push('/benefits')} testID="home-list-more" />
-          <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
-            {shown.map((x, i) => <GrantRow key={x.benefit.id} item={x} last={i === shown.length - 1 && est.items.length <= shown.length} />)}
-            {est.items.length > shown.length ? (
-              <Pressable testID="home-list-all" accessibilityRole="button" onPress={() => router.push(acc.active ? '/benefits' : join)} style={{ minHeight: 52, alignItems: 'center', justifyContent: 'center' }}>
-                <T v="label" color={c.primary}>{acc.active ? `전체 ${est.items.length}건 보기` : `${est.items.length - shown.length}건 더 보기`}</T>
-              </Pressable>
-            ) : null}
-          </View>
+          {missBlock}
+          {nowBlock}
+          {est.items.length > 0 ? (
+            <Pressable testID="home-list-all" accessibilityRole="button" onPress={() => router.push(acc.active ? '/benefits' : join)} style={{ minHeight: 48, alignItems: 'center', justifyContent: 'center' }}>
+              <T v="label" color={c.primary}>{acc.active ? `전체 ${est.items.length}건 보기` : `무료로 전체 ${est.items.length}건 보기`}</T>
+            </Pressable>
+          ) : null}
           {!acc.active ? (
             <>
               <Btn label="무료로 전체 보기" onPress={() => router.push(join)} testID="home-join" />

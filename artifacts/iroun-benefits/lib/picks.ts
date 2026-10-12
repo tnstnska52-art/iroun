@@ -9,7 +9,7 @@ import { daysLeft } from '@/lib/util';
 
 type Item = { benefit: Benefit; result: string };
 // 민생지원금, 전기·가스 요금 환급, 캐시백처럼 대부분 조건만 맞으면 받는 유형
-const EASY_MONEY = /민생|전기|가스|에너지|요금|캐시백|페이백|환급|바우처|상품권|지역화폐|쿠폰|감면/;
+export const EASY_MONEY = /민생|전기|가스|에너지|요금|캐시백|페이백|환급|바우처|상품권|지역화폐|쿠폰|감면/;
 
 /** 오늘 접수 중인지: 접수 상태가 확인됐고, 시작일이 지났고, 마감 전이며, 예산이 남아 있다. */
 export function openToday(b: Benefit, now = Date.now()) {
@@ -32,4 +32,13 @@ export function todayPicks(items: Item[], count = 5): Item[] {
     .sort((p, q) => q.score - p.score || p.left - q.left)
     .slice(0, count)
     .map((p) => p.x);
+}
+
+/**
+ * 놓치기 쉬운 지원금: 몰라서 안 받는 경우가 많은 것.
+ * 환급금, 상시로 신청받는 것, 민생지원금·요금 감면·바우처·캐시백 같은 것, 준비할 것이 적은 것.
+ * 홈의 "지금 신청 가능한 지원금"과 겹치지 않게 나누는 기준으로 쓴다.
+ */
+export function easyToMiss(b: Benefit) {
+  return b.kind === '환급금' || b.status === '상시 조회' || EASY_MONEY.test(`${b.title} ${b.category}`) || difficulty(b) <= 1;
 }
