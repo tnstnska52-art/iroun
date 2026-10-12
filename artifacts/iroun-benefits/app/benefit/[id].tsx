@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Linking, Platform, Pressable, Share, View } from 'react-native';
+import { Linking, Modal, Platform, Pressable, ScrollView, Share, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { useUser } from '@clerk/expo';
 import { pushRecent } from '@/lib/recent';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -36,13 +38,15 @@ export default function BenefitDetail() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ t: 'ok' | 'error'; s: string } | null>(null);
   const [applying, setApplying] = useState(false);
-  const [applied, setApplied] = useState<{ ok: boolean; title: string; body: string; reasons: string[]; needInfo?: boolean; needDocs?: boolean } | null>(null);
+  const [applied, setApplied] = useState<{ ok: boolean; title: string; body: string; reasons: string[]; needInfo?: boolean; needDocs?: boolean; ready?: boolean; requestId?: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   const [asking, setAsking] = useState(false);
+  const { user } = useUser();
   // 계약 고객의 서류함. 이 공고의 서류를 모두 올려야 회사에 요청할 수 있다.
   const myDocs = useMyDocuments(!!acc.me?.entitlement.contractActive);
   const [lackNow, setLackNow] = useState<number | null>(null);
   // 서류를 다 올리면 '서류를 등록해 주세요' 안내를 닫는다.
-  useEffect(() => { if (applied?.needDocs && lackNow === 0) setApplied(null); }, [applied?.needDocs, lackNow]);
+  useEffect(() => { if (applied?.needDocs && lackNow === 0) setApplied({ ok: false, title: '서류를 모두 올렸어요', body: '이제 회사에 요청할 수 있어요', reasons: [], ready: true }); }, [applied?.needDocs, lackNow]);
 
   const b = q.data;
   const cur = tracks.data?.find((t) => t.benefitId === id);
@@ -104,7 +108,8 @@ export default function BenefitDetail() {
     try {
       const res = (await createServiceRequest({ benefitId: b.id, businessId: helpBusinessId, kind, confirmed: true })) as unknown as { id?: string; message?: string };
       await qc.invalidateQueries({ queryKey: getGetServiceStateQueryKey() });
-      setApplied({ ok: true, title: '회사에 요청이 접수됐어요', body: `${res.id ? `접수번호 ${res.id}. ` : ''}${kind === '자격 확인' ? '담당자가 나머지 조건을 확인해요.' : '담당자를 배정하고 있어요.'}\n기관 신청은 아직이에요.`, reasons: [] });
+      setApplied({ ok: true, title: '회사에 요청이 접수됐어요', body: `${res.id ? `접수번호 ${res.id}. ` : ''}${kind === '자격 확인' ? '담당자가 나머지 조건을 확인해요.' : '담당자를 배정하고 있어요.'}\n기관 신청은 아직이에요.`, reasons: [], requestId: res.id });
+      setCopied(false);
     } catch (e) {
       const detail = (e as { data?: { detail?: { result?: string; exclusions?: string[]; unknowns?: string[]; missingDocuments?: string[] } } }).data?.detail;
       if (errStatus(e) === 409 && detail?.result === '서류 필요') askDocs(detail.missingDocuments ?? []);
@@ -114,7 +119,16 @@ export default function BenefitDetail() {
       else setApplied({ ok: false, title: '요청하지 못했어요', body: errStatus(e) === 409 ? '마감됐거나 조건이 바뀌었어요.' : apiErrorMessage(e, '저장하지 못했어요. 다시 시도해 주세요.'), reasons: [] });
     }
   };
-  const askDocs = (lack: string[]) => setApplied({ ok: false, title: `서류 ${lack.length}가지를 등록해 주세요`, body: "아래 '필요 서류'에서 올리면 요청할 수 있어요", reasons: lack, needDocs: true });
+  const sheetOpen = asking || !!applied;
+  const closeSheet = () => { setAsking(false); setApplied(null); };
+  // 접수 뒤 회사 카카오톡 채널로 보낼 내용. 앱이 고객 대신 카카오톡을 보낼 수는 없어서, 복사해 두고 채팅창을 열어 준다.
+  const kakaoUrl = /^https:\/\//.test(svc.data?.company?.kakao ?? '') ? (svc.data?.company?.kakao as string) : '';
+  const notifyText = `[이로운사람들 신청 도움 요청]\n이름: ${user?.firstName ?? ''}\n연락처: ${(user?.primaryPhoneNumber?.phoneNumber ?? '').replace(/^\+82/, '0')}\n지원사업: ${b.title}\n접수번호: ${applied?.requestId ?? ''}\n서류: ${b.documents.length ? `${b.documents.length}가지 등록 완료` : '해당 없음'}`;
+  const notifyKakao = async () => {
+    try { await Clipboard.setStringAsync(notifyText); setCopied(true); } catch { /* 복사가 막힌 환경에서는 화면의 글을 길게 눌러 복사한다 */ }
+    if (kakaoUrl) Linking.openURL(kakaoUrl).catch(() => {});
+  };
+  const askDocs = (lack: string[]) => setApplied({ ok: false, title: `서류 ${lack.length}가지를 등록해 주세요`, body: '아래에서 바로 올릴 수 있어요', reasons: lack, needDocs: true });
   const lackCount = myDocs.missing(b.documents).length;
   if (lackCount !== lackNow) setLackNow(lackCount);
   const startHelp = () => {
@@ -187,17 +201,46 @@ export default function BenefitDetail() {
         <T v="label" color={dd.urgent ? c.destructive : c.primary}>{dd.label}</T>
       </View>
       {msg ? <Notice tone={msg.t}>{msg.s}</Notice> : null}
-      {asking && acc.me ? <InfoAdd benefit={b} profile={acc.me.profile} businessId={helpBusinessId} busy={applying} onDone={infoDone} onCancel={() => setAsking(false)} /> : null}
-      {applied && !asking ? (
-        <View testID="apply-result" accessibilityLiveRegion="polite" style={{ backgroundColor: applied.ok ? c.successSoft : applied.needInfo || applied.needDocs ? c.primarySoft : c.destructiveSoft, borderRadius: c.radius, padding: 16, gap: 6 }}>
-          <T v="h3" color={applied.ok ? c.success : applied.needInfo || applied.needDocs ? c.primary : c.destructive}>{applied.title}</T>
-          <T v="small">{applied.body}</T>
-          {applied.reasons.map((x, i) => <T key={i} v="small">• {x}</T>)}
-          {applied.ok ? <Btn kind="secondary" label="접수 내역 보기" onPress={() => router.push('/company-progress')} testID="apply-progress" /> : null}
-          {applied.needInfo && !asking ? <Btn label="정보 추가" icon="plus" onPress={() => setAsking(true)} testID="apply-add-info" /> : null}
-          {!applied.ok && !applied.needInfo && !applied.needDocs ? <Btn kind="ghost" label="정보 수정" onPress={() => router.push('/onboarding')} testID="apply-fix" /> : null}
+      <Modal visible={sheetOpen} transparent animationType="slide" onRequestClose={closeSheet}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}>
+          <Pressable accessibilityLabel="닫기" onPress={closeSheet} style={{ flex: 1 }} />
+          <View testID="help-sheet" style={{ backgroundColor: c.background, borderTopLeftRadius: 22, borderTopRightRadius: 22, maxHeight: '88%', paddingBottom: 18 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 20, paddingRight: 8, minHeight: 56 }}>
+              <T v="h3" style={{ flex: 1 }}>회사에 신청 도움 요청</T>
+              <Pressable testID="help-sheet-close" accessibilityRole="button" accessibilityLabel="닫기" onPress={closeSheet} style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+                <Feather name="x" size={22} color={c.mutedForeground} />
+              </Pressable>
+            </View>
+            <ScrollView contentContainerStyle={{ paddingHorizontal: 16, gap: 12, paddingBottom: 8 }} keyboardShouldPersistTaps="handled">
+              {asking && acc.me ? <InfoAdd benefit={b} profile={acc.me.profile} businessId={helpBusinessId} busy={applying} onDone={infoDone} onCancel={() => setAsking(false)} /> : null}
+              {applied && !asking ? (
+                <View testID="apply-result" accessibilityLiveRegion="polite" style={{ backgroundColor: applied.ok ? c.successSoft : applied.needInfo || applied.needDocs || applied.ready ? c.primarySoft : c.destructiveSoft, borderRadius: c.radius + 2, padding: 16, gap: 6 }}>
+                  <T v="h2" color={applied.ok ? c.success : applied.needInfo || applied.needDocs || applied.ready ? c.primary : c.destructive}>{applied.title}</T>
+                  <T>{applied.body}</T>
+                  {!applied.needDocs ? applied.reasons.map((x, i) => <T key={i} v="small">• {x}</T>) : null}
+                  {applied.needInfo ? <Btn label="정보 추가" icon="plus" onPress={() => setAsking(true)} testID="apply-add-info" /> : null}
+                  {applied.ready ? <Btn label="회사에 요청하기" icon="send" loading={applying} onPress={async () => { setApplying(true); await send('신청 지원'); setApplying(false); }} testID="apply-send" /> : null}
+                  {!applied.ok && !applied.needInfo && !applied.needDocs && !applied.ready ? <Btn kind="ghost" label="정보 수정" onPress={() => { closeSheet(); router.push('/onboarding'); }} testID="apply-fix" /> : null}
+                </View>
+              ) : null}
+              {applied?.needDocs && !asking ? (
+                <View style={{ backgroundColor: c.card, borderRadius: c.radius + 2, paddingHorizontal: 14 }}>
+                  <DocList names={b.documents} canUpload />
+                </View>
+              ) : null}
+              {applied?.ok && !asking ? (
+                <View testID="apply-notify" style={{ backgroundColor: c.card, borderRadius: c.radius + 2, padding: 16, gap: 8 }}>
+                  <T v="label">카카오톡으로 한 번만 알려 주세요</T>
+                  <T v="small" color={c.mutedForeground}>아래 내용이 복사돼요. 채팅창에 붙여넣고 보내면 끝이에요.</T>
+                  <View style={{ backgroundColor: c.secondary, borderRadius: 10, padding: 12 }}><T v="small" selectable testID="apply-notify-text">{notifyText}</T></View>
+                  {kakaoUrl ? <Btn label={copied ? '복사됨 · 카카오톡 열기' : '복사하고 카카오톡 열기'} icon="message-circle" onPress={notifyKakao} testID="apply-kakao" /> : <Btn label={copied ? '복사됨' : '내용 복사하기'} icon="copy" onPress={notifyKakao} testID="apply-copy" />}
+                  <Btn kind="ghost" label="접수 내역 보기" onPress={() => { closeSheet(); router.push('/company-progress'); }} testID="apply-progress" />
+                </View>
+              ) : null}
+            </ScrollView>
+          </View>
         </View>
-      ) : null}
+      </Modal>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, marginTop: 4 }}>
         {info.map(([icon, label, value]) => (

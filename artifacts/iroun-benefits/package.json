@@ -64,6 +64,7 @@
   },
   "dependencies": {
     "@clerk/localizations": "^4.22.1",
+    "expo-clipboard": "~57.0.2",
     "expo-dev-client": "~57.0.19",
     "expo-document-picker": "~57.0.3",
     "expo-notifications": "~57.0.22",
