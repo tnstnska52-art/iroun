@@ -6,8 +6,9 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { getAuth } from "@clerk/express";
 import { pool } from "@workspace/db";
+import { migrationSql } from "../lib/migration";
+
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { account, audit } from "../lib/benefit-store";
 
@@ -31,7 +32,7 @@ export const fundLeadSchema = z.object({
 export type FundLead = z.infer<typeof fundLeadSchema>;
 
 let ready: Promise<unknown> | undefined;
-const table = () => (ready ??= pool.query(readFileSync(new URL("../migrations/004-fund-leads.sql", import.meta.url), "utf8")));
+const table = () => (ready ??= pool.query(migrationSql("004-fund-leads.sql")));
 const digits = (s: string) => s.replace(/\D/g, "");
 
 /** 같은 요청은 한 번만 저장한다. 같은 번호로 하루 3번까지만 받는다(장난·반복 방지). */

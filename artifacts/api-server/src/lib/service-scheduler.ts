@@ -3,6 +3,7 @@ import { deliverDeadlines,checkPushReceipts } from "./push-delivery";
 import { logger } from "./logger";
 import {catalog} from "./public-feed-model";
 import {runPublicFeed,publicFeedScheduleReady} from "./public-feeds";
+import {crmSyncReady,startCrmSync} from "./crm-contracts";
 /** Opt-in only. No key/flag means no provider call and no success log. */
 export function startServiceScheduler(){
   const timers:ReturnType<typeof setInterval>[]=[];
@@ -24,6 +25,8 @@ export function startServiceScheduler(){
   if(process.env.IROUN_PUSH_SEND_ENABLED==="true"){
     timers.push(setInterval(()=>{void deliverDeadlines().then(()=>deliverDeadlines(undefined,undefined,Date.now(),"personalized")).then(()=>checkPushReceipts()).catch(()=>logger.warn("푸시 작업 실패: 제공자 확인 필요"));},60000));
   }
+  // 회사 전산 패키지 계약 수신: 공동 키(CRM_APP_INBOUND_SECRET)가 있을 때만 60초마다.
+  const stopCrm=crmSyncReady()?startCrmSync():()=>{};
   for(const t of timers)t.unref();
-  return ()=>timers.forEach(clearInterval);
+  return ()=>{timers.forEach(clearInterval);stopCrm();};
 }

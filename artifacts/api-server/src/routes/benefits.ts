@@ -10,6 +10,7 @@ import { registerDevice } from "../lib/push-delivery";
 import { bizinfoStatus,runBizinfoFeed } from "../lib/official-feed";
 import { extractNotice } from "../lib/notice-extract";
 import {publicFeedStatus,runPublicFeed} from "../lib/public-feeds";
+import {claimPendingCrm,ensureCrmTables,crmSyncReady} from "../lib/crm-contracts";
 
 type AuthedRequest = Request & { customerId?: string };
 export const benefitsRouter = Router();
@@ -47,7 +48,11 @@ benefitsRouter.get("/membership", async(req,res)=>{
   const c=billingConfig();
   res.set("Cache-Control","private, no-store").json({...c,message:c.configured?"검증 제공자 설정됨. 가격·구매는 네이티브 스토어에서 확인하며 권한은 서버 검증 후 반영합니다.":"스토어 상품·월요금·구매 검증 연결 전입니다. 현재 구매할 수 없습니다.",entitlement:access});
 });
-benefitsRouter.get("/me",authenticated,async(req,res)=>res.json(await account(userId(req))));
+benefitsRouter.get("/me",authenticated,async(req,res)=>{
+  // 가입 전에 회사 전산에서 받은 패키지 계약이 있으면 인증된 휴대폰 번호로 연결한다.
+  await claimPendingCrm(userId(req)).catch(()=>0);
+  res.json(await account(userId(req)));
+});
 benefitsRouter.put("/profile",authenticated,async(req,res)=>{
   const id=userId(req), a=await account(id);
   if(!a.preferences.privacyConsent) throw fail("먼저 개인정보 수집·이용에 동의해 주세요.");
@@ -144,6 +149,7 @@ benefitsRouter.post("/account/deletion",authenticated,async(req,res)=>{
   res.json({message:"회원 탈퇴 및 서비스 개인정보 삭제가 완료됐습니다. Apple·Google 구독은 스토어에서 별도로 해지해 주세요."});
 });
 export async function eraseAccount(id:string,deletionId:string,actor:string){
+  await ensureCrmTables();
   const client=await pool.connect();
   try{
     await client.query("BEGIN");
@@ -151,6 +157,8 @@ export async function eraseAccount(id:string,deletionId:string,actor:string){
     await client.query("DELETE FROM iroun_grants WHERE user_id=$1",[id]);
     await client.query("DELETE FROM iroun_subscriptions WHERE user_id=$1",[id]);
     await client.query("UPDATE iroun_service_requests SET assigned_to=NULL WHERE assigned_to=$1",[id]);
+    // 전산 계약 연결은 다른 계정으로 옮겨지지 않도록 남기되, 번호 해시는 지우고 회사 확인으로 돌린다.
+    await client.query("UPDATE iroun_crm_links SET phone_hash=NULL,state=CASE WHEN status='active' THEN 'review_required' ELSE state END,review_reason=CASE WHEN status='active' THEN '연결된 계정 삭제' ELSE review_reason END,updated_at=now() WHERE user_id=$1",[id]);
     for(const table of ["iroun_push_devices","iroun_push_jobs","iroun_billing_sync","iroun_billing_transactions","iroun_trials","iroun_contracts","iroun_owner_codes","iroun_consents","iroun_staff","iroun_service_requests","iroun_inquiries","iroun_inbox"]) await client.query(`DELETE FROM ${table} WHERE user_id=$1`,[id]);
     await client.query("UPDATE iroun_accounts SET profile='{\"personal\":{},\"businesses\":[],\"step\":0}',preferences='{\"largeText\":false,\"notifications\":false,\"privacyConsent\":false,\"personalizedAlerts\":false}',role='customer',deleted_at=now() WHERE id=$1",[id]);
     // Retain only a pseudonymous tombstone to prevent old sessions recreating a deleted account.
@@ -160,6 +168,12 @@ export async function eraseAccount(id:string,deletionId:string,actor:string){
   }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
 }
 benefitsRouter.use("/admin",authenticated,administrator);
+// 회사 전산 계약 연결 현황. 전화번호·전산 메모는 내보내지 않는다.
+benefitsRouter.get("/admin/crm-contracts",async(_req,res)=>{
+  await ensureCrmTables();
+  const {rows}=await pool.query("SELECT crm_contract_id AS \"contractId\",crm_customer_id AS \"crmCustomerId\",user_id AS \"userId\",version,status,state,review_reason AS \"reviewReason\",starts_at AS \"startsAt\",ends_at AS \"endsAt\",updated_at AS \"updatedAt\" FROM iroun_crm_links ORDER BY updated_at DESC LIMIT 500");
+  res.json({syncReady:crmSyncReady(),links:rows});
+});
 benefitsRouter.get("/admin/dashboard",async(_req,res)=>{
   const users=(await pool.query("SELECT id FROM iroun_accounts WHERE deleted_at IS NULL ORDER BY id")).rows;
   const customers=await Promise.all(users.map(async r=>{

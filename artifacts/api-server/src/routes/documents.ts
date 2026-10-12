@@ -6,8 +6,9 @@
 import express, { Router, type Request, type Response, type NextFunction } from "express";
 import { getAuth } from "@clerk/express";
 import { pool } from "@workspace/db";
+import { migrationSql } from "../lib/migration";
+
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { account, audit } from "../lib/benefit-store";
 
 const fail = (message: string, status = 400) => Object.assign(new Error(message), { status });
@@ -17,7 +18,7 @@ const TYPES = ["application/pdf", "image/jpeg", "image/png", "image/heic", "imag
 export const docKey = (s: string) => s.normalize("NFKC").replace(/[\s·,()\-_/]/g, "").toLowerCase();
 
 let ready: Promise<unknown> | undefined;
-export const ensureDocuments = () => (ready ??= pool.query(readFileSync(new URL("../migrations/005-documents.sql", import.meta.url), "utf8")));
+export const ensureDocuments = () => (ready ??= pool.query(migrationSql("005-documents.sql")));
 /** 이 공고의 서류 중 고객이 아직 올리지 않은 것 */
 export async function missingDocuments(userId: string, documents: string[], client: Pick<typeof pool, "query"> = pool) {
   if (!documents.length) return [];
