@@ -12,19 +12,29 @@
         "EXPO_PUBLIC_API_URL": "https://iroun-api.onrender.com"
       },
       "pnpm": "10.28.0",
-      "node": "22.22.0"
+      "node": "22.22.0",
+      "android": {
+        "image": "latest"
+      },
+      "ios": {
+        "image": "latest"
+      }
     },
     "preview": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "image": "latest"
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://iroun-api.onrender.com",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bHVja3ktc25pcGUtNTY5Mi5jbGVyay5hY2NvdW50cy5kZXYk"
       },
       "pnpm": "10.28.0",
-      "node": "22.22.0"
+      "node": "22.22.0",
+      "ios": {
+        "image": "latest"
+      }
     },
     "production": {
       "autoIncrement": true,
@@ -33,7 +43,13 @@
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bHVja3ktc25pcGUtNTY5Mi5jbGVyay5hY2NvdW50cy5kZXYk"
       },
       "pnpm": "10.28.0",
-      "node": "22.22.0"
+      "node": "22.22.0",
+      "android": {
+        "image": "latest"
+      },
+      "ios": {
+        "image": "latest"
+      }
     }
   },
   "submit": {
