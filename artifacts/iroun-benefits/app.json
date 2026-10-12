@@ -12,7 +12,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "CFBundleDevelopmentRegion": "ko"
-      }
+      },
+      "bundleIdentifier": "com.irounsaram.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +22,8 @@
       },
       "permissions": [
         "POST_NOTIFICATIONS"
-      ]
+      ],
+      "package": "com.irounsaram.app"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -42,6 +44,15 @@
     },
     "locales": {
       "ko": "./assets/locales/ko.json"
+    },
+    "owner": "irounsaram",
+    "extra": {
+      "eas": {
+        "projectId": "94cddd49-334b-4118-89b9-6c7937884a44"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }
