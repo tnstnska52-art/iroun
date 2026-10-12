@@ -10,7 +10,9 @@
       "env": {
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bHVja3ktc25pcGUtNTY5Mi5jbGVyay5hY2NvdW50cy5kZXYk",
         "EXPO_PUBLIC_API_URL": "https://iroun-api.onrender.com"
-      }
+      },
+      "pnpm": "10.28.0",
+      "node": "22.22.0"
     },
     "preview": {
       "distribution": "internal",
@@ -20,14 +22,18 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://iroun-api.onrender.com",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bHVja3ktc25pcGUtNTY5Mi5jbGVyay5hY2NvdW50cy5kZXYk"
-      }
+      },
+      "pnpm": "10.28.0",
+      "node": "22.22.0"
     },
     "production": {
       "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_API_URL": "https://iroun-api.onrender.com",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_test_bHVja3ktc25pcGUtNTY5Mi5jbGVyay5hY2NvdW50cy5kZXYk"
-      }
+      },
+      "pnpm": "10.28.0",
+      "node": "22.22.0"
     }
   },
   "submit": {
