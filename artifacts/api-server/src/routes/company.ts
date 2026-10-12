@@ -2,6 +2,7 @@ import {Router,type Request,type Response,type NextFunction} from "express";
 import {getAuth,clerkClient} from "@clerk/express";
 import {createHash,createHmac,randomBytes,randomUUID} from "node:crypto";
 import {z} from "zod";
+import {missingDocuments} from "./documents";
 import {pool} from "@workspace/db";
 import {account,audit} from "../lib/benefit-store";
 import {customerPushStatus} from "../lib/push-customer-status";
@@ -176,6 +177,9 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
    if(!decision)throw fail("현재 등록된 사업장을 선택해 주세요.",409);
    if(input.kind==="신청 지원"&&decision.result!=="조건 일치")throw fail(decision.result==="대상 제외"?"입력 조건과 다른 항목이 있습니다. 정보를 수정하거나 자격확인 문의를 보내 주세요.":"추가 확인이 필요합니다. 자격확인 문의로 보내 주세요.",409,decision);
    if(!input.confirmed)throw fail("회사에 요청하는 내용임을 확인해 주세요.");
+   // 서류를 모두 올린 고객만 요청할 수 있다. 요청 뒤에 다시 서류를 안내하지 않기 위해서다.
+   const lacking=await missingDocuments(a.id,b.documents,c);
+   if(lacking.length)throw fail("필요한 서류를 먼저 등록해 주세요.",409,{result:"서류 필요",missingDocuments:lacking});
    const snapshot={decision,profileUpdatedBasis:"접수 시 입력정보 기준",title:b.title,sourceUrl:b.sourceUrl,sourceId:b.sourceId,checkedAt:b.checkedAt,endsAt:b.endsAt,documents:b.documents,checks:b.checks,warning:"회사 접수이며 기관 신청·승인·지급 완료가 아닙니다."};
    const prior=(await c.query("SELECT id,kind FROM iroun_service_requests WHERE user_id=$1 AND benefit_id=$2 AND business_id=$3",[a.id,b.id,input.businessId])).rows[0];
    if(prior){

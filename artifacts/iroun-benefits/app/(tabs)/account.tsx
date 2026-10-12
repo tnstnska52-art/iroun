@@ -101,6 +101,7 @@ export function AccountView({ settings }: { settings: boolean }) {
         <ListRow icon="award" label="이용 상태·동의" onPress={() => router.push('/access')} testID="nav-access" />
         <ListRow icon="target" label="맞춤 공고" onPress={() => router.push('/matches')} testID="nav-matches" />
         <ListRow icon="clipboard" label="회사 진행" onPress={() => router.push('/company-progress')} testID="nav-company-progress" />
+        <ListRow icon="folder" label="내 서류함" onPress={() => router.push('/documents' as never)} testID="nav-documents" />
         <ListRow icon="bookmark" label="저장한 공고·내 기록" onPress={() => router.push('/mine')} testID="nav-mine" />
         <ListRow icon="bell" label="알림함" onPress={() => router.push('/inbox')} testID="nav-inbox" />
         {acc.me && acc.me.role !== 'user' && acc.me.role !== 'customer' ? <ListRow icon="briefcase" label="회사 업무" onPress={() => router.push('/office')} testID="nav-office" /> : null}

@@ -161,8 +161,12 @@ function seedRequest(userId: string, benefitId: string, state: string, assigned:
   const tasks = b.documents.map((d) => `${d} 준비 · 발급처는 공식 원문 확인`);
   requests.push({ id: newId('req'), user_id: userId, benefit_id: benefitId, business_id: decision.businessId, kind: '신청 지원', state, assigned_to: assigned, snapshot: snapshotOf(b, decision), customer_tasks: tasks, staff_tasks: [...STAFF_TASKS], completed_tasks: done.map((i) => tasks[Number(i)]).filter(Boolean), internal_note: '', created_at: isoIn(-agoH * HOUR), updated_at: isoIn(-(agoH / 3) * HOUR) });
 }
+type Doc = { id: string; user_id: string; name: string; filename: string; mime: string; size: number; created_at: string; blob: Blob };
+let docs: Doc[] = [];
+const docKeyOf = (x: string) => x.normalize('NFKC').replace(/[\s·,()\-_/]/g, '').toLowerCase();
 export function resetPreview() {
   seq = 1; seedUsers();
+  docs = [];
   tracking = new Map(); requests = []; inquiries = []; inbox = []; auditLog = []; ownerCodes = new Map();
   staff = new Map([['demo-staff', { user_id: 'demo-staff', name: '김서연 매니저', phone: '031-555-0100', kakao: 'https://pf.kakao.com/_example/chat', enabled: true }]]);
   company = { phone: '1588-0000', kakao: 'https://pf.kakao.com/_example/chat', website: '' };
@@ -349,6 +353,8 @@ function route(method: string, path: string, query: URLSearchParams, body: Body,
     if (!decision) throw fail('현재 등록된 사업장을 선택해 주세요.', 409);
     if (kind === '신청 지원' && decision.result !== '조건 일치') throw fail(decision.result === '대상 제외' ? '입력 조건과 다른 항목이 있습니다. 정보를 수정하거나 자격확인 문의를 보내 주세요.' : '추가 확인이 필요합니다. 자격확인 문의로 보내 주세요.', 409, decision);
     if (!body.confirmed) throw fail('회사에 요청하는 내용임을 확인해 주세요.');
+    const lacking = b.documents.filter((d) => !docs.some((x) => x.user_id === id && docKeyOf(x.name) === docKeyOf(d)));
+    if (lacking.length) throw fail('필요한 서류를 먼저 등록해 주세요.', 409, { result: '서류 필요', missingDocuments: lacking });
     const snapshot = snapshotOf(b, decision), tasks = b.documents.map((d) => `${d} 준비 · 발급처는 공식 원문 확인`);
     const prior = requests.find((r) => r.user_id === id && r.benefit_id === b.id && r.business_id === businessId);
     if (prior) {
@@ -491,6 +497,30 @@ export function installPreviewServer(getUser: () => string | null) {
     try { const text = typeof init?.body === 'string' ? init.body : req && method !== 'GET' ? await req.clone().text() : ''; if (text) body = JSON.parse(text) as Body; } catch { body = {}; }
     await new Promise((r) => setTimeout(r, 120)); // 실제 통신처럼 약간의 지연
     const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json' } });
+    // 서류함: 파일을 주고받으므로 따로 처리한다(미리보기에서는 브라우저 메모리에만 둔다).
+    const me0 = currentUser();
+    const dm = /^\/api\/(service\/documents|office\/documents|office\/customers\/[^/]+\/documents)(\/.*)?$/.exec(url.pathname);
+    if (dm) {
+      const seg = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+      if (!me0) return json({ message: '로그인 후 이용해 주세요.' }, 401);
+      const mine = account(me0), isStaff = mine.role === 'admin' || mine.role === 'staff';
+      const pub = (d: Doc) => ({ id: d.id, name: d.name, filename: d.filename, mime: d.mime, size: d.size, created_at: d.created_at });
+      if (seg[1] === 'service' && seg.length === 3 && method === 'GET') return json({ documents: docs.filter((d) => d.user_id === me0).map(pub) });
+      if (seg[1] === 'service' && seg.length === 4 && method === 'PUT') {
+        if (!mine.entitlement.contractActive) return json({ message: '서류 등록은 계약 고객만 할 수 있습니다.' }, 403);
+        const h = new Headers(init?.headers ?? req?.headers), blob = init?.body instanceof Blob ? init.body : new Blob([]);
+        if (blob.size === 0) return json({ message: '파일이 비어 있어요.' }, 400);
+        if (blob.size > 10 * 1024 * 1024) return json({ message: '파일이 너무 커요. 10MB 이하로 올려 주세요.' }, 413);
+        const d: Doc = { id: newId('doc'), user_id: me0, name: seg[3], filename: decodeURIComponent(h.get('x-filename') ?? seg[3]), mime: (h.get('content-type') ?? '').split(';')[0], size: blob.size, created_at: new Date().toISOString(), blob };
+        docs = [d, ...docs.filter((x) => !(x.user_id === me0 && docKeyOf(x.name) === docKeyOf(d.name)))];
+        return json(pub(d));
+      }
+      if (seg[1] === 'service' && seg.length === 4 && method === 'DELETE') { docs = docs.filter((d) => !(d.id === seg[3] && d.user_id === me0)); return json({ message: '지웠어요.' }); }
+      if (seg[1] === 'service' && seg[4] === 'file') { const d = docs.find((x) => x.id === seg[3] && x.user_id === me0); return d ? new Response(d.blob, { headers: { 'content-type': d.mime } }) : json({ message: '서류를 찾을 수 없습니다.' }, 404); }
+      if (!isStaff) return json({ message: '회사 담당자만 이용할 수 있습니다.' }, 403);
+      if (seg[2] === 'customers') return json({ documents: docs.filter((d) => d.user_id === seg[3]).map(pub) });
+      const d = docs.find((x) => x.id === seg[3]); return d ? new Response(d.blob, { headers: { 'content-type': d.mime } }) : json({ message: '서류를 찾을 수 없습니다.' }, 404);
+    }
     try { return json(route(method, url.pathname, url.searchParams, body, currentUser())); }
     catch (e) {
       const err = e as HttpError & { issues?: unknown };

@@ -19,6 +19,7 @@ import { confirmAsk } from '@/lib/confirm';
 import { errStatus } from '@/lib/util';
 import { Collapsible, dday } from '@/components/BenefitCard';
 import { InfoAdd, nextQuestion } from '@/components/InfoAdd';
+import { DocList, useMyDocuments } from '@/components/DocList';
 
 export default function BenefitDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -35,8 +36,13 @@ export default function BenefitDetail() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ t: 'ok' | 'error'; s: string } | null>(null);
   const [applying, setApplying] = useState(false);
-  const [applied, setApplied] = useState<{ ok: boolean; title: string; body: string; reasons: string[]; needInfo?: boolean } | null>(null);
+  const [applied, setApplied] = useState<{ ok: boolean; title: string; body: string; reasons: string[]; needInfo?: boolean; needDocs?: boolean } | null>(null);
   const [asking, setAsking] = useState(false);
+  // 계약 고객의 서류함. 이 공고의 서류를 모두 올려야 회사에 요청할 수 있다.
+  const myDocs = useMyDocuments(!!acc.me?.entitlement.contractActive);
+  const [lackNow, setLackNow] = useState<number | null>(null);
+  // 서류를 다 올리면 '서류를 등록해 주세요' 안내를 닫는다.
+  useEffect(() => { if (applied?.needDocs && lackNow === 0) setApplied(null); }, [applied?.needDocs, lackNow]);
 
   const b = q.data;
   const cur = tracks.data?.find((t) => t.benefitId === id);
@@ -100,19 +106,25 @@ export default function BenefitDetail() {
       await qc.invalidateQueries({ queryKey: getGetServiceStateQueryKey() });
       setApplied({ ok: true, title: '회사에 요청이 접수됐어요', body: `${res.id ? `접수번호 ${res.id}. ` : ''}${kind === '자격 확인' ? '담당자가 나머지 조건을 확인해요.' : '담당자를 배정하고 있어요.'}\n기관 신청은 아직이에요.`, reasons: [] });
     } catch (e) {
-      const detail = (e as { data?: { detail?: { result?: string; exclusions?: string[]; unknowns?: string[] } } }).data?.detail;
-      if (errStatus(e) === 409 && detail?.result === '대상 제외') setApplied({ ok: false, title: '이 지원금은 신청할 수 없어요', body: '내 정보와 공고 조건이 달라요.', reasons: detail.exclusions ?? [] });
+      const detail = (e as { data?: { detail?: { result?: string; exclusions?: string[]; unknowns?: string[]; missingDocuments?: string[] } } }).data?.detail;
+      if (errStatus(e) === 409 && detail?.result === '서류 필요') askDocs(detail.missingDocuments ?? []);
+      else if (errStatus(e) === 409 && detail?.result === '대상 제외') setApplied({ ok: false, title: '이 지원금은 신청할 수 없어요', body: '내 정보와 공고 조건이 달라요.', reasons: detail.exclusions ?? [] });
       // 고객이 답할 수 없는 확인 사항(예산·접수 상태 등)만 남았으면 담당자 확인으로 넘긴다.
       else if (errStatus(e) === 409 && detail && kind === '신청 지원') await send('자격 확인');
       else setApplied({ ok: false, title: '요청하지 못했어요', body: errStatus(e) === 409 ? '마감됐거나 조건이 바뀌었어요.' : apiErrorMessage(e, '저장하지 못했어요. 다시 시도해 주세요.'), reasons: [] });
     }
   };
+  const askDocs = (lack: string[]) => setApplied({ ok: false, title: `서류 ${lack.length}가지를 등록해 주세요`, body: "아래 '필요 서류'에서 올리면 요청할 수 있어요", reasons: lack, needDocs: true });
+  const lackCount = myDocs.missing(b.documents).length;
+  if (lackCount !== lackNow) setLackNow(lackCount);
   const startHelp = () => {
     const me = acc.me;
     if (!me || applying) return;
     if (!me.profile.businesses.length) { router.push('/onboarding'); return; }
     const need = nextQuestion(b, me.profile, helpBusinessId).left;
     if (need > 0) { setAsking(false); setApplied({ ok: false, title: '정보를 조금만 더 알려 주세요', body: `${need}가지만 고르면 돼요`, reasons: [], needInfo: true }); return; }
+    const lack = myDocs.missing(b.documents);
+    if (lack.length) { askDocs(lack); return; }
     confirmAsk('회사에 신청 도움을 요청할까요?', '담당자가 확인하고 도와드려요.', '요청하기', async () => { setApplying(true); await send('신청 지원'); setApplying(false); });
   };
   const infoDone = async (next: Profile) => {
@@ -122,7 +134,8 @@ export default function BenefitDetail() {
       await qc.invalidateQueries({ queryKey: getGetMeQueryKey() });
       await qc.invalidateQueries({ queryKey: getGetRecommendationsQueryKey() });
       setAsking(false);
-      await send('신청 지원');
+      const lack = myDocs.missing(b.documents);
+      if (lack.length) askDocs(lack); else await send('신청 지원');
     } catch (e) { setApplied({ ok: false, title: '저장하지 못했어요', body: apiErrorMessage(e, '다시 시도해 주세요.'), reasons: [], needInfo: true }); }
     setApplying(false);
   };
@@ -176,13 +189,13 @@ export default function BenefitDetail() {
       {msg ? <Notice tone={msg.t}>{msg.s}</Notice> : null}
       {asking && acc.me ? <InfoAdd benefit={b} profile={acc.me.profile} businessId={helpBusinessId} busy={applying} onDone={infoDone} onCancel={() => setAsking(false)} /> : null}
       {applied && !asking ? (
-        <View testID="apply-result" accessibilityLiveRegion="polite" style={{ backgroundColor: applied.ok ? c.successSoft : applied.needInfo ? c.primarySoft : c.destructiveSoft, borderRadius: c.radius, padding: 16, gap: 6 }}>
-          <T v="h3" color={applied.ok ? c.success : applied.needInfo ? c.primary : c.destructive}>{applied.title}</T>
+        <View testID="apply-result" accessibilityLiveRegion="polite" style={{ backgroundColor: applied.ok ? c.successSoft : applied.needInfo || applied.needDocs ? c.primarySoft : c.destructiveSoft, borderRadius: c.radius, padding: 16, gap: 6 }}>
+          <T v="h3" color={applied.ok ? c.success : applied.needInfo || applied.needDocs ? c.primary : c.destructive}>{applied.title}</T>
           <T v="small">{applied.body}</T>
           {applied.reasons.map((x, i) => <T key={i} v="small">• {x}</T>)}
           {applied.ok ? <Btn kind="secondary" label="접수 내역 보기" onPress={() => router.push('/company-progress')} testID="apply-progress" /> : null}
           {applied.needInfo && !asking ? <Btn label="정보 추가" icon="plus" onPress={() => setAsking(true)} testID="apply-add-info" /> : null}
-          {!applied.ok && !applied.needInfo ? <Btn kind="ghost" label="정보 수정" onPress={() => router.push('/onboarding')} testID="apply-fix" /> : null}
+          {!applied.ok && !applied.needInfo && !applied.needDocs ? <Btn kind="ghost" label="정보 수정" onPress={() => router.push('/onboarding')} testID="apply-fix" /> : null}
         </View>
       ) : null}
 
@@ -259,7 +272,12 @@ export default function BenefitDetail() {
       {unlocked ? (
         <>
       <Box title="필요 서류">
-        {b.documents.length === 0 ? <T>공식 페이지에서 확인</T> : b.documents.map((d) => <T key={d}>• {d}</T>)}
+        {b.documents.length === 0 ? <T>공식 페이지에서 확인</T> : (
+          <>
+            {contract ? <T v="small" color={myDocs.missing(b.documents).length ? c.mutedForeground : c.success} testID="docs-status">{myDocs.missing(b.documents).length ? `${b.documents.length}가지 중 ${b.documents.length - myDocs.missing(b.documents).length}가지 등록 · 모두 올리면 회사에 요청할 수 있어요` : '모두 등록했어요 · 회사에 요청할 수 있어요'}</T> : null}
+            <DocList names={b.documents} canUpload={contract} />
+          </>
+        )}
       </Box>
 
       <Box title="확인할 사항">

@@ -2993,3 +2993,13 @@ const jsonPost = (body: unknown, options?: Parameters<typeof customFetch>[1]) =>
 export const requestFundDiagnosis = (body: FundLeadInput, options?: Parameters<typeof customFetch>[1]) => customFetch<{ id: string; message: string }>('/api/fund/diagnosis', jsonPost(body, options));
 export const getFundLeads = (options?: Parameters<typeof customFetch>[1]) => customFetch<{ leads: FundLeadRow[] }>('/api/office/fund-leads', { ...options, method: 'GET' });
 export const updateFundLead = (id: string, body: { state: string; memo: string }, options?: Parameters<typeof customFetch>[1]) => customFetch<{ message: string }>(`/api/office/fund-leads/${encodeURIComponent(id)}`, jsonPost(body, options));
+
+/** 서류함 — 손으로 추가한 호출 */
+export interface DocMeta { id: string; name: string; filename: string; mime: string; size: number; created_at: string }
+export const listMyDocuments = (options?: Parameters<typeof customFetch>[1]) => customFetch<{ documents: DocMeta[] }>('/api/service/documents', { ...options, method: 'GET' });
+export const uploadMyDocument = (name: string, file: Blob, filename: string, mime: string, options?: Parameters<typeof customFetch>[1]) =>
+  customFetch<DocMeta>(`/api/service/documents/${encodeURIComponent(name)}`, { ...options, method: 'PUT', headers: { 'Content-Type': mime, 'X-Filename': encodeURIComponent(filename), ...options?.headers }, body: file, responseType: 'json' });
+export const deleteMyDocument = (id: string, options?: Parameters<typeof customFetch>[1]) => customFetch<{ message: string }>(`/api/service/documents/${encodeURIComponent(id)}`, { ...options, method: 'DELETE' });
+export const fetchMyDocument = (id: string) => customFetch<Blob>(`/api/service/documents/${encodeURIComponent(id)}/file`, { method: 'GET', responseType: 'blob' });
+export const listCustomerDocuments = (userId: string) => customFetch<{ documents: DocMeta[] }>(`/api/office/customers/${encodeURIComponent(userId)}/documents`, { method: 'GET' });
+export const fetchOfficeDocument = (id: string) => customFetch<Blob>(`/api/office/documents/${encodeURIComponent(id)}/file`, { method: 'GET', responseType: 'blob' });

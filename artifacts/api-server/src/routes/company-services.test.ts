@@ -5,6 +5,7 @@ import {pool} from "@workspace/db";
 import {randomUUID,createHmac} from "node:crypto";
 vi.mock("@clerk/express",()=>({getAuth:(r:any)=>({userId:r.get("x-test-user")||null}),clerkClient:{users:{getUser:vi.fn(),deleteUser:vi.fn()}}}));
 import {createCompanyRouter} from "./company";
+import {ensureDocuments} from "./documents";
 import {eraseAccount} from "./benefits";
 import {account} from "../lib/benefit-store";
 import {deliverDeadlines,registerDevice,expoTransport} from "../lib/push-delivery";
@@ -24,7 +25,8 @@ const put=(path:string,body:any,user=admin)=>request(app()).put(path).set("x-tes
 const trial=()=>post("/service/trial",{});
 const apply=(kind="신청 지원",extra:any={})=>post("/service/requests",{benefitId:bId,businessId:"biz",kind,confirmed:true,...extra});
 // 회사 신청 도움은 계약 고객만 요청할 수 있으므로, 접수 시험에서는 계약 기록을 함께 만든다.
-async function signed(user=owner){await pool.query("INSERT INTO iroun_contracts(id,user_id,starts_at,ends_at,reason,evidence,actor) VALUES($1,$2,now()-interval '1 day',now()+interval '30 days','시험 계약','시험',$3)",[randomUUID(),user,admin]);}
+async function filed(user=owner){await ensureDocuments();await pool.query("INSERT INTO iroun_documents(id,user_id,name,filename,mime,size,data) VALUES($1,$2,'사업자등록증','a.pdf','application/pdf',4,$3) ON CONFLICT(user_id,name) DO NOTHING",[randomUUID(),user,Buffer.from('%PDF')]);}
+async function signed(user=owner){await filed(user);await pool.query("INSERT INTO iroun_contracts(id,user_id,starts_at,ends_at,reason,evidence,actor) VALUES($1,$2,now()-interval '1 day',now()+interval '30 days','시험 계약','시험',$3)",[randomUUID(),user,admin]);}
 // 이용 종료 시험: 이용권과 계약을 함께 회수한다.
 async function revokeAll(user=owner){await pool.query("UPDATE iroun_grants SET revoked_at=now() WHERE user_id=$1",[user]);await pool.query("UPDATE iroun_contracts SET revoked_at=now() WHERE user_id=$1",[user]);}
 async function gift(user=owner){await signed(user);await pool.query("INSERT INTO iroun_grants(user_id,expires_at,reason,granted_by) VALUES($1,now()+interval '1 day','시험용', $2) ON CONFLICT(user_id) DO UPDATE SET expires_at=excluded.expires_at,revoked_at=NULL",[user,admin]);}
@@ -156,6 +158,12 @@ describe("신규 회사 접수·담당자·문의·알림",()=>{
   expect((await get("/service/matches")).status).toBe(200);
   const r=await apply();expect(r.status).toBe(403);expect(r.body.error).toContain("계약 고객");
   await signed();expect((await apply()).status).toBe(200);
+ });
+ it("서류를 다 올리지 않은 계약 고객은 요청 불가, 올리면 가능",async()=>{
+  await gift();await pool.query("DELETE FROM iroun_documents WHERE user_id=$1",[owner]);
+  const r=await apply();expect(r.status).toBe(409);expect(r.body.detail).toEqual({result:"서류 필요",missingDocuments:["사업자등록증"]});
+  expect((await get("/service/state")).body.requests).toHaveLength(0);
+  await filed();expect((await apply()).status).toBe(200);
  });
  it("체험 회원은 신청지원 요청 불가(계약 고객만)",async()=>{await trial();const r=await apply();expect(r.status).toBe(403);expect(r.body.error).toContain("계약 고객");await signed();expect((await apply()).status).toBe(200);});
  it("조건일치·고객확인→회사 실제접수",async()=>{await gift();const r=await apply();expect(r.status).toBe(200);const state=(await get("/service/state")).body;expect(state.requests[0].state).toBe("회사 접수");expect(state.requests[0].snapshot.warning).toContain("기관");});
