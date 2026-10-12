@@ -1,3 +1,5 @@
 {
-  "CFBundleDisplayName": "이로운사람들"
+  "ios": {
+    "CFBundleDisplayName": "이로운사람들"
+  }
 }
