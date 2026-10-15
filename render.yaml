@@ -23,3 +23,20 @@ services:
         sync: false
       - key: CRM_APP_INBOUND_SECRET
         sync: false
+      # 공고 자동 수집 켜기(비밀값 아님). 실제 키 4개는 Render 설정 화면에 직접 넣는다.
+      - key: IROUN_OFFICIAL_FEEDS_ENABLED
+        value: "true"
+      - key: IROUN_FEED_INTERVAL_MINUTES
+        value: "60"
+      - key: BIZINFO_API_APPROVED
+        value: "true"
+      - key: BIZINFO_TERMS_APPROVED
+        value: "true"
+      - key: IROUN_BIZINFO_APPROVED_SCOPE
+        value: "기업마당 지원사업 공고 목록 수집"
+      - key: IROUN_GOV24_APPROVED
+        value: "true"
+      - key: IROUN_WELFARECENTRAL_APPROVED
+        value: "true"
+      - key: IROUN_WELFARELOCAL_APPROVED
+        value: "true"
