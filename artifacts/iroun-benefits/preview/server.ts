@@ -89,6 +89,24 @@ const SAMPLES: Benefit[] = [
     documents: ['사업자등록증명', '소상공인확인서'], startsAt: '2025-04-01', endsAt: '2025-05-30', status: '마감', maxAmount: 2000000 }),
 ];
 const benefits: Benefit[] = [...(official as Benefit[]), ...SAMPLES];
+/** 실제 서버(Render)에 공개된 공고를 불러와 미리보기 자료로 쓴다. 실패하면 예시 자료를 그대로 쓴다. */
+export const LIVE_API = 'https://iroun-api.onrender.com/api/benefits';
+export const liveState = { loaded: false, count: 0 };
+let liveReady: Promise<void> = Promise.resolve();
+function loadLive(get: typeof fetch) {
+  liveReady = (async () => {
+    try {
+      const r = await Promise.race([get(LIVE_API, { credentials: 'omit' }), new Promise<never>((_, j) => setTimeout(() => j(new Error('timeout')), 8000))]);
+      if (!r.ok) return;
+      const live = (await r.json()) as Benefit[];
+      if (!Array.isArray(live) || live.length === 0) return;
+      // 실제 공고가 충분하면 예시는 빼고, 지난해 예시(놓친 지원금 화면용)만 남긴다.
+      const keep = live.length >= 10 ? SAMPLES.filter((b) => b.status === '마감') : SAMPLES;
+      benefits.splice(0, benefits.length, ...live, ...keep);
+      liveState.loaded = true; liveState.count = live.length;
+    } catch { /* 예시 자료 유지 */ }
+  })();
+}
 const notices = () => benefits.filter(publicBenefit);
 const finished = (b: Benefit, t = now()) => b.status === '마감' || b.budgetStatus === '소진' || (!!b.endsAt && Number.isFinite(noticeTime(b.endsAt, 'end')) && noticeTime(b.endsAt, 'end') < t);
 function historicalMatch(b: Benefit, p: Profile) {
@@ -487,10 +505,12 @@ export function installPreviewServer(getUser: () => string | null) {
   if (g.__irounPreview) return;
   g.__irounPreview = true;
   const original = g.fetch?.bind(globalThis);
+  if (original) loadLive(original);
   g.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const raw = typeof input === 'string' ? input : input instanceof URL ? input.toString() : (input as Request).url;
     const url = new URL(raw, 'http://preview.local');
     if (!url.pathname.startsWith('/api/')) return original ? original(input, init) : Promise.reject(new Error('offline'));
+    await liveReady;
     const req = typeof input === 'object' && !(input instanceof URL) ? (input as Request) : undefined;
     const method = (init?.method ?? req?.method ?? 'GET').toUpperCase();
     let body: Body = {};

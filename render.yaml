@@ -40,3 +40,8 @@ services:
         value: "true"
       - key: IROUN_WELFARELOCAL_APPROVED
         value: "true"
+      # 기업마당 공고 중 내용이 확실한 것(확신도 80 이상·주의사항 없음)은 바로 공개, 나머지는 검토 대기.
+      - key: IROUN_AUTO_PUBLISH_CONFIDENT
+        value: "true"
+      - key: IROUN_BIZINFO_MAX_PAGES
+        value: "3"

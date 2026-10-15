@@ -2,10 +2,10 @@
  * 미리보기 전용 로그인 대역. '@clerk/expo' 자리에 연결되어 실제 로그인 서버 없이 화면을 확인하게 한다.
  * 운영 빌드에는 포함되지 않는다(EXPO_PUBLIC_PREVIEW=1일 때만 metro가 연결).
  */
-import React, { useState, useSyncExternalStore } from 'react';
+import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
-import { ensureUser, installPreviewServer, previewUser, resetPreview } from './server';
+import { ensureUser, installPreviewServer, liveState, previewUser, resetPreview } from './server';
 
 type Listener = () => void;
 let userId: string | null = null;
@@ -31,6 +31,8 @@ function PreviewBar() {
   const current = useSyncExternalStore(subscribe, snapshot, snapshot);
   const [open, setOpen] = useState(false);
   const known = PERSONAS.find((p) => p.id === current);
+  const [live, setLive] = useState(liveState.count);
+  useEffect(() => { const t = setInterval(() => setLive(liveState.count), 1500); return () => clearInterval(t); }, []);
   const pick = (id: string | null) => { setOpen(false); setUser(id); try { router.replace('/'); } catch { /* 라우터 준비 전 */ } };
   return (
     <View style={{ width: '100%', backgroundColor: '#0f1b33', zIndex: 1000 }}>
@@ -38,6 +40,7 @@ function PreviewBar() {
         style={{ minHeight: 40, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
         <Text style={{ color: '#9fb4dc', fontSize: 13, fontWeight: '600' }}>미리보기</Text>
         <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '700', flex: 1 }} numberOfLines={1}>{known ? known.label : '새로 가입한 회원'} 화면</Text>
+        <Text style={{ color: live ? '#7ee2a8' : '#9fb4dc', fontSize: 12, fontWeight: '700' }}>{live ? `실제 공고 ${live}건` : '예시 공고'}</Text>
         <Text style={{ color: '#9fb4dc', fontSize: 13, fontWeight: '600' }}>{open ? '닫기 ▲' : '사용자 바꾸기 ▼'}</Text>
       </Pressable>
       {open ? (
