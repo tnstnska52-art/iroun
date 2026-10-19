@@ -80,6 +80,8 @@ export const benefitSchema = z.object({
     confidence: z.number().int().min(0).max(100),
     evidence: z.array(z.object({field: z.string().max(40), label: z.string().max(200), quote: z.string().max(200)}).strict()).max(40),
     missing: z.array(z.string().max(60)).max(20), cautions: z.array(z.string().max(200)).max(20), at: z.string().max(40),
+    // AI 로 원문을 읽어 정리한 기록(모델·정리 규칙 버전). 다시 정리할지 판단하는 데 쓴다.
+    ai: z.object({model: z.string().max(60), version: z.number().int().min(1).max(1000)}).strict().optional(),
   }).strict().optional(),
 }).strict();
 export type Benefit = z.infer<typeof benefitSchema>;

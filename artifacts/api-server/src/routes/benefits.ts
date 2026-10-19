@@ -10,6 +10,7 @@ import { registerDevice } from "../lib/push-delivery";
 import { bizinfoStatus,runBizinfoFeed } from "../lib/official-feed";
 import { extractNotice } from "../lib/notice-extract";
 import {publicFeedStatus,runPublicFeed} from "../lib/public-feeds";
+import {aiJob,aiReady,runAiStructuring} from "../lib/ai-structure";
 import {claimPendingCrm,ensureCrmTables,crmSyncReady} from "../lib/crm-contracts";
 
 type AuthedRequest = Request & { customerId?: string };
@@ -198,6 +199,13 @@ benefitsRouter.post("/admin/extract",async(req,res)=>{
   res.json(extractNotice(input));
 });
 benefitsRouter.post("/admin/feeds/bizinfo/run",async(_req,res)=>res.json(await runBizinfoFeed()));
+// AI 공고 정리: 바로 시작만 하고 진행 상황은 /admin/ai/status 로 본다.
+benefitsRouter.post("/admin/ai/run",async(_req,res)=>{
+  if(!aiReady()) throw fail("ANTHROPIC_API_KEY 설정이 필요합니다.",409);
+  if(!aiJob.running) void runAiStructuring().catch(()=>undefined);
+  res.json({...aiJob,running:true});
+});
+benefitsRouter.get("/admin/ai/status",async(_req,res)=>res.json({ready:aiReady(),...aiJob}));
 benefitsRouter.post("/admin/feeds/public/run",async(req,res)=>{
   const source=z.enum(["gov24","welfareCentral","welfareLocal"]).parse(req.body?.source);
   res.json(await runPublicFeed(source));

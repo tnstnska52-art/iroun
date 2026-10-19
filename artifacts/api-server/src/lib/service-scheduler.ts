@@ -4,6 +4,7 @@ import { logger } from "./logger";
 import {catalog} from "./public-feed-model";
 import {runPublicFeed,publicFeedScheduleReady} from "./public-feeds";
 import {crmSyncReady,startCrmSync} from "./crm-contracts";
+import {aiReady,runAiStructuring} from "./ai-structure";
 /** Opt-in only. No key/flag means no provider call and no success log. */
 export function startServiceScheduler(){
   const timers:ReturnType<typeof setInterval>[]=[];
@@ -18,7 +19,8 @@ export function startServiceScheduler(){
   }
   const feedConfig=bizinfoFeedConfiguration();
   if(feedConfig.ready){
-    const run=()=>{void runBizinfoFeed().catch(()=>logger.warn("공식 수집 실패: 관리자 확인 필요"));};
+    // 수집이 끝나면 새 공고를 AI 로 정리한다(키가 있을 때만).
+    const run=()=>{void runBizinfoFeed().catch(()=>logger.warn("공식 수집 실패: 관리자 확인 필요")).then(()=>aiReady()?runAiStructuring():undefined).catch(()=>logger.warn("AI 공고 정리 실패"));};
     run();
     timers.push(setInterval(run,feedConfig.intervalMinutes*60000));
   }
