@@ -5,6 +5,15 @@ import {catalog} from "./public-feed-model";
 import {runPublicFeed,publicFeedScheduleReady} from "./public-feeds";
 import {crmSyncReady,startCrmSync} from "./crm-contracts";
 import {aiReady,runAiStructuring} from "./ai-structure";
+import {gov24BulkReady,hideDuplicates,kstartupReady,runGov24Bulk,runKstartup} from "./bulk-feeds";
+/** 기업마당 → 정부24 전체(하루 1번) → K-Startup → AI 정리 → 중복 정리. 출처 하나가 실패해도 나머지는 계속한다. */
+export async function collectAll(){
+  await runBizinfoFeed().catch(()=>logger.warn("기업마당 수집 실패: 관리자 확인 필요"));
+  if(gov24BulkReady())await runGov24Bulk().catch(e=>logger.warn({err:(e as Error).message},"정부24 전체 수집 실패"));
+  if(kstartupReady())await runKstartup().catch(e=>logger.warn({err:(e as Error).message},"K-Startup 수집 실패"));
+  if(aiReady())await runAiStructuring().catch(()=>logger.warn("AI 공고 정리 실패"));
+  await hideDuplicates().catch(()=>logger.warn("중복 공고 정리 실패"));
+}
 /** Opt-in only. No key/flag means no provider call and no success log. */
 export function startServiceScheduler(){
   const timers:ReturnType<typeof setInterval>[]=[];
@@ -12,6 +21,8 @@ export function startServiceScheduler(){
     const configuredMinutes=Number(process.env.IROUN_FEED_INTERVAL_MINUTES);
     const intervalMinutes=Math.max(60,Number.isInteger(configuredMinutes)&&configuredMinutes>=15&&configuredMinutes<=10080?configuredMinutes:60);
     for(const source of Object.keys(catalog) as (keyof typeof catalog)[]){
+      // 정부24 전체 수집을 쓰면 시간당 2건짜리 소량 수집은 돌리지 않는다(같은 자료를 두 번 보지 않게).
+      if(source==="gov24"&&gov24BulkReady())continue;
       if(publicFeedScheduleReady(source)){
         timers.push(setInterval(()=>{void runPublicFeed(source).catch(()=>logger.warn("공공서비스 수집 확인 필요"));},intervalMinutes*60000));
       }
@@ -20,7 +31,7 @@ export function startServiceScheduler(){
   const feedConfig=bizinfoFeedConfiguration();
   if(feedConfig.ready){
     // 수집이 끝나면 새 공고를 AI 로 정리한다(키가 있을 때만).
-    const run=()=>{void runBizinfoFeed().catch(()=>logger.warn("공식 수집 실패: 관리자 확인 필요")).then(()=>aiReady()?runAiStructuring():undefined).catch(()=>logger.warn("AI 공고 정리 실패"));};
+    const run=()=>{void collectAll().catch(()=>logger.warn("공고 수집·정리 실패"));};
     run();
     timers.push(setInterval(run,feedConfig.intervalMinutes*60000));
   }

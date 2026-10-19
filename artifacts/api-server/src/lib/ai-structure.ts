@@ -19,7 +19,7 @@ type Rule = Benefit["rules"][number];
 export const AI_INDUSTRIES = ["음식점", "도소매", "서비스", "제조", "건설", "운수", "숙박", "교육", "보건·복지", "정보통신", "농림어업", "기타"] as const;
 const PROVINCE_KEYS = ["전국", "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
 export const AI_VERSION = 2;
-const SOURCES = ["bizinfo-", "gov24-", "welfareCentral-", "welfareLocal-"];
+const SOURCES = ["bizinfo-", "kstartup-", "gov24-", "welfareCentral-", "welfareLocal-"];
 
 export interface AiResult {
   is_business_support: boolean;
@@ -219,6 +219,8 @@ export function aiReviewStatus(prev: Benefit, next: Benefit, x: AiResult): Benef
   if (process.env.IROUN_AI_AUTO_PUBLISH === "false") return prev.reviewStatus;
   if (!x.is_business_support || x.is_loan_or_guarantee || excludedCategory(next)) return "비공개";
   if (prev.reviewStatus === "비공개" && !prev.extraction?.ai) return "비공개";
+  // 다른 출처에 같은 사업이 공개돼 있으면 계속 숨긴다(중복 정리).
+  if (prev.duplicateOf) return "비공개";
   if (next.status === "마감") return prev.reviewStatus === "공개" ? "공개" : "검토대기";
   return publicBenefit({ ...next, reviewStatus: "공개" }) ? "공개" : prev.reviewStatus;
 }

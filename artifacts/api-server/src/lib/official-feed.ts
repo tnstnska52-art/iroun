@@ -103,7 +103,8 @@ export async function runBizinfoFeed(fetcher:typeof fetch=fetch,testMode=false){
     let created=0,updated=0,published=0;
     const pageStart=Math.max(1,Number(feedState.nextPage)||1);
     const dailyValue=Number(process.env.IROUN_BIZINFO_DAILY_LIMIT);
-    const dailyLimit=Number.isInteger(dailyValue)&&dailyValue>0?Math.min(dailyValue,24):24;
+    // 기업마당은 별도 일일 호출 한도를 공지하지 않는다. 시간당 최대 10쪽 × 24회 = 240회가 기본 상한.
+    const dailyLimit=Number.isInteger(dailyValue)&&dailyValue>0?Math.min(dailyValue,1000):240;
     // This deliberately bounded page window is not a nationwide-completeness claim.
     for(let offset=0;offset<config.maxPages;offset++){
       const pageIndex=pageStart+offset;

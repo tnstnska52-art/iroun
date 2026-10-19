@@ -11,6 +11,8 @@ import { bizinfoStatus,runBizinfoFeed } from "../lib/official-feed";
 import { extractNotice } from "../lib/notice-extract";
 import {publicFeedStatus,runPublicFeed} from "../lib/public-feeds";
 import {aiJob,aiReady,runAiStructuring} from "../lib/ai-structure";
+import {bulkFeedStatus,hideDuplicates,runGov24Bulk,runKstartup} from "../lib/bulk-feeds";
+import {collectAll} from "../lib/service-scheduler";
 import {claimPendingCrm,ensureCrmTables,crmSyncReady} from "../lib/crm-contracts";
 
 type AuthedRequest = Request & { customerId?: string };
@@ -191,7 +193,7 @@ benefitsRouter.get("/admin/dashboard",async(_req,res)=>{
   res.json({benefits:await allBenefits(),users:customers,
     audit:(await pool.query("SELECT * FROM iroun_audit ORDER BY id DESC LIMIT 300")).rows,
     deletions:(await pool.query("SELECT * FROM iroun_deletions ORDER BY created_at DESC LIMIT 100")).rows,
-    connections:[...connections.filter(c=>!["정부24","기업마당"].includes(c.name)),await bizinfoStatus(),...await publicFeedStatus()]});
+    connections:[...connections.filter(c=>!["정부24","기업마당"].includes(c.name)),await bizinfoStatus(),...await publicFeedStatus(),...await bulkFeedStatus()]});
 });
 // 공고 원문을 붙여 넣으면 지역·조건·금액·서류를 뽑아 준다. 저장하지 않고 결과만 돌려준다.
 benefitsRouter.post("/admin/extract",async(req,res)=>{
@@ -206,6 +208,14 @@ benefitsRouter.post("/admin/ai/run",async(_req,res)=>{
   res.json({...aiJob,running:true});
 });
 benefitsRouter.get("/admin/ai/status",async(_req,res)=>res.json({ready:aiReady(),...aiJob}));
+// 정부24 전체·K-Startup 수집과 중복 정리를 지금 바로 돌린다(결과를 기다리지 않음).
+benefitsRouter.post("/admin/feeds/all/run",async(req,res)=>{
+  const which=z.enum(["all","gov24","kstartup","dedupe"]).default("all").parse(req.body?.source);
+  const job=which==="gov24"?runGov24Bulk(fetch,true):which==="kstartup"?runKstartup():which==="dedupe"?hideDuplicates():collectAll();
+  void Promise.resolve(job).then(async()=>{if(which!=="dedupe"&&which!=="all"&&aiReady()){await runAiStructuring();await hideDuplicates();}}).catch(()=>undefined);
+  res.json({started:which});
+});
+benefitsRouter.get("/admin/feeds/status",async(_req,res)=>res.json({feeds:[await bizinfoStatus(),...await publicFeedStatus(),...await bulkFeedStatus()],ai:{ready:aiReady(),...aiJob}}));
 benefitsRouter.post("/admin/feeds/public/run",async(req,res)=>{
   const source=z.enum(["gov24","welfareCentral","welfareLocal"]).parse(req.body?.source);
   res.json(await runPublicFeed(source));

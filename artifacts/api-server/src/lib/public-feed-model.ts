@@ -39,7 +39,7 @@ export function mapPublicBenefit(source:PublicFeed,list:Row,detail:Row,condition
   const docs=gov?text(detail["구비서류"]):rows(detail.basfrmList).map(x=>text(x.servSeDetailNm??x.servSeDetailLink)).filter(Boolean).join("; ");
   const method=gov?text(detail["신청방법"]):local?text(detail.aplyMtdCn):"공식 원문의 신청방법과 담당기관 확인 필요";
   return benefitSchema.parse({id:`${source}-${id}`,sourceId:`${source}:${id}`,title,
-    kind:"지원금",audience:gov&&text(list["사용자구분"]).includes("법인")?"사업":childTarget?"가구":"개인",category:text(gov?list["서비스분야"]:list.intrsThemaNmArray??list.intrsThemaArray)||"공공 혜택",
+    kind:"지원금",audience:gov&&/법인|소상공인/.test(text(list["사용자구분"]))?"사업":childTarget?"가구":"개인",category:text(gov?list["서비스분야"]:list.intrsThemaNmArray??list.intrsThemaArray)||"공공 혜택",
     region:local?`${text(list.ctpvNm)} ${text(list.sggNm)}`:"관할 확인 필요",
     agency,sourceUrl:raw,summary:(text(gov?list["서비스목적요약"]:list.servDgst)||support||"공식 원문 확인 필요").slice(0,1000),
     support:(support||"지원내용 원문 확인 필요").slice(0,5000),
