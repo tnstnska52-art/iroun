@@ -18,7 +18,7 @@ type Rule = Benefit["rules"][number];
 /** 앱·홈페이지에서 고르는 업종 목록과 같아야 한다. */
 export const AI_INDUSTRIES = ["음식점", "도소매", "서비스", "제조", "건설", "운수", "숙박", "교육", "보건·복지", "정보통신", "농림어업", "기타"] as const;
 const PROVINCE_KEYS = ["전국", "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
-export const AI_VERSION = 1;
+export const AI_VERSION = 2;
 const SOURCES = ["bizinfo-", "gov24-", "welfareCentral-", "welfareLocal-"];
 
 export interface AiResult {
@@ -40,6 +40,8 @@ export interface AiResult {
   documents: string[];
   summary: string;
   unclear: string[];
+  fit_industries: string[];
+  small_business_fit: number;
 }
 
 const TOOL = {
@@ -48,7 +50,7 @@ const TOOL = {
   input_schema: {
     type: "object",
     additionalProperties: false,
-    required: ["is_business_support", "is_loan_or_guarantee", "region", "industries", "max_employees", "min_employees", "max_years_in_business", "min_years_in_business", "max_revenue_won", "min_revenue_won", "entity", "target", "max_amount_won", "starts_at", "ends_at", "documents", "summary", "unclear"],
+    required: ["is_business_support", "is_loan_or_guarantee", "region", "industries", "max_employees", "min_employees", "max_years_in_business", "min_years_in_business", "max_revenue_won", "min_revenue_won", "entity", "target", "max_amount_won", "starts_at", "ends_at", "documents", "summary", "unclear", "fit_industries", "small_business_fit"],
     properties: {
       is_business_support: { type: "boolean", description: "사업자(소상공인·중소기업·스타트업 등)가 신청하는 지원사업이면 true. 개인·가구 복지, 행사 안내, 기관 내부 공고, 수요조사·설문만이면 false." },
       is_loan_or_guarantee: { type: "boolean", description: "대출·융자·보증·이자 지원·이차보전이 주된 내용이면 true." },
@@ -68,6 +70,8 @@ const TOOL = {
       documents: { type: "array", items: { type: "string" }, description: "신청 제출 서류 이름(최대 12개)." },
       summary: { type: "string", description: "사장님이 이해하기 쉬운 지원 내용 요약 2문장 이내." },
       unclear: { type: "array", items: { type: "string" }, description: "원문에서 확인하지 못한 중요한 자격 조건(최대 5개)." },
+      fit_industries: { type: "array", items: { type: "string", enum: [...AI_INDUSTRIES] }, description: "자격 제한과 별개로, 이 사업이 실제로 쓸모 있는 업종(최대 4개). 예: 음식점 위생시설 지원 → 음식점, 해외인증·수출 → 제조, SW 개발 → 정보통신. 업종과 무관하게 모든 자영업자에게 쓸모 있으면(카드수수료·노무·경영 기초) 빈 배열." },
+      small_business_fit: { type: "integer", minimum: 1, maximum: 5, description: "동네 가게·1~4인 소상공인이 실제로 신청해 혜택을 볼 가능성. 5=소상공인 전용·서류 간단, 3=중소기업 일반, 1=연구개발·대규모 컨소시엄·기술기업 전용." },
     },
   },
 } as const;
@@ -201,6 +205,7 @@ export function applyAi(b: Benefit, x: AiResult, model: string, now = new Date()
     status,
     budgetStatus: status === "마감" ? b.budgetStatus : "해당 없음",
     checks: checks.slice(0, 50),
+    fit: { industries: (x.fit_industries ?? []).filter((i) => (AI_INDUSTRIES as readonly string[]).includes(i)).slice(0, 4), small: Math.max(1, Math.min(5, Math.round(Number(x.small_business_fit) || 3))) },
     extraction: {
       confidence: Math.max(0, Math.min(100, 100 - unclear.length * 15)),
       evidence: [], missing: unclear.slice(0, 20).map((s) => s.slice(0, 60)), cautions: unclear,

@@ -11,7 +11,7 @@ const base: Benefit = {
 const ai: AiResult = {
   is_business_support: true, is_loan_or_guarantee: false, region: "경기 시흥시", industries: ["음식점", "도소매"],
   max_employees: 4, min_employees: null, max_years_in_business: 7, min_years_in_business: null, max_revenue_won: 300000000, min_revenue_won: null,
-  entity: "무관", target: ["소상공인"], max_amount_won: 3000000, starts_at: "2026-10-01", ends_at: "2026-11-30", documents: ["사업자등록증명"], summary: "점포 개선비 최대 300만원", unclear: [],
+  entity: "무관", target: ["소상공인"], max_amount_won: 3000000, starts_at: "2026-10-01", ends_at: "2026-11-30", documents: ["사업자등록증명"], summary: "점포 개선비 최대 300만원", unclear: [], fit_industries: ["음식점"], small_business_fit: 5,
 };
 const now = new Date("2026-10-19T03:00:00Z");
 const profile = (biz: Record<string, unknown>) => ({ personal: {}, businesses: [{ id: "w", ...biz }], step: 0 }) as never;
@@ -24,7 +24,8 @@ describe("AI 공고 정리 반영", () => {
     expect(b.maxAmount).toBe(3000000);
     expect(b.status).toBe("접수 중");
     expect(b.checks).toEqual([]);
-    expect(b.extraction?.ai?.version).toBe(1);
+    expect(b.extraction?.ai?.version).toBe(2);
+    expect(b.fit).toEqual({ industries: ["음식점"], small: 5 });
   });
   it("조건이 맞는 사업장은 조건 일치, 다른 지역·업종은 제외", () => {
     const ok = matchBenefit(b, profile({ industry: "음식점", province: "경기도", district: "시흥시", openedYear: 2024, revenue: "1억~3억 원", employeeBand: "1~4명" }), now)[0]!;
