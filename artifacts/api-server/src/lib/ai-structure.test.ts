@@ -24,7 +24,7 @@ describe("AI 공고 정리 반영", () => {
     expect(b.maxAmount).toBe(3000000);
     expect(b.status).toBe("접수 중");
     expect(b.checks).toEqual([]);
-    expect(b.extraction?.ai?.version).toBe(2);
+    expect(b.extraction?.ai?.version).toBe(3);
     expect(b.fit).toEqual({ industries: ["음식점"], small: 5 });
   });
   it("조건이 맞는 사업장은 조건 일치, 다른 지역·업종은 제외", () => {
@@ -32,6 +32,14 @@ describe("AI 공고 정리 반영", () => {
     expect(ok.result).toBe("조건 일치");
     expect(matchBenefit(b, profile({ industry: "제조", province: "경기도", district: "시흥시", openedYear: 2024, revenue: "1억~3억 원", employeeBand: "1~4명" }), now)[0]!.result).toBe("대상 제외");
     expect(matchBenefit(b, profile({ industry: "음식점", province: "경기도", district: "수원시", openedYear: 2024, revenue: "1억~3억 원", employeeBand: "1~4명" }), now)[0]!.result).toBe("대상 제외");
+  });
+  it("여러 시·군·구로 제한된 공고는 그 밖의 시·군·구를 제외한다", () => {
+    const m = applyAi(base, { ...ai, region: "경기", districts: ["의정부시", "경기 구리시"] }, "m", now);
+    expect(m.region).toBe("경기");
+    const biz = { industry: "음식점", province: "경기도", openedYear: 2024, revenue: "1억~3억 원", employeeBand: "1~4명" };
+    expect(matchBenefit(m, profile({ ...biz, district: "부천시" }), now)[0]!.result).toBe("대상 제외");
+    expect(matchBenefit(m, profile({ ...biz, district: "구리시" }), now)[0]!.result).toBe("조건 일치");
+    expect(applyAi(base, { ...ai, region: "경기", districts: ["부천시"] }, "m", now).region).toBe("경기 부천시");
   });
   it("사업자 지원이 아니거나 대출이면 비공개", () => {
     expect(aiReviewStatus(base, b, { ...ai, is_business_support: false })).toBe("비공개");

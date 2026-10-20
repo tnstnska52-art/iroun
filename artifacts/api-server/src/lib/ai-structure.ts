@@ -18,7 +18,7 @@ type Rule = Benefit["rules"][number];
 /** 앱·홈페이지에서 고르는 업종 목록과 같아야 한다. */
 export const AI_INDUSTRIES = ["음식점", "도소매", "서비스", "제조", "건설", "운수", "숙박", "교육", "보건·복지", "정보통신", "농림어업", "기타"] as const;
 const PROVINCE_KEYS = ["전국", "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
-export const AI_VERSION = 2;
+export const AI_VERSION = 3;
 const SOURCES = ["bizinfo-", "kstartup-", "gov24-", "welfareCentral-", "welfareLocal-"];
 
 export interface AiResult {
@@ -42,6 +42,7 @@ export interface AiResult {
   unclear: string[];
   fit_industries: string[];
   small_business_fit: number;
+  districts?: string[];
 }
 
 const TOOL = {
@@ -50,11 +51,12 @@ const TOOL = {
   input_schema: {
     type: "object",
     additionalProperties: false,
-    required: ["is_business_support", "is_loan_or_guarantee", "region", "industries", "max_employees", "min_employees", "max_years_in_business", "min_years_in_business", "max_revenue_won", "min_revenue_won", "entity", "target", "max_amount_won", "starts_at", "ends_at", "documents", "summary", "unclear", "fit_industries", "small_business_fit"],
+    required: ["is_business_support", "is_loan_or_guarantee", "region", "industries", "max_employees", "min_employees", "max_years_in_business", "min_years_in_business", "max_revenue_won", "min_revenue_won", "entity", "target", "max_amount_won", "starts_at", "ends_at", "documents", "summary", "unclear", "fit_industries", "small_business_fit", "districts"],
     properties: {
       is_business_support: { type: "boolean", description: "사업자(소상공인·중소기업·스타트업 등)가 신청하는 지원사업이면 true. 개인·가구 복지, 행사 안내, 기관 내부 공고, 수요조사·설문만이면 false." },
       is_loan_or_guarantee: { type: "boolean", description: "대출·융자·보증·이자 지원·이차보전이 주된 내용이면 true." },
       region: { type: "string", description: `지원 대상 사업장 소재지. 형식: "전국" 또는 시·도 약칭(${PROVINCE_KEYS.slice(1).join(", ")}) 또는 "시·도약칭 시군구명"(예: "경기 시흥시"). 원문에 지역 제한이 없으면 "전국". 주관기관이 지자체·지역 기관이고 '관내/도내/시내 소재 기업' 대상이면 그 지역.` },
+      districts: { type: "array", items: { type: "string" }, description: "지원 대상 사업장이 특정 시·군·구로 제한되면 그 이름 전부(예: '의정부시·구리시 소재 음식점' → [\"의정부시\", \"구리시\"]). 시·도 전체나 전국이면 빈 배열. 주관기관 소재지가 아니라 '지원 대상' 지역만." },
       industries: { type: "array", items: { type: "string", enum: [...AI_INDUSTRIES] }, description: "지원 대상 업종이 특정되면 해당하는 것만. 업종 제한이 없으면 빈 배열." },
       max_employees: { type: ["integer", "null"], description: "상시근로자 수 상한(명). 예: '상시근로자 10인 미만' → 9. 없으면 null." },
       min_employees: { type: ["integer", "null"], description: "상시근로자 수 하한(명). 없으면 null." },
@@ -70,7 +72,7 @@ const TOOL = {
       documents: { type: "array", items: { type: "string" }, description: "신청 제출 서류 이름(최대 12개)." },
       summary: { type: "string", description: "사장님이 이해하기 쉬운 지원 내용 요약 2문장 이내." },
       unclear: { type: "array", items: { type: "string" }, description: "원문에서 확인하지 못한 중요한 자격 조건(최대 5개)." },
-      fit_industries: { type: "array", items: { type: "string", enum: [...AI_INDUSTRIES] }, description: "자격 제한과 별개로, 이 사업이 실제로 쓸모 있는 업종(최대 4개). 예: 음식점 위생시설 지원 → 음식점, 해외인증·수출 → 제조, SW 개발 → 정보통신. 업종과 무관하게 모든 자영업자에게 쓸모 있으면(카드수수료·노무·경영 기초) 빈 배열." },
+      fit_industries: { type: "array", items: { type: "string", enum: [...AI_INDUSTRIES] }, description: "자격 제한과 별개로, 이 사업이 실제로 쓸모 있는 업종(최대 4개). 예: 음식점 위생시설 지원 → 음식점, 해외인증·수출 → 제조, SW 개발 → 정보통신. '음식점'은 손님에게 음식을 파는 식당·카페·외식업만 뜻한다. 식품 제조·가공·소스 개발·식품 수출은 '제조'다. 업종과 무관하게 모든 자영업자에게 쓸모 있으면(카드수수료·노무·경영 기초) 빈 배열." },
       small_business_fit: { type: "integer", minimum: 1, maximum: 5, description: "동네 가게·1~4인 소상공인이 실제로 신청해 혜택을 볼 가능성. 5=소상공인 전용·서류 간단, 3=중소기업 일반, 1=연구개발·대규모 컨소시엄·기술기업 전용." },
     },
   },
@@ -194,7 +196,14 @@ export function applyAi(b: Benefit, x: AiResult, model: string, now = new Date()
     : Number.isFinite(endT) ? "접수 중" : b.status === "마감" ? "마감" : "상시 조회";
   const amount = int(x.max_amount_won);
   const summary = typeof x.summary === "string" && x.summary.trim() ? x.summary.trim().slice(0, 1000) : b.summary;
-  const region = normalizeRegion(x.region);
+  let region = normalizeRegion(x.region);
+  // 여러 시·군·구로 제한된 공고: 지역은 시·도로 두고 시·군·구 목록을 조건으로 넣는다. 한 곳이면 지역에 붙인다.
+  const districts = [...new Set((x.districts ?? []).map((d) => String(d).trim().split(/\s+/).pop() ?? "").filter((d) => /^[가-힣]{1,6}(시|군|구)$/.test(d)))].slice(0, 30);
+  const province = region.split(" ")[0]!;
+  if (PROVINCE_KEYS.includes(province) && province !== "전국" && districts.length) {
+    if (districts.length === 1) region = `${province} ${districts[0]}`;
+    else if (!region.includes(" ")) rules.push({ scope: "business", field: "district", operator: "in", value: districts, label: `지역: ${province} ${districts.join("·")}` });
+  }
 
   return benefitSchema.parse({
     ...b,
@@ -230,8 +239,10 @@ export function aiReviewStatus(prev: Benefit, next: Benefit, x: AiResult): Benef
 
 export const aiJob = { running: false, total: 0, done: 0, failed: 0, published: 0, hidden: 0, startedAt: "", finishedAt: "", lastError: "", model: "" };
 
+/** v3 는 시·군·구 목록만 바뀐 것이라, 지역이 시·도 하나로만 적힌 공고만 다시 읽는다(비용 절약). */
+const provinceOnly = (b: Benefit) => b.region !== "전국" && !b.region.trim().includes(" ") && b.reviewStatus !== "비공개";
 const needsAi = (b: Benefit) => !b.isTest && b.audience === "사업" && SOURCES.some((s) => b.id.startsWith(s))
-  && (!b.extraction?.ai || b.extraction.ai.version < AI_VERSION
+  && (!b.extraction?.ai || b.extraction.ai.version < 2 || (b.extraction.ai.version < AI_VERSION && provinceOnly(b))
     // 원문이 바뀌어 다시 검토대기가 된 공고는 다시 읽는다.
     || b.stale === true
     || (b.reviewStatus === "검토대기" && Date.parse(b.checkedAt) > Date.parse(b.extraction.at)));
