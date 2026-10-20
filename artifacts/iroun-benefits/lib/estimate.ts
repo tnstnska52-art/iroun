@@ -12,7 +12,7 @@ export const IS_PREVIEW = process.env.EXPO_PUBLIC_PREVIEW === '1';
 export const FREE_COUNT = 3;
 
 export interface EstimateItem { benefit: Benefit; result: '조건 일치' | '추가 확인 필요'; /** 고른 업종에 맞춤인 공고 */ tailored?: boolean }
-export interface Estimate { items: EstimateItem[]; total: number; counted: number; noAmount: number; /** 합계에서 뺀 10억 초과 대형사업 수 */ big: number; /** 업종 맞춤 건수 */ tailored: number; /** 소상공인 적합(4~5점) 건수 */ small: number }
+export interface Estimate { items: EstimateItem[]; total: number; counted: number; noAmount: number; /** 합계에서 뺀 10억 초과 대형사업 수 */ big: number; /** 업종 맞춤 건수 */ tailored: number; /** 소상공인 적합(4~5점) 건수 */ small: number; /** 정밀 모드에서 목록에서 뺀 '추가 확인 필요' 공고(담당자가 원문 확인) */ pending: EstimateItem[] }
 /** 이 금액을 넘는 공고(대형 R&D·인프라)는 합계에서 빼고 뒤로 보낸다. 홈페이지와 같다. */
 export const BIG = 1_000_000_000;
 type Fit = { industries: string[]; small: number };
@@ -45,7 +45,7 @@ function summarize(items: EstimateItem[], profile: Profile): Estimate {
   return {
     items, total: withAmount.reduce((n, x) => n + (x.benefit.maxAmount ?? 0), 0), counted: withAmount.length,
     noAmount: items.filter((x) => !(x.benefit.maxAmount ?? 0)).length, big: items.filter((x) => (x.benefit.maxAmount ?? 0) > BIG).length,
-    tailored: items.filter((x) => x.tailored).length, small: items.filter((x) => smallFit(x.benefit) >= 4).length,
+    tailored: items.filter((x) => x.tailored).length, small: items.filter((x) => smallFit(x.benefit) >= 4).length, pending: [],
   };
 }
 
@@ -53,15 +53,28 @@ function summarize(items: EstimateItem[], profile: Profile): Estimate {
  * 받을 수 있는 지원금. 내 조건으로 '대상 제외'가 아닌 진행 중 공고를 모으고,
  * 공고 원문에 적힌 최대 금액만 더한다. 실제 지급액·선정 여부를 뜻하지 않는다.
  */
-export function estimate(benefits: Benefit[], profile: Profile): Estimate {
-  const items: EstimateItem[] = [];
+export function estimate(benefits: Benefit[], profile: Profile, strict = false): Estimate {
+  const items: EstimateItem[] = [], pending: EstimateItem[] = [];
   for (const b of benefits) {
     if (isClosed(b)) continue;
     const r = match(b, profile);
     if (r.includes('조건 일치')) items.push({ benefit: b, result: '조건 일치' });
-    else if (r.includes('추가 확인 필요')) items.push({ benefit: b, result: '추가 확인 필요' });
+    else if (r.includes('추가 확인 필요')) (strict ? pending : items).push({ benefit: b, result: '추가 확인 필요' });
   }
-  return summarize(items, profile);
+  const est = summarize(items, profile);
+  // 정밀 모드(패키지 고객): 목록·금액은 조건이 확실히 맞는 공고만. 나머지는 담당자 확인용으로 따로 둔다.
+  if (strict) est.pending = summarize(pending, profile).items;
+  return est;
+}
+
+/** 정밀 조건(대표자 출생연도·사업자 형태·여성 대표 여부)을 다 골랐는지 */
+export function preciseDone(p?: Profile | null): boolean {
+  const b = p?.businesses[0] as { entity?: string; womanOwned?: string } | undefined;
+  return !!p?.personal?.birthYear && !!b?.entity && !!b?.womanOwned;
+}
+/** 지원금 패키지(회사 계약) 고객이고 정밀 조건까지 골랐으면 '조건 일치만' 보여준다. */
+export function strictMode(contractActive: boolean | undefined, p?: Profile | null): boolean {
+  return !!contractActive && preciseDone(p);
 }
 
 /**

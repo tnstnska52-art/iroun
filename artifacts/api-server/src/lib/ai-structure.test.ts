@@ -24,7 +24,7 @@ describe("AI 공고 정리 반영", () => {
     expect(b.maxAmount).toBe(3000000);
     expect(b.status).toBe("접수 중");
     expect(b.checks).toEqual([]);
-    expect(b.extraction?.ai?.version).toBe(3);
+    expect(b.extraction?.ai?.version).toBe(4);
     expect(b.fit).toEqual({ industries: ["음식점"], small: 5 });
   });
   it("조건이 맞는 사업장은 조건 일치, 다른 지역·업종은 제외", () => {
@@ -43,6 +43,25 @@ describe("AI 공고 정리 반영", () => {
     // 시·도 이름은 시·군·구 목록에서 뺀다
     expect(applyAi(base, { ...ai, region: "서울", districts: ["서울특별시", "강동구"] }, "m", now).region).toBe("서울 강동구");
     expect(applyAi(base, { ...ai, region: "대구", districts: ["대구", "수성구", "남구"] }, "m", now).rules.find((r) => r.field === "district")?.value).toEqual(["수성구", "남구"]);
+  });
+  it("정밀 조건: 청년·여성·법인·예비창업자 전용을 조건으로 저장하고 판정한다", () => {
+    const m = applyAi(base, { ...ai, industries: [], max_employees: null, max_years_in_business: null, max_revenue_won: null, entity: "법인", representative_max_age: 39, woman_owned_only: true }, "m", now);
+    expect(m.rules.map((r) => r.field)).toEqual(["entity", "age", "womanOwned"]);
+    const biz = { province: "경기도", district: "시흥시", openedYear: 2024 };
+    const who = (personal: Record<string, unknown>, b: Record<string, unknown>) => ({ personal, businesses: [{ id: "w", ...biz, ...b }], step: 0 }) as never;
+    expect(matchBenefit(m, who({ birthYear: 1995 }, { entity: "법인", womanOwned: "예" }), now)[0]!.result).toBe("조건 일치");
+    expect(matchBenefit(m, who({ birthYear: 1970 }, { entity: "법인", womanOwned: "예" }), now)[0]!.result).toBe("대상 제외");
+    expect(matchBenefit(m, who({ birthYear: 1995 }, { entity: "개인", womanOwned: "예" }), now)[0]!.result).toBe("대상 제외");
+    expect(matchBenefit(m, who({ birthYear: 1995 }, { entity: "법인", womanOwned: "아니오" }), now)[0]!.result).toBe("대상 제외");
+    // 정밀 조건을 안 고른 무료 고객은 빠지지 않고 '추가 확인 필요'
+    expect(matchBenefit(m, who({}, {}), now)[0]!.result).toBe("추가 확인 필요");
+    const pre = applyAi(base, { ...ai, industries: [], max_employees: null, max_years_in_business: null, max_revenue_won: null, pre_startup_only: true }, "m", now);
+    expect(matchBenefit(pre, who({}, {}), now)[0]!.result).toBe("대상 제외");
+  });
+  it("자격 제한이 없다고 확인된 공고는 조건 일치", () => {
+    const open = applyAi({ ...base, checks: [] }, { ...ai, industries: [], max_employees: null, max_years_in_business: null, max_revenue_won: null, open_to_all: true }, "m", now);
+    expect(open.openToAll).toBe(true);
+    expect(matchBenefit(open, profile({ province: "경기도", district: "시흥시" }), now)[0]!.result).toBe("조건 일치");
   });
   it("사업자 지원이 아니거나 대출이면 비공개", () => {
     expect(aiReviewStatus(base, b, { ...ai, is_business_support: false })).toBe("비공개");

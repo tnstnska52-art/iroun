@@ -31,6 +31,8 @@ export const businessSchema = z.object({
   openedYear: z.number().int().min(1900).max(new Date().getFullYear()).optional(),
   employeeBand: z.enum(EMPLOYEE_BANDS).optional(),
   premises: z.enum(["임차", "자가"]).optional(),
+  // 정밀 조건(패키지 고객): 여성 대표 여부
+  womanOwned: z.enum(["예", "아니오"]).optional(),
 }).strict();
 export const profileSchema = z.object({
   unknownAnswers: z.array(z.string().min(1).max(120)).max(500).optional(),
@@ -48,7 +50,7 @@ export const trackingSchema = z.object({
   saved: z.boolean(), stage: z.enum(["관심", "신청 준비", "신청함", "결과 확인", "지급 확인"]),
   checkedDocuments: z.array(z.string().max(200)).max(100), deadlineReminder: z.boolean(),
 }).strict();
-const fields = ["province", "district", "birthYear", "age", "income", "household", "children", "housing", "entity", "industry", "situation", "openedAt", "revenue", "employees", "duplicateBenefit", "premises"];
+const fields = ["province", "district", "birthYear", "age", "income", "household", "children", "housing", "entity", "industry", "situation", "openedAt", "revenue", "employees", "duplicateBenefit", "premises", "womanOwned"];
 export const ruleSchema = z.object({
   scope: z.enum(["personal", "business"]),
   field: z.enum(fields as [string, ...string[]]),
@@ -79,6 +81,8 @@ export const benefitSchema = z.object({
   fit: z.object({industries: z.array(z.string().max(20)).max(12), small: z.number().int().min(1).max(5)}).strict().optional(),
   // 다른 출처에 같은 사업이 이미 공개돼 있으면 그 공고 id. 이 공고는 비공개로 둔다.
   duplicateOf: z.string().max(80).optional(),
+  // 원문에 '사업자 누구나'처럼 자격 제한이 없다고 확인된 공고. 조건표가 비어도 '세부 자격 확인 필요'로 보지 않는다.
+  openToAll: z.boolean().optional(),
   // 공식 원문이 바뀌어 AI 가 다시 읽어야 하는 공고. 다시 읽으면 지운다.
   stale: z.boolean().optional(),
   // 자동 정리 기록: 원문 어느 문장에서 무엇을 읽었는지. 운영자 검토용이며 고객 판단에는 쓰지 않는다.
@@ -157,6 +161,11 @@ export function evalRule(r: Rule, business: Record<string, unknown>, p: Profile,
     expected=Array.isArray(expected)?expected.map(v=>typeof v==="string"?provinceKey(v)??v:v):typeof expected==="string"?provinceKey(expected)??expected:expected;
   }
   const empty = actual===undefined||actual===null||actual===""||actual==="잘 모르겠어요"||actual==="모름";
+  // 예비창업자 전용 공고: 개업연도·개업일을 입력한 사업장은 이미 사업자이므로 대상이 아니다.
+  if(r.scope==="business"&&r.field==="situation"&&empty&&(r.value==="예비창업자"||(Array.isArray(r.value)&&r.value.length===1&&r.value[0]==="예비창업자"))){
+    const bz=business as {openedYear?:number;openedAt?:string};
+    if(bz.openedYear||bz.openedAt)return {result:false,missing:false};
+  }
   const biz = business as {employeeBand?:string;openedYear?:number};
   const banded = r.scope==="business" && empty ? (
     r.field==="employees" && biz.employeeBand && BAND_RANGE[biz.employeeBand] ? rangeCompare(BAND_RANGE[biz.employeeBand]![0],BAND_RANGE[biz.employeeBand]![1],r.operator,expected)
@@ -202,7 +211,7 @@ export function matchBenefit(b: Benefit, p: Profile, now = new Date()) {
     if (b.startsAt && Number.isFinite(noticeTime(b.startsAt,"start")) && noticeTime(b.startsAt,"start") > now.getTime()) unknowns.push("아직 신청기간 전입니다.");
     if (b.status === "확인 필요") unknowns.push("현재 접수상태를 공식 신청처에서 확인해 주세요.");
     if (b.budgetStatus === "확인 필요") unknowns.push("예산 잔여를 확인해 주세요.");
-    if (!b.rules.length) unknowns.push("세부 자격은 공식 신청처에서 확인해야 합니다.");
+    if (!b.rules.length && !b.openToAll) unknowns.push("세부 자격은 공식 신청처에서 확인해야 합니다.");
     for (const r of b.rules) {
       const {result} = evalRule(r, business, p, year);
       if (result === true) reasons.push(`${r.label}: 입력 조건과 일치합니다.`);

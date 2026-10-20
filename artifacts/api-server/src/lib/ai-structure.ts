@@ -18,7 +18,7 @@ type Rule = Benefit["rules"][number];
 /** 앱·홈페이지에서 고르는 업종 목록과 같아야 한다. */
 export const AI_INDUSTRIES = ["음식점", "도소매", "서비스", "제조", "건설", "운수", "숙박", "교육", "보건·복지", "정보통신", "농림어업", "기타"] as const;
 const PROVINCE_KEYS = ["전국", "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"];
-export const AI_VERSION = 3;
+export const AI_VERSION = 4;
 const SOURCES = ["bizinfo-", "kstartup-", "gov24-", "welfareCentral-", "welfareLocal-"];
 
 export interface AiResult {
@@ -43,6 +43,11 @@ export interface AiResult {
   fit_industries: string[];
   small_business_fit: number;
   districts?: string[];
+  representative_max_age?: number | null;
+  representative_min_age?: number | null;
+  woman_owned_only?: boolean;
+  pre_startup_only?: boolean;
+  open_to_all?: boolean;
 }
 
 const TOOL = {
@@ -51,11 +56,16 @@ const TOOL = {
   input_schema: {
     type: "object",
     additionalProperties: false,
-    required: ["is_business_support", "is_loan_or_guarantee", "region", "industries", "max_employees", "min_employees", "max_years_in_business", "min_years_in_business", "max_revenue_won", "min_revenue_won", "entity", "target", "max_amount_won", "starts_at", "ends_at", "documents", "summary", "unclear", "fit_industries", "small_business_fit", "districts"],
+    required: ["is_business_support", "is_loan_or_guarantee", "region", "industries", "max_employees", "min_employees", "max_years_in_business", "min_years_in_business", "max_revenue_won", "min_revenue_won", "entity", "target", "max_amount_won", "starts_at", "ends_at", "documents", "summary", "unclear", "fit_industries", "small_business_fit", "districts", "representative_max_age", "representative_min_age", "woman_owned_only", "pre_startup_only", "open_to_all"],
     properties: {
       is_business_support: { type: "boolean", description: "사업자(소상공인·중소기업·스타트업 등)가 신청하는 지원사업이면 true. 개인·가구 복지, 행사 안내, 기관 내부 공고, 수요조사·설문만이면 false." },
       is_loan_or_guarantee: { type: "boolean", description: "대출·융자·보증·이자 지원·이차보전이 주된 내용이면 true." },
       region: { type: "string", description: `지원 대상 사업장 소재지. 형식: "전국" 또는 시·도 약칭(${PROVINCE_KEYS.slice(1).join(", ")}) 또는 "시·도약칭 시군구명"(예: "경기 시흥시"). 원문에 지역 제한이 없으면 "전국". 주관기관이 지자체·지역 기관이고 '관내/도내/시내 소재 기업' 대상이면 그 지역.` },
+      representative_max_age: { type: ["integer", "null"], description: "대표자 나이 상한(만 나이). 예: '청년(만 39세 이하) 대표' → 39. 없으면 null." },
+      representative_min_age: { type: ["integer", "null"], description: "대표자 나이 하한(만 나이). 예: '만 40세 이상 중장년' → 40. 없으면 null." },
+      woman_owned_only: { type: "boolean", description: "여성 대표(여성기업)만 신청할 수 있으면 true. 여성 우대·가점만 있으면 false." },
+      pre_startup_only: { type: "boolean", description: "사업자등록 전 예비창업자만 신청할 수 있고 이미 사업 중인 사업자는 신청할 수 없으면 true." },
+      open_to_all: { type: "boolean", description: "원문을 읽어 보니 지역 외에 업종·규모·업력·매출·대표자 등 별도 자격 제한 없이 사업자 누구나 신청할 수 있다고 확인되면 true. 원문에 자격이 안 보여 모르는 경우는 false." },
       districts: { type: "array", items: { type: "string" }, description: "지원 대상 사업장이 특정 시·군·구로 제한되면 그 이름 전부(예: '의정부시·구리시 소재 음식점' → [\"의정부시\", \"구리시\"]). 시·도 전체나 전국이면 빈 배열. 주관기관 소재지가 아니라 '지원 대상' 지역만." },
       industries: { type: "array", items: { type: "string", enum: [...AI_INDUSTRIES] }, description: "지원 대상 업종이 특정되면 해당하는 것만. 업종 제한이 없으면 빈 배열." },
       max_employees: { type: ["integer", "null"], description: "상시근로자 수 상한(명). 예: '상시근로자 10인 미만' → 9. 없으면 null." },
@@ -187,8 +197,12 @@ export function applyAi(b: Benefit, x: AiResult, model: string, now = new Date()
   if (minR !== null && minR > 0 && minR <= 100_000_000_000) rules.push({ scope: "business", field: "revenue", operator: "gte", value: minR, label: `연매출 ${Math.round(minR / 1e8 * 10) / 10}억 원 이상` });
 
   const checks: string[] = [];
-  if (x.entity === "법인") checks.push("법인사업자만 신청할 수 있습니다.");
-  if (x.entity === "개인") checks.push("개인사업자만 신청할 수 있습니다.");
+  if (x.entity === "법인" || x.entity === "개인") rules.push({ scope: "business", field: "entity", operator: "eq", value: x.entity, label: `${x.entity}사업자만 신청` });
+  const maxAge = int(x.representative_max_age), minAge = int(x.representative_min_age);
+  if (maxAge !== null && maxAge >= 15 && maxAge < 100) rules.push({ scope: "personal", field: "age", operator: "lte", value: maxAge, label: `대표자 만 ${maxAge}세 이하` });
+  if (minAge !== null && minAge >= 15 && minAge < 100) rules.push({ scope: "personal", field: "age", operator: "gte", value: minAge, label: `대표자 만 ${minAge}세 이상` });
+  if (x.woman_owned_only === true) rules.push({ scope: "business", field: "womanOwned", operator: "eq", value: "예", label: "여성 대표 사업장만 신청" });
+  if (x.pre_startup_only === true) rules.push({ scope: "business", field: "situation", operator: "eq", value: "예비창업자", label: "예비창업자 전용(이미 사업 중이면 대상 아님)" });
   const unclear = (x.unclear ?? []).filter((s) => typeof s === "string" && s.trim()).slice(0, 5).map((s) => s.trim().slice(0, 200));
 
   const starts = isoDate(x.starts_at) || b.startsAt.slice(0, 10);
@@ -221,6 +235,7 @@ export function applyAi(b: Benefit, x: AiResult, model: string, now = new Date()
     budgetStatus: status === "마감" ? b.budgetStatus : "해당 없음",
     checks: checks.slice(0, 50),
     stale: undefined,
+    openToAll: x.open_to_all === true && rules.length === 0 ? true : undefined,
     fit: { industries: (x.fit_industries ?? []).filter((i) => (AI_INDUSTRIES as readonly string[]).includes(i)).slice(0, 4), small: Math.max(1, Math.min(5, Math.round(Number(x.small_business_fit) || 3))) },
     extraction: {
       confidence: Math.max(0, Math.min(100, 100 - unclear.length * 15)),
@@ -243,10 +258,9 @@ export function aiReviewStatus(prev: Benefit, next: Benefit, x: AiResult): Benef
 
 export const aiJob = { running: false, total: 0, done: 0, failed: 0, published: 0, hidden: 0, startedAt: "", finishedAt: "", lastError: "", model: "" };
 
-/** v3 는 시·군·구 목록만 바뀐 것이라, 지역이 시·도 하나로만 적힌 공고만 다시 읽는다(비용 절약). */
-const provinceOnly = (b: Benefit) => b.region !== "전국" && !b.region.trim().includes(" ") && b.reviewStatus !== "비공개";
 const needsAi = (b: Benefit) => !b.isTest && b.audience === "사업" && SOURCES.some((s) => b.id.startsWith(s))
-  && (!b.extraction?.ai || b.extraction.ai.version < 2 || (b.extraction.ai.version < AI_VERSION && provinceOnly(b)) || badDistrictRule(b)
+  // 규칙 버전이 올라가면 숨긴(비공개) 공고는 빼고 다시 읽는다(비용 절약).
+  && (!b.extraction?.ai || (b.extraction.ai.version < AI_VERSION && b.reviewStatus !== "비공개") || badDistrictRule(b)
     // 원문이 바뀌어 다시 검토대기가 된 공고는 다시 읽는다.
     || b.stale === true
     || (b.reviewStatus === "검토대기" && Date.parse(b.checkedAt) > Date.parse(b.extraction.at)));

@@ -9,7 +9,8 @@ import { apiErrorMessage } from '@/lib/text';
 import { useAccount } from '@/lib/session';
 import { useServiceStateView } from '@/lib/service';
 import { daysLeft } from '@/lib/util';
-import { estimate, hasConditions, missed, useDraftProfile } from '@/lib/estimate';
+import { estimate, hasConditions, missed, preciseDone, strictMode, useDraftProfile } from '@/lib/estimate';
+import { PendingBox, PreciseBanner } from '@/components/Precise';
 
 type Tab = 'now' | 'missed';
 
@@ -56,7 +57,9 @@ export default function Grants() {
     );
   }
 
-  const now = estimate(list, profile);
+  const contract = !!acc.me?.entitlement.contractActive;
+  const strict = strictMode(contract, profile);
+  const now = estimate(list, profile, strict);
   const past = missed(list, profile);
   const cur = tab === 'now' ? now : past;
   const color = tab === 'now' ? c.primary : c.destructive;
@@ -75,7 +78,8 @@ export default function Grants() {
         })}
       </View>
 
-      <Total testID={`grants-total-${tab}`} tone={tab === 'now' ? 'blue' : 'red'} label={tab === 'now' ? '신청 가능 지원금' : '놓친 지원금'} count={cur.items.length} total={cur.total} note={tab === 'missed' ? '올해는 놓치지 마세요' : undefined} />
+      {contract && !preciseDone(profile) ? <PreciseBanner /> : null}
+      <Total testID={`grants-total-${tab}`} tone={tab === 'now' ? 'blue' : 'red'} label={tab === 'now' ? (strict ? '조건이 확실히 맞는 지원금' : '신청 가능 지원금') : '놓친 지원금'} count={cur.items.length} total={cur.total} note={tab === 'missed' ? '올해는 놓치지 마세요' : undefined} />
 
       {cur.items.length === 0 ? (
         <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, padding: 20, gap: 6 }}>
@@ -83,6 +87,7 @@ export default function Grants() {
           <T v="small" color={c.mutedForeground}>{tab === 'now' ? '새 공고가 뜨면 알려드릴게요' : '확인된 자료가 없어요'}</T>
         </View>
       ) : <GrantList items={cur.items} missed={tab === 'missed'} unlocked={acc.active} />}
+      {strict && tab === 'now' ? <PendingBox items={now.pending} /> : null}
 
       <Btn kind="ghost" label="조건 다시 고르기" onPress={() => router.push('/onboarding')} testID="grants-redo" />
       <Disclaimer />

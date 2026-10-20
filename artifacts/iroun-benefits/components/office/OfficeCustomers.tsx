@@ -26,6 +26,9 @@ export function OfficeCustomers({ o }: OfficeProps) {
               <View style={{ flex: 1 }}>
                 <T v="h3">{u.name || '이름 미확인'}{b?.name ? ` · ${b.name}` : ''}</T>
                 <T v="small" color={c.mutedForeground}>{[u.phone, b?.industry, b?.province, b?.revenue].filter(Boolean).join(' · ') || '입력한 정보 없음'}</T>
+                {(() => { const bb = b as { entity?: string; womanOwned?: string } | undefined; const by = u.profile?.personal?.birthYear; return by || bb?.entity || bb?.womanOwned
+                  ? <T v="small" color={c.mutedForeground}>정밀 조건: {[by ? `${by}년생` : '출생연도 미입력', bb?.entity ? `${bb.entity}사업자` : '형태 미입력', bb?.womanOwned ? `여성 대표 ${bb.womanOwned}` : '여성 대표 미입력'].join(' · ')}</T>
+                  : <T v="small" color={c.warning}>정밀 조건 미입력 · 결과가 넓게 나와요</T>; })()}
               </View>
               <Feather name={on ? 'chevron-up' : 'chevron-down'} size={20} color={c.mutedForeground} />
             </Pressable>

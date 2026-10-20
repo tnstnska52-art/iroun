@@ -14,7 +14,7 @@ import { GrantRow, Total, useJoinHref } from '@/components/GrantList';
 import { apiErrorMessage } from '@/lib/text';
 import { daysLeft, fmtDate } from '@/lib/util';
 import { remaining, useServiceStateView } from '@/lib/service';
-import { FREE_COUNT, HEADLINE_STAT, IS_PREVIEW, estimate, hasConditions, missed, useDraftProfile, won } from '@/lib/estimate';
+import { FREE_COUNT, HEADLINE_STAT, IS_PREVIEW, estimate, hasConditions, missed, strictMode, useDraftProfile, won } from '@/lib/estimate';
 import { difficulty } from '@/lib/difficulty';
 
 export default function Home() {
@@ -37,7 +37,7 @@ export default function Home() {
   // 맞춤 이용이 끝난 고객에게는 맞춤 결과를 보여주지 않는다(전체 공고만).
   const expired = acc.isSignedIn && !acc.active && !!svc.data?.trialUsed;
   const profile = expired ? null : hasConditions(acc.me?.profile) ? acc.me!.profile : hasConditions(draft) ? draft : null;
-  const est = profile ? estimate(list, profile) : null;
+  const est = profile ? estimate(list, profile, strictMode(ent?.contractActive, profile)) : null;
   const lastYear = new Date(Date.now() + 9 * 3600000).getUTCFullYear() - 1;
   const past = profile ? missed(list, profile, lastYear) : null;
   const reqs = (svc.data?.requests ?? []).filter((x) => x.state !== '회사 지원 종료');

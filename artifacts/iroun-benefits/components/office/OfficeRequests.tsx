@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { updateOfficeRequest, useGetOfficeCustomerMatches } from '@workspace/api-client-react';
 import { Badge, Btn, Card, Chip, Empty, Field, Loading, Notice, T, Wrap } from '@/components/ui';
 import { useColors } from '@/hooks/useColors';
@@ -18,7 +18,31 @@ export function CustomerMatches({ userId, period = 'current' }: { userId: string
   const d = q.data as unknown as MatchesPayload | undefined;
   const items = (d?.items ?? []).filter((i) => (period === 'past' ? i.matches.some((m) => !(m.referenceExclusions?.length)) : i.matches.some((m) => m.result !== '대상 제외')));
   if (items.length === 0) return <T v="small" color={c.mutedForeground}>{period === 'past' ? '올해 지나간 공고 중 맞았던 것이 없어요.' : '지금 맞는 공고가 없어요.'}</T>;
-  return <View style={{ gap: 6 }}>{items.map((i) => <T key={i.benefit.id} v="small">• {i.benefit.title} — {period === 'past' ? `${i.benefit.endsAt || ''} 마감` : i.matches.map((m) => m.result).join(', ')}{i.benefit.maxAmount ? ` · 공고상 최대 ${Math.round(i.benefit.maxAmount / 10000).toLocaleString('ko-KR')}만원` : ''}</T>)}</View>;
+  const line = (i: (typeof items)[number]) => <T key={i.benefit.id} v="small">• {i.benefit.title} — {period === 'past' ? `${i.benefit.endsAt || ''} 마감` : i.matches.map((m) => m.result).join(', ')}{i.benefit.maxAmount ? ` · 공고상 최대 ${Math.round(i.benefit.maxAmount / 10000).toLocaleString('ko-KR')}만원` : ''}</T>;
+  if (period === 'past') return <View style={{ gap: 6 }}>{items.map(line)}</View>;
+  // 관리 담당은 '확실히 맞음'부터 처리하고, '확인 필요'는 원문을 보고 판단한다.
+  const sure = items.filter((i) => i.matches.some((m) => m.result === '조건 일치'));
+  const check = items.filter((i) => !i.matches.some((m) => m.result === '조건 일치'));
+  return (
+    <View style={{ gap: 6 }}>
+      <T v="small" style={{ fontWeight: '700' }} testID={`office-sure-${userId}`}>확실히 맞음 {sure.length}건</T>
+      {sure.length ? sure.map(line) : <T v="small" color={c.mutedForeground}>조건이 확실히 맞는 공고가 아직 없어요.</T>}
+      <CheckList items={check} render={line} userId={userId} />
+    </View>
+  );
+}
+function CheckList<I>({ items, render, userId }: { items: I[]; render: (i: I) => React.ReactNode; userId: string }) {
+  const c = useColors();
+  const [open, setOpen] = useState(false);
+  if (!items.length) return null;
+  return (
+    <>
+      <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen(!open)} testID={`office-check-${userId}`} style={{ minHeight: 40, justifyContent: 'center' }}>
+        <T v="small" color={c.primary} style={{ fontWeight: '700' }}>직원 확인 필요 {items.length}건 {open ? '접기 ▲' : '펼치기 ▼'}</T>
+      </Pressable>
+      {open ? items.map(render) : null}
+    </>
+  );
 }
 
 function Detail({ r }: { r: OfficeRequest }) {

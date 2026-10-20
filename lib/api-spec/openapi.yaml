@@ -457,6 +457,7 @@ components:
         openedYear: { type: integer, description: "개업년도. 2009는 '2009년 이전'" }
         employeeBand: { type: string, enum: [없음, 1~4명, 5~9명, 10~29명, 30명 이상] }
         premises: { type: string, enum: [임차, 자가] }
+        womanOwned: { type: string, enum: [예, 아니오], description: "정밀 조건: 여성 대표 사업장 여부" }
     Personal:
       type: object
       properties:

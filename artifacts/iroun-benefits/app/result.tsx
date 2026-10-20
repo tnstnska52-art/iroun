@@ -6,7 +6,8 @@ import { Btn, Disclaimer, Loading, Page, SectionHead, T } from '@/components/ui'
 import { GrantList, Total, useJoinHref } from '@/components/GrantList';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
-import { estimate, hasConditions, missed, useDraftProfile } from '@/lib/estimate';
+import { estimate, hasConditions, missed, preciseDone, strictMode, useDraftProfile } from '@/lib/estimate';
+import { PendingBox, PreciseBanner } from '@/components/Precise';
 
 /** 조건을 다 고른 뒤 보여주는 결과: 받을 수 있는 지원금 목록과 금액, 작년에 놓친 금액 */
 export default function Result() {
@@ -30,7 +31,9 @@ export default function Result() {
     );
   }
   const list = benefits.data ?? [];
-  const est = estimate(list, profile);
+  const contract = !!acc.me?.entitlement.contractActive;
+  const strict = strictMode(contract, profile);
+  const est = estimate(list, profile, strict);
   const past = missed(list, profile, lastYear);
   const industry = (profile.businesses[0] as { industry?: string } | undefined)?.industry;
   const fitText = est.tailored && industry && industry !== '기타' ? `${industry} 업종 맞춤 ${est.tailored}건` : '';
@@ -41,7 +44,8 @@ export default function Result() {
       <Btn label="무료로 전체 보기" onPress={() => router.push(join)} testID="result-signup" />
       <T v="small" color={c.mutedForeground} style={{ textAlign: 'center' }}>3일 무료 · 자동결제 없음</T>
     </> : undefined}>
-      <Total testID="result-summary" label="신청 가능 지원금" count={est.items.length} total={est.total} note={est.total > 0 ? `공고 기준 최대 금액 합계${est.big ? ` · 10억 초과 대형사업 ${est.big}건 제외` : ''}` : undefined} />
+      {contract && !preciseDone(profile) ? <PreciseBanner /> : null}
+      <Total testID="result-summary" label={strict ? '조건이 확실히 맞는 지원금' : '신청 가능 지원금'} count={est.items.length} total={est.total} note={est.total > 0 ? `공고 기준 최대 금액 합계${est.big ? ` · 10억 초과 대형사업 ${est.big}건 제외` : ''}` : undefined} />
       {past.items.length > 0 ? (
         <Total testID="result-missed" tone="red" label={`${lastYear}년에 놓친 지원금`} count={past.items.length} total={past.total} note="올해는 놓치지 마세요" onPress={() => router.push({ pathname: '/benefits', params: { tab: 'missed' } })} />
       ) : null}
@@ -59,6 +63,7 @@ export default function Result() {
           <Btn kind="secondary" label="조건 다시 고르기" onPress={() => router.replace('/onboarding')} />
         </View>
       ) : <GrantList items={est.items} unlocked={acc.active} />}
+      {strict ? <PendingBox items={est.pending} /> : null}
       <Btn kind="ghost" label="조건 다시 고르기" onPress={() => router.replace('/onboarding')} testID="result-redo" />
       <Disclaimer />
     </Page>

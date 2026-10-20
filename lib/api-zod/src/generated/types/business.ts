@@ -23,4 +23,6 @@ export interface Business {
   employeeBand?: '없음' | '1~4명' | '5~9명' | '10~29명' | '30명 이상';
   /** 사업장 형태 */
   premises?: '임차' | '자가';
+  /** 정밀 조건: 여성 대표 사업장 여부 */
+  womanOwned?: '예' | '아니오';
 }
