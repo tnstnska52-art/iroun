@@ -215,12 +215,16 @@ export function normTitle(t: string) {
     .replace(/20\d\d\s*(년도|년)?|\d+\s*차|재공고|추가\s*모집|연장|변경|공고|모집|안내|참여\s*기업|참여자|신청|접수|하반기|상반기/g, " ")
     .replace(/[^가-힣a-zA-Z0-9]/g, "").toLowerCase();
 }
+/** 같은 출처 안 비교용: 연도·차수는 남긴다(2022년 지정 ≠ 2023년 지정, 2차 ≠ 3차). */
+export function strictTitle(t: string) {
+  return t.normalize("NFKC").replace(/\[[^\]]*\]|「|」|『|』/g, " ").replace(/[^가-힣a-zA-Z0-9]/g, "").toLowerCase();
+}
 const normAgency = (a: string) => a.normalize("NFKC").replace(/\s+/g, "").replace(/^(주식회사|\(주\)|재단법인|\(재\)|사단법인)/, "");
 
 /** 같은 사업으로 보이는 공개 공고 묶음 → {중복 id: 대표 id}. 순수 함수(테스트 대상). */
 export function findDuplicates(list: Benefit[]): Map<string, string> {
   const items = list.filter((b) => b.reviewStatus === "공개" && !b.isTest && b.audience === "사업")
-    .map((b) => ({ b, t: normTitle(b.title), a: normAgency(b.agency), src: rank(b) }))
+    .map((b) => ({ b, t: normTitle(b.title), st: strictTitle(b.title), a: normAgency(b.agency), src: rank(b) }))
     .filter((x) => x.t.length >= 4);
   const parent = new Map<string, string>();
   const find = (id: string): string => { const p = parent.get(id) ?? id; if (p === id) return id; const r = find(p); parent.set(id, r); return r; };
@@ -228,7 +232,7 @@ export function findDuplicates(list: Benefit[]): Map<string, string> {
   const same = (x: typeof items[number], y: typeof items[number]) => {
     if (x.b.id.split("-")[0] === y.b.id.split("-")[0]) {
       // 같은 출처 안에서는 제목·기관·마감일이 모두 같을 때만.
-      return x.t === y.t && x.a === y.a && x.b.endsAt.slice(0, 10) === y.b.endsAt.slice(0, 10);
+      return x.st === y.st && x.a === y.a && x.b.endsAt.slice(0, 10) === y.b.endsAt.slice(0, 10);
     }
     if (x.t === y.t) return x.a === y.a || (!!x.b.endsAt && x.b.endsAt.slice(0, 10) === y.b.endsAt.slice(0, 10));
     const [s, l] = x.t.length <= y.t.length ? [x.t, y.t] : [y.t, x.t];
@@ -257,15 +261,22 @@ export function findDuplicates(list: Benefit[]): Map<string, string> {
 export async function hideDuplicates() {
   const all = (await pool.query("SELECT data FROM iroun_benefits")).rows.map((r) => r.data as Benefit);
   const dups = findDuplicates(all);
-  let hidden = 0;
+  let hidden = 0, restored = 0;
+  // 규칙이 바뀌어 더는 중복이 아닌 공고는 되살려 AI 가 공개 여부를 다시 정하게 한다.
+  for (const prev of all) {
+    if (!prev.duplicateOf || dups.has(prev.id)) continue;
+    const next = benefitSchema.parse({ ...prev, duplicateOf: undefined, stale: true });
+    const saved = await pool.query("UPDATE iroun_benefits SET data=$2,updated_at=now() WHERE id=$1 RETURNING id", [prev.id, JSON.stringify(next)]);
+    if (saved.rowCount) { restored++; await audit("system:dedupe", "중복 해제", prev.id, { before: { duplicateOf: prev.duplicateOf }, after: { duplicateOf: null } }); }
+  }
   for (const [id, keeper] of dups) {
     const prev = all.find((b) => b.id === id)!;
     const next = benefitSchema.parse({ ...prev, reviewStatus: "비공개", duplicateOf: keeper });
     const saved = await pool.query("UPDATE iroun_benefits SET data=$2,updated_at=now() WHERE id=$1 AND data->>'reviewStatus'='공개' RETURNING id", [id, JSON.stringify(next)]);
     if (saved.rowCount) { hidden++; await audit("system:dedupe", "중복 공고 비공개", id, { before: { reviewStatus: prev.reviewStatus }, after: { reviewStatus: "비공개", duplicateOf: keeper } }); }
   }
-  if (hidden) logger.info({ hidden }, "중복 공고 정리");
-  return { duplicates: dups.size, hidden };
+  if (hidden || restored) logger.info({ hidden, restored }, "중복 공고 정리");
+  return { duplicates: dups.size, hidden, restored };
 }
 
 export async function bulkFeedStatus() {

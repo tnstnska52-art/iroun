@@ -256,7 +256,9 @@ export async function runAiStructuring(limit = 2000, concurrency = 4, fetcher: t
         aiJob.model = out!.model;
         const next = applyAi(prev, out!.result, out!.model);
         next.reviewStatus = aiReviewStatus(prev, next, out!.result);
-        const saved = await pool.query("UPDATE iroun_benefits SET data=$2,updated_at=now() WHERE id=$1 AND data->>'checkedAt'=$3 RETURNING id", [prev.id, JSON.stringify(next), prev.checkedAt]);
+        // 읽는 동안 확인 시각(checkedAt)만 갱신된 경우는 저장한다. 내용이 바뀌었으면 건너뛰고 다음에 다시 읽는다.
+        const saved = await pool.query(`UPDATE iroun_benefits SET data=jsonb_set($2::jsonb,'{checkedAt}',data->'checkedAt'),updated_at=now()
+          WHERE id=$1 AND (data->>'checkedAt'=$3 OR (data - 'checkedAt') = ($4::jsonb - 'checkedAt')) RETURNING id`, [prev.id, JSON.stringify(next), prev.checkedAt, JSON.stringify(prev)]);
         if (saved.rowCount) {
           await audit("system:ai-structure", next.reviewStatus !== prev.reviewStatus ? `AI 정리·${next.reviewStatus}` : "AI 정리", prev.id, { before: { reviewStatus: prev.reviewStatus, region: prev.region, rules: prev.rules }, after: { reviewStatus: next.reviewStatus, region: next.region, rules: next.rules, maxAmount: next.maxAmount }, ai: out!.result });
           if (next.reviewStatus === "공개" && prev.reviewStatus !== "공개") aiJob.published++;

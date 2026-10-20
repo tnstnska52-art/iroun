@@ -59,4 +59,9 @@ describe("중복 정리", () => {
     const d = base({ id: "bizinfo-PBLN_3", sourceId: "PBLN_3", title: "청년 창업지원 프로그램 참여기업 모집", agency: "서울시" });
     expect(findDuplicates([a, b, c, d]).size).toBe(0);
   });
+  it("같은 출처의 다른 연도·차수 공고는 묶지 않는다", () => {
+    const a = base({ id: "bizinfo-PBLN_1", title: "2022년 12월 최초지정 혁신제품 지정기간 연장 공고", agency: "산업통상부" });
+    const b = base({ id: "bizinfo-PBLN_2", sourceId: "PBLN_2", title: "2023년 12월 최초지정 혁신제품 지정기간 연장 공고", agency: "산업통상부" });
+    expect(findDuplicates([a, b]).size).toBe(0);
+  });
 });
