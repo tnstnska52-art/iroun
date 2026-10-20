@@ -107,8 +107,10 @@ async function callClaude(title: string, agency: string, text: string, fetcher: 
     });
     if (res.status === 404 || res.status === 400) {
       const body = await res.text();
-      if (/model/i.test(body)) { lastError = `model ${model} unavailable`; continue; }
-      throw new Error(`AI 요청 거절(${res.status})`);
+      if (/model/i.test(body) && !/credit|balance|billing/i.test(body)) { lastError = `model ${model} unavailable`; continue; }
+      let why = "";
+      try { why = String((JSON.parse(body) as { error?: { message?: string } }).error?.message ?? "").slice(0, 160); } catch { /* 본문 없음 */ }
+      throw new Error(`AI 요청 거절(${res.status})${why ? `: ${why}` : ""}`);
     }
     if (res.status === 429 || res.status === 529) throw Object.assign(new Error("AI 호출 한도"), { retry: true });
     if (!res.ok) throw new Error(`AI 응답 실패(${res.status})`);
@@ -264,7 +266,8 @@ export async function runAiStructuring(limit = 2000, concurrency = 4, fetcher: t
       } catch (e) {
         aiJob.failed++; aiJob.done++;
         aiJob.lastError = (e as Error).message.slice(0, 200);
-        if (/사용 가능한 AI 모델 없음|\((401|403)\)/.test(aiJob.lastError)) { i = todo.length; }
+        // 키·결제·요청 형식 문제는 다른 공고도 똑같이 실패하므로 바로 멈춘다.
+        if (/사용 가능한 AI 모델 없음|\((400|401|403)\)/.test(aiJob.lastError)) { i = todo.length; }
       }
     }
   };

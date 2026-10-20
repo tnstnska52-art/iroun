@@ -164,10 +164,10 @@ export async function runKstartup(fetcher: typeof fetch = fetch) {
     acquired = (await lock.query("SELECT pg_try_advisory_lock(84101) AS ok")).rows[0]?.ok === true;
     if (!acquired) return { busy: true };
     const checkedAt = new Date().toISOString();
-    for (let page = 1; page <= 50; page++) {
+    for (let page = 1; page <= 30; page++) {
       if (!await reserve("kstartup", daily)) throw new Error("오늘 K-Startup 호출 한도 도달");
       const url = new URL(KSTARTUP_URL);
-      url.search = new URLSearchParams({ serviceKey: key, page: String(page), perPage: "100", returnType: "json", rcrt_prgs_yn: "Y" }).toString();
+      url.search = new URLSearchParams({ serviceKey: key, page: String(page), perPage: "100", returnType: "json", rcrt_prgs_yn: "Y", "cond[rcrt_prgs_yn::EQ]": "Y" }).toString();
       const r = await fetcher(url, { signal: AbortSignal.timeout(30000) });
       state.calls = Number(state.calls) + 1;
       const body = await r.text();
