@@ -11,18 +11,42 @@ export const IS_PREVIEW = process.env.EXPO_PUBLIC_PREVIEW === '1';
 /** 가입 전에 정리본까지 열어 주는 공고 수 */
 export const FREE_COUNT = 3;
 
-export interface EstimateItem { benefit: Benefit; result: '조건 일치' | '추가 확인 필요' }
-export interface Estimate { items: EstimateItem[]; total: number; counted: number; noAmount: number }
+export interface EstimateItem { benefit: Benefit; result: '조건 일치' | '추가 확인 필요'; /** 고른 업종에 맞춤인 공고 */ tailored?: boolean }
+export interface Estimate { items: EstimateItem[]; total: number; counted: number; noAmount: number; /** 합계에서 뺀 10억 초과 대형사업 수 */ big: number; /** 업종 맞춤 건수 */ tailored: number; /** 소상공인 적합(4~5점) 건수 */ small: number }
+/** 이 금액을 넘는 공고(대형 R&D·인프라)는 합계에서 빼고 뒤로 보낸다. 홈페이지와 같다. */
+export const BIG = 1_000_000_000;
+type Fit = { industries: string[]; small: number };
+const fitOf = (b: Benefit) => (b as unknown as { fit?: Fit }).fit;
+/** 업종 맞춤: AI 가 정한 관련 업종 또는 공고 자격 업종에 고른 업종이 들어 있다. 자격 판정이 아니라 정렬·표시용. */
+export function isTailored(b: Benefit, industry?: string): boolean {
+  if (!industry || industry === '기타') return false;
+  if (fitOf(b)?.industries?.includes(industry)) return true;
+  return (b.rules ?? []).some((r) => r.field === 'industry' && Array.isArray(r.value) && (r.value as unknown[]).includes(industry));
+}
+/** 동네 가게가 실제로 받을 가능성 1~5(모르면 3) */
+export const smallFit = (b: Benefit) => fitOf(b)?.small ?? 3;
+const tier = (b: Benefit) => { const a = b.maxAmount ?? 0; return a && a <= BIG ? 0 : !a ? 1 : 2; };
 
 const isClosed = (b: Benefit) => b.status === '마감' || b.budgetStatus === '소진' || (daysLeft(b.endsAt) ?? 0) < 0;
 const match = (b: Benefit, p: Profile, at?: Date) => matchBenefit(b as unknown as DomainBenefit, p as unknown as DomainProfile, at).map((m) => m.result);
-// 받을 가능성이 높은 것 → 금액이 큰 것 → 신청이 쉬운 것 순서
+// 업종 맞춤 → 받을 가능성이 높은 것 → 소상공인 적합 → 금액 있는 것(10억 이하) → 금액이 큰 것 → 신청이 쉬운 것 (홈페이지와 같은 순서)
 const order = (x: EstimateItem, y: EstimateItem) =>
-  (x.result === y.result ? 0 : x.result === '조건 일치' ? -1 : 1) || (y.benefit.maxAmount ?? 0) - (x.benefit.maxAmount ?? 0) || difficulty(x.benefit) - difficulty(y.benefit);
-function summarize(items: EstimateItem[]): Estimate {
+  Number(!!y.tailored) - Number(!!x.tailored)
+  || (x.result === y.result ? 0 : x.result === '조건 일치' ? -1 : 1)
+  || smallFit(y.benefit) - smallFit(x.benefit)
+  || tier(x.benefit) - tier(y.benefit)
+  || (y.benefit.maxAmount ?? 0) - (x.benefit.maxAmount ?? 0) || difficulty(x.benefit) - difficulty(y.benefit);
+const industryOf = (p: Profile) => (p.businesses[0] as { industry?: string } | undefined)?.industry;
+function summarize(items: EstimateItem[], profile: Profile): Estimate {
+  const ind = industryOf(profile);
+  for (const x of items) x.tailored = isTailored(x.benefit, ind);
   items.sort(order);
-  const withAmount = items.filter((x) => (x.benefit.maxAmount ?? 0) > 0);
-  return { items, total: withAmount.reduce((n, x) => n + (x.benefit.maxAmount ?? 0), 0), counted: withAmount.length, noAmount: items.length - withAmount.length };
+  const withAmount = items.filter((x) => (x.benefit.maxAmount ?? 0) > 0 && (x.benefit.maxAmount ?? 0) <= BIG);
+  return {
+    items, total: withAmount.reduce((n, x) => n + (x.benefit.maxAmount ?? 0), 0), counted: withAmount.length,
+    noAmount: items.filter((x) => !(x.benefit.maxAmount ?? 0)).length, big: items.filter((x) => (x.benefit.maxAmount ?? 0) > BIG).length,
+    tailored: items.filter((x) => x.tailored).length, small: items.filter((x) => smallFit(x.benefit) >= 4).length,
+  };
 }
 
 /**
@@ -37,7 +61,7 @@ export function estimate(benefits: Benefit[], profile: Profile): Estimate {
     if (r.includes('조건 일치')) items.push({ benefit: b, result: '조건 일치' });
     else if (r.includes('추가 확인 필요')) items.push({ benefit: b, result: '추가 확인 필요' });
   }
-  return summarize(items);
+  return summarize(items, profile);
 }
 
 /**
@@ -59,7 +83,7 @@ export function missed(benefits: Benefit[], profile: Profile, year?: number): Es
     if (r.includes('조건 일치')) items.push({ benefit: b, result: '조건 일치' });
     else if (r.includes('추가 확인 필요')) items.push({ benefit: b, result: '추가 확인 필요' });
   }
-  return summarize(items);
+  return summarize(items, profile);
 }
 
 /** 가입 전에도 정리본을 볼 수 있는 공고(받을 수 있는 지원금 위에서 3건, 놓친 지원금 위에서 3건) */

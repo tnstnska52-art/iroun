@@ -33,7 +33,12 @@ export function GrantRow({ item, missed, locked, last }: { item: EstimateItem; m
         <Feather name={locked ? 'lock' : ICON[b.category] ?? 'file-text'} size={20} color={c.mutedForeground} />
       </View>
       <View style={{ flex: 1, gap: 2 }}>
-        {locked ? <View style={{ height: 16, width: '72%', borderRadius: 8, backgroundColor: c.secondary }} /> : <T v="h3" numberOfLines={1}>{b.title}</T>}
+        {locked ? <View style={{ height: 16, width: '72%', borderRadius: 8, backgroundColor: c.secondary }} /> : (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {!missed && item.tailored ? <View testID={`grant-fit-${b.id}`} style={{ backgroundColor: c.primary, borderRadius: 4, paddingHorizontal: 6, paddingVertical: 1 }}><T v="small" color="#FFFFFF" style={{ fontSize: 11, lineHeight: 16, fontWeight: '700' }}>맞춤</T></View> : null}
+            <T v="h3" numberOfLines={1} style={{ flex: 1 }}>{b.title}</T>
+          </View>
+        )}
         {locked ? <View style={{ height: 12, width: '44%', borderRadius: 6, backgroundColor: c.secondary, marginTop: 6 }} /> : <T v="small" color={!missed && dd.urgent ? c.destructive : c.mutedForeground} numberOfLines={1}>{sub}</T>}
       </View>
       {locked ? <View style={{ height: 16, width: 64, borderRadius: 8, backgroundColor: c.secondary }} /> : <T v="label" color={missed ? c.destructive : c.primary} style={{ flexShrink: 0 }}>{amount}</T>}

@@ -6,7 +6,7 @@ import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollV
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
 import { useQueryClient } from '@tanstack/react-query';
-import { getGetMeQueryKey, saveProfile, savePreferences, type Business, type Personal, type Profile } from '@workspace/api-client-react';
+import { getGetMeQueryKey, getListBenefitsQueryKey, saveProfile, savePreferences, useListBenefits, type Business, type Personal, type Profile } from '@workspace/api-client-react';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
 import { loadDraft, saveDraft } from '@/lib/draft';
@@ -246,7 +246,7 @@ export default function Onboarding() {
   const toast = sync?.t === 'ok' ? sync.s : null;
   const syncNote = sync && sync.t !== 'ok' ? <Notice tone={sync.t === 'warn' ? 'info' : 'error'}>{sync.s}</Notice> : null;
 
-  if (searching) return <Searching onDone={() => router.replace('/result' as never)} />;
+  if (searching) return <Searching business={profile.businesses[0] as unknown as Record<string, unknown> | undefined} onDone={() => router.replace('/result' as never)} />;
 
   if (!biz && idx === 0 && !sync) return <Sheet title="내 사업자 지원금은 얼마일까?" onClose={close}><Loading rows={2} /></Sheet>;
   if (!biz && idx === 0) {
@@ -369,29 +369,42 @@ function Option({ label, selected, onPress, testID, disabled, multi }: { label: 
 }
 
 /** 조건을 다 고른 뒤 잠깐 보여주는 찾는 중 화면. 1%에서 100%까지 차오른 뒤 결과로 넘어간다. */
-function Searching({ onDone }: { onDone: () => void }) {
+function Searching({ onDone, business }: { onDone: () => void; business?: Record<string, unknown> }) {
   const c = useColors();
   const [pct, setPct] = useState(1);
+  const count = useListBenefits(undefined, { query: { queryKey: getListBenefitsQueryKey() } }).data?.length ?? 0;
+  const where = [business?.province, business?.district].filter((v) => typeof v === 'string' && v).join(' ');
+  const industry = typeof business?.industry === 'string' ? business.industry : '';
+  // 홈페이지 '지원금 확인'과 같은 문구·시간(약 3.6초)
+  const steps = [
+    '대표님 조건에 맞는 지원사업을 확인 중이에요',
+    count ? `기업마당·정부24·K-Startup 공고 ${count.toLocaleString('ko-KR')}건을 살펴보는 중이에요` : '기업마당·정부24·K-Startup 공고를 살펴보는 중이에요',
+    where ? `${where} 지역 사업을 고르는 중이에요` : '지역 사업을 고르는 중이에요',
+    industry ? `${industry} 업종에 맞는 사업을 찾는 중이에요` : '업종에 맞는 사업을 찾는 중이에요',
+    '직원 수·업력·매출 조건을 비교하는 중이에요',
+    '작년에 놓친 지원금도 확인하는 중이에요',
+  ];
   const done = useRef(false);
   useEffect(() => {
-    const started = Date.now(), total = 2600;
+    const started = Date.now(), total = 3600;
     const h = setInterval(() => {
       const t = Math.min(1, (Date.now() - started) / total);
-      const p = Math.max(1, Math.round(100 * (1 - Math.pow(1 - t, 2))));
+      const p = Math.max(1, Math.min(100, Math.round(100 * (t < 0.85 ? (t / 0.85) * 0.9 : 0.9 + ((t - 0.85) / 0.15) * 0.1))));
       setPct(p);
       if (t >= 1 && !done.current) { done.current = true; clearInterval(h); setTimeout(onDone, 350); }
     }, 40);
     return () => clearInterval(h);
   }, [onDone]);
-  const step = pct < 35 ? '업종·지역 확인 중' : pct < 70 ? '매출·직원 수 확인 중' : pct < 100 ? '놓친 지원금 확인 중' : '다 찾았어요';
+  const step = pct >= 100 ? '다 찾았어요' : steps[Math.min(steps.length - 1, Math.floor((pct / 100) * steps.length))];
   return (
     <View testID="searching" style={{ flex: 1, backgroundColor: c.card, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 18 }}>
-      <T v="title" style={{ textAlign: 'center' }}>지원금과 환급금을{'\n'}찾고 있어요</T>
+      <T v="title" style={{ textAlign: 'center' }}>🔎 지원사업을{'\n'}찾고 있어요</T>
       <T v="hero" color={c.primary} style={{ fontSize: 56, lineHeight: 66 }} accessibilityRole="text">{pct}%</T>
       <View accessible accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: pct }} style={{ alignSelf: 'stretch', height: 14, borderRadius: 7, backgroundColor: c.secondary, overflow: 'hidden' }}>
         <View style={{ width: `${pct}%`, height: 14, borderRadius: 7, backgroundColor: c.primary }} />
       </View>
-      <T color={c.mutedForeground} style={{ textAlign: 'center' }}>{step}</T>
+      <T style={{ textAlign: 'center', fontWeight: '700' }}>{step}</T>
+      <T v="small" color={c.mutedForeground} style={{ textAlign: 'center' }}>공식 공고 원문 기준 · 잠시만 기다려 주세요</T>
     </View>
   );
 }
