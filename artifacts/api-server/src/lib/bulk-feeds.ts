@@ -223,7 +223,8 @@ const normAgency = (a: string) => a.normalize("NFKC").replace(/\s+/g, "").replac
 
 /** 같은 사업으로 보이는 공개 공고 묶음 → {중복 id: 대표 id}. 순수 함수(테스트 대상). */
 export function findDuplicates(list: Benefit[]): Map<string, string> {
-  const items = list.filter((b) => b.reviewStatus === "공개" && !b.isTest && b.audience === "사업")
+  // 이미 중복으로 숨긴 공고도 후보에 넣어야 '중복 해제'로 잘못 되살리지 않는다.
+  const items = list.filter((b) => (b.reviewStatus === "공개" || !!b.duplicateOf) && !b.isTest && b.audience === "사업")
     .map((b) => ({ b, t: normTitle(b.title), st: strictTitle(b.title), a: normAgency(b.agency), src: rank(b) }))
     .filter((x) => x.t.length >= 4);
   const parent = new Map<string, string>();
