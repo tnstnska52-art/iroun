@@ -40,6 +40,9 @@ describe("AI 공고 정리 반영", () => {
     expect(matchBenefit(m, profile({ ...biz, district: "부천시" }), now)[0]!.result).toBe("대상 제외");
     expect(matchBenefit(m, profile({ ...biz, district: "구리시" }), now)[0]!.result).toBe("조건 일치");
     expect(applyAi(base, { ...ai, region: "경기", districts: ["부천시"] }, "m", now).region).toBe("경기 부천시");
+    // 시·도 이름은 시·군·구 목록에서 뺀다
+    expect(applyAi(base, { ...ai, region: "서울", districts: ["서울특별시", "강동구"] }, "m", now).region).toBe("서울 강동구");
+    expect(applyAi(base, { ...ai, region: "대구", districts: ["대구", "수성구", "남구"] }, "m", now).rules.find((r) => r.field === "district")?.value).toEqual(["수성구", "남구"]);
   });
   it("사업자 지원이 아니거나 대출이면 비공개", () => {
     expect(aiReviewStatus(base, b, { ...ai, is_business_support: false })).toBe("비공개");

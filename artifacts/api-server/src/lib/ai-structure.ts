@@ -165,6 +165,10 @@ function normalizeRegion(r: string): string {
   return d && /^[가-힣]{1,5}(시|군|구)$/.test(d) ? `${p} ${d}` : p!;
 }
 
+/** '서울특별시'·'인천광역시'·'대구' 같은 시·도 이름(시·군·구가 아님) */
+const isProvinceName = (d: string) => /(특별시|광역시|특별자치시|특별자치도)$/.test(d) || PROVINCE_KEYS.includes(d) || PROVINCE_KEYS.some((p) => d === `${p}시`);
+const badDistrictRule = (b: Benefit) => b.rules.some((r) => r.field === "district" && Array.isArray(r.value) && r.value.some((v) => typeof v === "string" && isProvinceName(v)));
+
 /** AI 결과를 공고에 반영한다. 순수 함수(테스트 대상). */
 export function applyAi(b: Benefit, x: AiResult, model: string, now = new Date()): Benefit {
   const rules: Rule[] = [];
@@ -198,7 +202,7 @@ export function applyAi(b: Benefit, x: AiResult, model: string, now = new Date()
   const summary = typeof x.summary === "string" && x.summary.trim() ? x.summary.trim().slice(0, 1000) : b.summary;
   let region = normalizeRegion(x.region);
   // 여러 시·군·구로 제한된 공고: 지역은 시·도로 두고 시·군·구 목록을 조건으로 넣는다. 한 곳이면 지역에 붙인다.
-  const districts = [...new Set((x.districts ?? []).map((d) => String(d).trim().split(/\s+/).pop() ?? "").filter((d) => /^[가-힣]{1,6}(시|군|구)$/.test(d)))].slice(0, 30);
+  const districts = [...new Set((x.districts ?? []).map((d) => String(d).trim().split(/\s+/).pop() ?? "").filter((d) => /^[가-힣]{1,6}(시|군|구)$/.test(d) && !isProvinceName(d)))].slice(0, 30);
   const province = region.split(" ")[0]!;
   if (PROVINCE_KEYS.includes(province) && province !== "전국" && districts.length) {
     if (districts.length === 1) region = `${province} ${districts[0]}`;
@@ -242,7 +246,7 @@ export const aiJob = { running: false, total: 0, done: 0, failed: 0, published: 
 /** v3 는 시·군·구 목록만 바뀐 것이라, 지역이 시·도 하나로만 적힌 공고만 다시 읽는다(비용 절약). */
 const provinceOnly = (b: Benefit) => b.region !== "전국" && !b.region.trim().includes(" ") && b.reviewStatus !== "비공개";
 const needsAi = (b: Benefit) => !b.isTest && b.audience === "사업" && SOURCES.some((s) => b.id.startsWith(s))
-  && (!b.extraction?.ai || b.extraction.ai.version < 2 || (b.extraction.ai.version < AI_VERSION && provinceOnly(b))
+  && (!b.extraction?.ai || b.extraction.ai.version < 2 || (b.extraction.ai.version < AI_VERSION && provinceOnly(b)) || badDistrictRule(b)
     // 원문이 바뀌어 다시 검토대기가 된 공고는 다시 읽는다.
     || b.stale === true
     || (b.reviewStatus === "검토대기" && Date.parse(b.checkedAt) > Date.parse(b.extraction.at)));
