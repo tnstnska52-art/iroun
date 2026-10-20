@@ -205,6 +205,7 @@ export function applyAi(b: Benefit, x: AiResult, model: string, now = new Date()
     status,
     budgetStatus: status === "마감" ? b.budgetStatus : "해당 없음",
     checks: checks.slice(0, 50),
+    stale: undefined,
     fit: { industries: (x.fit_industries ?? []).filter((i) => (AI_INDUSTRIES as readonly string[]).includes(i)).slice(0, 4), small: Math.max(1, Math.min(5, Math.round(Number(x.small_business_fit) || 3))) },
     extraction: {
       confidence: Math.max(0, Math.min(100, 100 - unclear.length * 15)),
@@ -230,6 +231,7 @@ export const aiJob = { running: false, total: 0, done: 0, failed: 0, published: 
 const needsAi = (b: Benefit) => !b.isTest && b.audience === "사업" && SOURCES.some((s) => b.id.startsWith(s))
   && (!b.extraction?.ai || b.extraction.ai.version < AI_VERSION
     // 원문이 바뀌어 다시 검토대기가 된 공고는 다시 읽는다.
+    || b.stale === true
     || (b.reviewStatus === "검토대기" && Date.parse(b.checkedAt) > Date.parse(b.extraction.at)));
 
 /** 아직 AI 정리를 안 한 공고를 정리한다. 동시에 한 번만 돈다. */

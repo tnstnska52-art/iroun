@@ -12,7 +12,7 @@ import { createHash } from "node:crypto";
 import { pool } from "@workspace/db";
 import { audit } from "./benefit-store";
 import { benefitSchema, excludedCategory, officialUrl, type Benefit } from "./benefit-domain";
-import { refreshOfficialCheck, stageOfficialNotice } from "./official-ingestion";
+import { refreshOfficialCheck, sameSnapshot, stableRecord, stageOfficialNotice } from "./official-ingestion";
 import { catalog, mapPublicBenefit, rows, text, type Row } from "./public-feed-model";
 import { storedFeedState, storeFeedState } from "./public-feeds";
 import { logger } from "./logger";
@@ -25,7 +25,7 @@ function canonical(value: unknown): string {
   }
   return JSON.stringify(value) ?? "null";
 }
-const hash = (v: unknown) => createHash("sha256").update(canonical(v)).digest("hex");
+const hash = (v: unknown) => "v2:" + createHash("sha256").update(canonical(stableRecord(v))).digest("hex");
 const kstDay = (d = new Date()) => new Date(d.getTime() + 9 * 3600000).toISOString().slice(0, 10);
 
 async function reserve(source: string, limit: number) {
@@ -92,8 +92,9 @@ export async function runGov24Bulk(fetcher: typeof fetch = fetch, force = false)
       // 시간당 소량 수집과 같은 형태로 지문을 만들어 같은 자료를 '변경'으로 보지 않게 한다.
       const sourceRecord = { list: item, detail, conditions: cond };
       const fingerprint = hash(sourceRecord);
-      const old = (await pool.query("SELECT content_hash FROM iroun_feed_snapshots WHERE source_id=$1", [b.sourceId])).rows[0];
-      if (old?.content_hash === fingerprint) { await refreshOfficialCheck(b.sourceId, b.checkedAt, b.sourceUrl, false); state.unchanged = Number(state.unchanged) + 1; continue; }
+      const snap = await sameSnapshot(b.sourceId, fingerprint);
+      const old = snap.exists;
+      if (snap.same) { await refreshOfficialCheck(b.sourceId, b.checkedAt, b.sourceUrl, false); state.unchanged = Number(state.unchanged) + 1; continue; }
       try {
         const result = await stageOfficialNotice(b, "official-gov24-bulk", { sourceRecord, baselineOnly: !old, contentHash: fingerprint });
         if (result.reused) state.updated = Number(state.updated) + 1; else state.created = Number(state.created) + 1;
@@ -182,8 +183,9 @@ export async function runKstartup(fetcher: typeof fetch = fetch) {
         try { b = mapKstartup(item, checkedAt); } catch { state.invalid = Number(state.invalid) + 1; if (!state.sampleKeys) state.sampleKeys = Object.keys(item).slice(0, 40); continue; }
         if (excludedCategory(b)) { state.excluded = Number(state.excluded) + 1; continue; }
         const fingerprint = hash(item);
-        const old = (await pool.query("SELECT content_hash FROM iroun_feed_snapshots WHERE source_id=$1", [b.sourceId])).rows[0];
-        if (old?.content_hash === fingerprint) { await refreshOfficialCheck(b.sourceId, b.checkedAt, b.sourceUrl, false); state.unchanged = Number(state.unchanged) + 1; continue; }
+        const snap = await sameSnapshot(b.sourceId, fingerprint);
+        const old = snap.exists;
+        if (snap.same) { await refreshOfficialCheck(b.sourceId, b.checkedAt, b.sourceUrl, false); state.unchanged = Number(state.unchanged) + 1; continue; }
         try {
           const result = await stageOfficialNotice(b, "official-kstartup-worker", { sourceRecord: item, baselineOnly: !old, contentHash: fingerprint });
           if (result.reused) state.updated = Number(state.updated) + 1; else state.created = Number(state.created) + 1;

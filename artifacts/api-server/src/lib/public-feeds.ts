@@ -1,7 +1,7 @@
 import {createHash} from "node:crypto";
 import {pool} from "@workspace/db";
 import {excludedCategory} from "./benefit-domain";
-import {refreshOfficialCheck,stageOfficialNotice} from "./official-ingestion";
+import {refreshOfficialCheck,sameSnapshot,stableRecord,stageOfficialNotice} from "./official-ingestion";
 import {catalog,mapPublicBenefit,parseWelfareXml,rows,text,type PublicFeed,type Row} from "./public-feed-model";
 let schema:Promise<unknown>|undefined;
 function canonical(value:unknown):string{
@@ -106,9 +106,10 @@ export async function runPublicFeed(source:PublicFeed,fetcher:typeof fetch=fetch
       try{b=mapPublicBenefit(source,item,detail,conditions,state.lastAttempt,testMode);}catch{state.invalid++;continue;}
       if(excludedCategory(b)){state.excluded++;continue;}
       const sourceRecord={list:item,detail,conditions};
-      const fingerprint=createHash("sha256").update(canonical(sourceRecord)).digest("hex");
-      const old=(await pool.query("SELECT content_hash FROM iroun_feed_snapshots WHERE source_id=$1",[b.sourceId])).rows[0];
-      if(old?.content_hash===fingerprint){
+      const fingerprint="v2:"+createHash("sha256").update(canonical(stableRecord(sourceRecord))).digest("hex");
+      const snap=await sameSnapshot(b.sourceId,fingerprint);
+      const old=snap.exists?{}:undefined;
+      if(snap.same){
         await refreshOfficialCheck(b.sourceId,b.checkedAt,b.sourceUrl,testMode);
         state.unchanged++;continue;
       }

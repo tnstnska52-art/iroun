@@ -3,7 +3,7 @@ import { pool } from "@workspace/db";
 import { z } from "zod";
 import { benefitSchema,excludedCategory,type Benefit } from "./benefit-domain";
 import {storedFeedState,storeFeedState,reserveFeedCall} from "./public-feeds";
-import { refreshOfficialCheck,stageOfficialNotice } from "./official-ingestion";
+import { refreshOfficialCheck,sameSnapshot,stableRecord,stageOfficialNotice } from "./official-ingestion";
 import { applyExtraction,autoPublishable,extractNotice } from "./notice-extract";
 
 export const BIZINFO_DOCUMENTATION="https://www.bizinfo.go.kr/apiDetail.do?id=bizinfoApi";
@@ -124,9 +124,10 @@ export async function runBizinfoFeed(fetcher:typeof fetch=fetch,testMode=false){
         if(excludedCategory(parsed)){excluded++;continue;}
         const structured=structureBizinfo(parsed,raw);
         const b=structured.benefit;
-        const fingerprint=createHash("sha256").update(canonical(raw)).digest("hex");
-        const prior=(await pool.query("SELECT content_hash FROM iroun_feed_snapshots WHERE source_id=$1",[b.sourceId])).rows[0];
-        if(prior?.content_hash===fingerprint){
+        const fingerprint="v2:"+createHash("sha256").update(canonical(stableRecord(raw))).digest("hex");
+        const snap=await sameSnapshot(b.sourceId,fingerprint);
+        const prior=snap.exists?{}:undefined;
+        if(snap.same){
           await refreshOfficialCheck(b.sourceId,b.checkedAt);
           unchanged++;continue;
         }

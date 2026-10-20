@@ -2,6 +2,22 @@ import { pool } from "@workspace/db";
 import { audit } from "./benefit-store";
 import { benefitSchema, excludedCategory, normalizeSourceKey, officialUrl, publicBenefit } from "./benefit-domain";
 
+/** 공고 내용과 무관하게 매번 바뀌는 값(전체 건수·조회수·순번). 변경 판단 지문에서 뺀다. */
+const VOLATILE=/^(totCnt|totalCount|inqireCo|inqCnt|inq_cnt|rnum|rn|rowNum|조회수|viewCnt|view_cnt|hit|hits)$/i;
+export function stableRecord(value:unknown):unknown{
+  if(Array.isArray(value))return value.map(stableRecord);
+  if(value&&typeof value==="object")return Object.fromEntries(Object.entries(value as Record<string,unknown>).filter(([k])=>!VOLATILE.test(k)).map(([k,v])=>[k,stableRecord(v)]));
+  return value;
+}
+/** 지문 비교. v2 지문은 변동값을 뺀 것. 예전(v1) 지문이 남아 있으면 이번 한 번은 '변경 없음'으로 보고 v2로 바꿔 적는다. */
+export async function sameSnapshot(sourceId:string,fingerprint:string){
+  const old=(await pool.query("SELECT content_hash FROM iroun_feed_snapshots WHERE source_id=$1",[sourceId])).rows[0]?.content_hash as string|undefined;
+  if(!old)return {exists:false,same:false};
+  if(old===fingerprint)return {exists:true,same:true};
+  if(!old.startsWith("v2:")){await pool.query("UPDATE iroun_feed_snapshots SET content_hash=$2 WHERE source_id=$1",[sourceId,fingerprint]);return {exists:true,same:true};}
+  return {exists:true,same:false};
+}
+
 /**
  * Store provider notices for operator review. Provider changes are proposals:
  * they must not overwrite curated fields or publish without a human review.
@@ -49,7 +65,11 @@ export async function stageOfficialNotice(
       b.id=prior.id;
       // Keep every curated field intact but remove the notice from public view
       // until an operator accepts or rejects this new official version.
-      const reviewCopy: typeof b={
+      // AI 가 관리하는 공고는 다시 읽을 때까지 지금 상태(공개 등)를 유지하고 stale 표시만 한다.
+      // 사람이 직접 관리하는 공고는 예전처럼 운영자 검토 전까지 내린다.
+      const reviewCopy: typeof b=prior.extraction?.ai
+        ?{...prior,checkedAt:b.checkedAt,stale:true}
+        :{
         ...prior,
         checkedAt:b.checkedAt,
         status:"확인 필요",

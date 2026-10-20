@@ -79,6 +79,8 @@ export const benefitSchema = z.object({
   fit: z.object({industries: z.array(z.string().max(20)).max(12), small: z.number().int().min(1).max(5)}).strict().optional(),
   // 다른 출처에 같은 사업이 이미 공개돼 있으면 그 공고 id. 이 공고는 비공개로 둔다.
   duplicateOf: z.string().max(80).optional(),
+  // 공식 원문이 바뀌어 AI 가 다시 읽어야 하는 공고. 다시 읽으면 지운다.
+  stale: z.boolean().optional(),
   // 자동 정리 기록: 원문 어느 문장에서 무엇을 읽었는지. 운영자 검토용이며 고객 판단에는 쓰지 않는다.
   extraction: z.object({
     confidence: z.number().int().min(0).max(100),
