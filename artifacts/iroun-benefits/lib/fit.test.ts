@@ -182,3 +182,8 @@ describe('12회차: 지나치게 빼던 공고', () => {
   it('AI 관련 업종만 다르고 제목이 그 업종을 가리키지 않으면 확인 필요로 남긴다', () => expect(industryGate({ category: '고용·창업', title: '중소기업 기술유출 방지 시스템 구축 지원', fit: { industries: ['정보통신'] } }, '제조')).toBe('ok'));
   it('소상공인 고용보험 가입 지원은 직원 없어도 남긴다', () => expect(needsEmployees({ title: '소상공인 고용보험 가입 지원' }, '없음')).toBe(false));
 });
+
+describe('13회차', () => {
+  it('요약에 2026.1.1. 이후 개업이면 2025년 개업 제외', () => expect(stageGate({ title: '[경남] 함양군 소규모 창업자 창업자금', summary: '예비창업자 또는 초기창업자(2026.1.1. 이후 개업)를 대상으로' }, 2025, new Date('2026-10-21T00:00:00Z'))).toBe('out'));
+  it('회원사 대상은 확인 필요', () => expect(orgTargetGate({ summary: '경북수출기업협회 유료회원사를 대상으로' })).toBe('check'));
+});

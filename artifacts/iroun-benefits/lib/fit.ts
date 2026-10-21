@@ -33,7 +33,7 @@ const STRONG_HINTS: [RegExp, string[]][] = [
   [/학원|교습소/, ['교육']],
   [/약국|의원|병원/, ['보건·복지']],
 ];
-const SECTOR = /사출|성형기|여행사|여행업|관광\s*사업체|광산|광업|석유\s*화학|철강|어선|양식|원양|어가|채종|종자|퇴비|비료|수산|쌀|꿀|벌꿀|화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
+const SECTOR = /천일염|염전|쏙|축산|축사|한우|양돈|양계|가전|사출|성형기|여행사|여행업|관광\s*사업체|광산|광업|석유\s*화학|철강|어선|양식|원양|어가|채종|종자|퇴비|비료|수산|쌀|꿀|벌꿀|화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
 /** 매장 업종에 벤처·스타트업 전용 공고는 확인 필요 */
 const VENTURE = /벤처|스타트업|딥테크|예비\s*창업|창업\s*기업|창업\s*도약|창업\s*패키지/;
 export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fit?: { industries?: string[] } }, industry?: string): 'ok' | 'check' | 'out' {
@@ -46,7 +46,7 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
   if (strong) return strong[1].includes(industry) ? 'ok' : 'out';
   // 화장품·자동차부품·수산처럼 세부 산업 공고는 업종이 맞아도 그 산업인지 확인이 필요하다.
   if (SECTOR.test(title)) return (b.fit?.industries?.length && !b.fit.industries.includes(industry)) ? 'out' : 'check';
-  if (/식육\s*(가공|포장)|양식장|어선|원양|도축/.test((b as { summary?: string }).summary ?? '')) return 'check';
+  if (/식육\s*(가공|포장)|양식장|어선|원양|도축|화장품|가전|천일염|축산\s*농가/.test((b as { summary?: string }).summary ?? '')) return 'check';
   if (/여행사|여행업\s*(등록|체)/.test((b as { summary?: string }).summary ?? '') && industry !== '서비스') return 'check';
   if (/여행사를?\s*대상|여행업\s*등록/.test((b as { summary?: string }).summary ?? '')) return 'check';
   if (/(식육|도축|양식장|어가|어선|원양|모빌리티|자동차|뿌리|항만|수리\s*조선|조선|석유\s*화학|철강|바이오|반도체|화장품|의료\s*기기|항공|방산|이차\s*전지|수소)\s*(산업|업종|부품\s*업종|기업)/.test((b as { summary?: string }).summary ?? '')) return 'check';
@@ -110,8 +110,11 @@ const EARLY_STAGE = /생애\s*첫|첫\s*창업|예비\s*창업|초기\s*창업|�
 /**
  * 업력 관문. 공고 자격에 업력 규칙이 없어도 제목이 창업 초기 전용이면 개업 3년이 넘은 사업장은 뺀다.
  */
-export function stageGate(b: Pick<Benefit, 'title'>, openedYear?: number, now = new Date()): 'ok' | 'out' {
+export function stageGate(b: Pick<Benefit, 'title'> & { summary?: string }, openedYear?: number, now = new Date()): 'ok' | 'out' {
   if (!openedYear) return 'ok';
+  // 요약에 "2026.1.1. 이후 개업"처럼 개업 시점이 적혀 있으면 그보다 먼저 개업한 사업장은 뺀다.
+  const after = (b.summary ?? '').match(/(20\d{2})\s*[.년]\s*\d{1,2}\s*[.월]\s*\d{1,2}\s*[.일]?\s*(?:이후|부터)\s*(?:개업|창업|사업자\s*등록|처음)/);
+  if (after && openedYear < parseInt(after[1], 10)) return 'out';
   const year = new Date(now.getTime() + 9 * 3600000).getUTCFullYear();
   return EARLY_STAGE.test(b.title) && openedYear <= year - 3 ? 'out' : 'ok';
 }
@@ -176,7 +179,7 @@ export function textLimitGate(b: Pick<Benefit, 'summary' | 'rules'>, x: { revenu
 }
 
 /** 공고 요약에 적힌 신청 대상이 조직(농협·영농조합·협동조합·사회적기업 등)이면 개별 사업장은 확인 필요 */
-const ORG_TARGET = /농협|영농\s*조합|농업\s*(회사\s*)?법인|협동\s*조합|생산자\s*단체|유통\s*(법인|조직)|산지\s*유통|사회적\s*기업|예비\s*사회적\s*기업/;
+const ORG_TARGET = /회원사|유료\s*회원|농협|영농\s*조합|농업\s*(회사\s*)?법인|협동\s*조합|생산자\s*단체|유통\s*(법인|조직)|산지\s*유통|사회적\s*기업|예비\s*사회적\s*기업/;
 export function orgTargetGate(b: Pick<Benefit, 'summary'>): 'ok' | 'check' {
   return ORG_TARGET.test(b.summary ?? '') && !/소상공인|개인\s*사업자|중소\s*기업/.test(b.summary ?? '') ? 'check' : 'ok';
 }
