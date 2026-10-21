@@ -187,3 +187,9 @@ describe('13회차', () => {
   it('요약에 2026.1.1. 이후 개업이면 2025년 개업 제외', () => expect(stageGate({ title: '[경남] 함양군 소규모 창업자 창업자금', summary: '예비창업자 또는 초기창업자(2026.1.1. 이후 개업)를 대상으로' }, 2025, new Date('2026-10-21T00:00:00Z'))).toBe('out'));
   it('회원사 대상은 확인 필요', () => expect(orgTargetGate({ summary: '경북수출기업협회 유료회원사를 대상으로' })).toBe('check'));
 });
+
+describe('15회차', () => {
+  it('업종 기타에 요약상 모빌리티 산업 공고는 확인 필요', () => expect(industryGate({ category: '인력', title: '[대구] 지역 플러스 고용활력 프로젝트', summary: '대구지역 모빌리티 산업의 신규 고용', fit: { industries: [] } } as never, '기타')).toBe('check'));
+  it('축산물 판매업소 공고는 음식점 제외', () => expect(industryGate({ category: '경영', title: '축산물 판매업소 위생시설 개선 지원', fit: { industries: [] } }, '음식점')).toBe('out'));
+  it('코로나 손실보상은 특정 상황', () => expect(ownerGate({ title: '소상공인 손실보상금 지원(현장신청 지원)' })).toBe('check'));
+});

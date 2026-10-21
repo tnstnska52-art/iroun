@@ -28,7 +28,7 @@ const STRONG_HINTS: [RegExp, string[]][] = [
   [/공중\s*위생|이\s*미용|미용\s*업/, ['숙박', '서비스']],
   [/신문사|신문\s*우송/, ['정보통신']],
   [/매출\s*채권/, ['제조', '도소매', '건설', '정보통신']],
-  [/축산물\s*판매|정육/, ['도소매', '농림어업', '음식점']],
+  [/축산물\s*판매|정육/, ['도소매', '농림어업']],
   [/택시|화물\s*운송/, ['운수']],
   [/학원|교습소/, ['교육']],
   [/약국|의원|병원/, ['보건·복지']],
@@ -40,7 +40,8 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
   const title = b.title ?? '';
   if (!industry) return 'ok';
   // 업종을 '기타'로 고르면 특정 업종 공고는 조건 일치로 세지 않는다.
-  if (industry === '기타') return STRONG_HINTS.some(([re]) => re.test(title)) || INDUSTRY_HINTS.some(([re]) => re.test(title)) || SECTOR.test(title) || VENTURE.test(title) || (b.fit?.industries?.length ?? 0) > 0 || b.category === '농림축산어업' ? 'check' : 'ok';
+  const sum = (b as { summary?: string }).summary ?? '';
+  if (industry === '기타') return STRONG_HINTS.some(([re]) => re.test(title)) || INDUSTRY_HINTS.some(([re]) => re.test(title)) || SECTOR.test(title) || VENTURE.test(title) || /식육\s*(가공|포장)|양식장|어선|원양|도축|화장품|가전|천일염|축산\s*농가|철강|자동차\s*(부품|제조)|기계\s*[·ㆍ]\s*부품|식품\s*제조|신발|폐사어/.test(sum) || /(모빌리티|자동차|뿌리|항만|조선|석유\s*화학|철강|바이오|반도체|화장품)\s*(산업|업종|기업)/.test(sum) || (b.fit?.industries?.length ?? 0) > 0 || b.category === '농림축산어업' ? 'check' : 'ok';
   // 제목에 업종이 분명히 적힌 공고(예: 축산물판매업소)는 AI가 정한 관련 업종보다 제목을 따른다.
   const strong = STRONG_HINTS.find(([re]) => re.test(title));
   if (strong) return strong[1].includes(industry) ? 'ok' : 'out';
@@ -69,7 +70,7 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
 }
 
 /** 직원을 두고 있어야 받는 사업(채용·고용유지·근로자 복지). 자영업자 본인 보험료 지원은 뺀다. */
-const EMPLOYER = /노동자|휴게\s*시설|산재\s*예방|클린\s*사업장|안전\s*보건|내일\s*채움|가족\s*친화|재택\s*근무|어린이집|일\s*생활|워라밸|인재|대체\s*인력|일\s*경험|계절\s*학기|고용|취업|사업주|근로\s*복지|채용|인턴|근로자|직원|인력|퇴직\s*연금|정규직|육아\s*휴직|출산|작업\s*환경|산재|일자리/;
+const EMPLOYER = /출근제|단축\s*근로|근로\s*시간|기숙사|노동자|휴게\s*시설|산재\s*예방|클린\s*사업장|안전\s*보건|내일\s*채움|가족\s*친화|재택\s*근무|어린이집|일\s*생활|워라밸|인재|대체\s*인력|일\s*경험|계절\s*학기|고용|취업|사업주|근로\s*복지|채용|인턴|근로자|직원|인력|퇴직\s*연금|정규직|육아\s*휴직|출산|작업\s*환경|산재|일자리/;
 const SELF = /고용\s*보험\s*(가입|료)|자영업자|1인|대표자|본인|보험료/;
 /** 4대보험 직원이 없다고 답한 사업장에 직원 고용 사업을 빼는지 */
 export function needsEmployees(b: Pick<Benefit, 'title'>, employeeBand?: string, employees?: number): boolean {
@@ -82,7 +83,7 @@ export function needsEmployees(b: Pick<Benefit, 'title'>, employeeBand?: string,
 const WOMAN_ONLY = /여성\s*(기업|벤처|창업|대표|CEO|경제인|기업인)/;
 const SPECIAL_OWNER = /북한\s*이탈|새터민|사회적\s*가치|사회\s*연대|사회적\s*(기업|경제)|협동\s*조합|마을\s*기업|비영리|보훈|국가\s*유공|다문화|한부모|장애인|장애\s*(기업|창업)|보조\s*공학/;
 /** 특정한 일이 생겼을 때만 받는 사업(산재·휴직·고용조정·폐업·재기). 평소 사업장에는 '조건 일치'로 세지 않는다. */
-const SITUATIONAL = /제로\s*마켓|리필|주차장|적립\s*운영|착한\s*가격|모범\s*업소|지정\s*업소|전입|기업\s*이전|이전\s*기업|공동\s*구매|협업\s*활성화|협업체|산재|고용\s*유지|육아\s*휴직|출산|실업\s*급여|사업\s*정리|폐업|재기|휴업|재해|피해\s*(지원|복구)|위기|부담금/;
+const SITUATIONAL = /손실\s*보상|코로나|제로\s*마켓|리필|주차장|적립\s*운영|착한\s*가격|모범\s*업소|지정\s*업소|전입|기업\s*이전|이전\s*기업|공동\s*구매|협업\s*활성화|협업체|산재|고용\s*유지|육아\s*휴직|출산|실업\s*급여|사업\s*정리|폐업|재기|휴업|재해|피해\s*(지원|복구)|위기|부담금/;
 /**
  * 대표자 자격 관문.
  *  - out: 여성 기업 전용인데 여성 대표가 아니라고 답함
