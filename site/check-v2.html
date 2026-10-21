@@ -438,7 +438,7 @@ function lockedList(items,red){var open=items.slice(0,FREE),rest=items.length-op
  return h+'</div>';}
 function bindCommon(){[].forEach.call(box.querySelectorAll('[data-join]'),function(b){b.onclick=openJoin;});[].forEach.call(box.querySelectorAll('[data-list]'),function(b){b.onclick=function(){S.tab=b.getAttribute('data-list');renderList();scrollTop();};});var rd=box.querySelector('[data-redo]');if(rd)rd.onclick=function(){S.idx=0;renderQ();scrollTop();};}
 /* ===== 지원금 목록 (3건 공개 + 잠금) ===== */
-function renderList(){stopTimers();S.view='list';if(!S.est)compute();var now=S.est,past=S.pastAll,cur=S.tab==='past'?past:now,red=S.tab==='past';
+function renderList(){stopTimers();S.view='list';if(!S.est)compute();var now=S.est,past=S.past,cur=S.tab==='past'?past:now,red=S.tab==='past';
  var h='<div class="c2-top" style="padding:0 4px"><button type="button" class="bk" data-back aria-label="뒤로">‹</button><b style="font-size:20px;font-weight:800">지원금</b></div>';
  h+='<div class="c2-tabs" role="tablist"><button type="button" role="tab" class="'+(red?'':'on')+'" data-tab="now">받을 수 있는 '+now.items.length+'</button><button type="button" role="tab" class="'+(red?'on':'')+'" data-tab="past">놓친 '+past.items.length+'</button></div>';
  h+=totalCard(red?'놓친 지원금':'신청 가능 지원금',cur,red,red?'올해는 놓치지 마세요':null);
@@ -453,7 +453,7 @@ function openModal(html){sheet.innerHTML=html;modal.hidden=false;document.docume
 function closeModal(){modal.hidden=true;document.documentElement.style.overflow='';}
 [].forEach.call(modal.querySelectorAll('[data-close]'),function(e){e.onclick=closeModal;});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!modal.hidden)closeModal();});
-function freeIds(){var s={};if(!S.est)return s;S.est.items.slice(0,FREE).concat((S.pastAll||{items:[]}).items.slice(0,FREE)).forEach(function(x){s[x.benefit.id]=1;});return s;}
+function freeIds(){var s={};if(!S.est)return s;S.est.items.slice(0,FREE).concat((S.past||{items:[]}).items.slice(0,FREE)).forEach(function(x){s[x.benefit.id]=1;});return s;}
 function findItem(id){var all=[];if(S.est)all=all.concat(S.est.items,S.pastAll.items);if(S.cache)all=all.concat(S.cache.items);for(var i=0;i<all.length;i++)if(all[i].benefit.id===id)return all[i];var b=(S.list||[]).filter(function(b){return b.id===id;})[0];return b?{benefit:b,result:'추가 확인 필요',m:null}:null;}
 function boxSec(title,inner){return '<div class="c2-box"><div>'+inner+'</div><h4>'+esc(title)+'</h4></div>';}
 function openDetail(id){var x=findItem(id);if(!x)return;var b=x.benefit,dd=dday(b),closed=dd.label==='마감';var unlocked=!!S.member||!!freeIds()[b.id];
