@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { textLimitGate, easeOf, smallBizGate, stageGate, dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
+import { districtGate, orgTargetGate, textLimitGate, easeOf, smallBizGate, stageGate, dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
 
 const b = (category: string, industries?: string[]) => ({ category, fit: industries ? { industries } : undefined });
 
@@ -134,4 +134,20 @@ describe('기타 업종·세부 산업', () => {
   it('업종 기타면 농업 공고는 확인 필요', () => expect(industryGate({ category: '농림축산어업', title: '농업용 면세유 유가연동보조금', fit: { industries: [] } }, '기타')).toBe('check'));
   it('화장품 박람회는 도소매라도 확인 필요', () => expect(industryGate({ category: '수출', title: '[충북] 이탈리아 볼로냐 코스모프로프 화장품 박람회', fit: { industries: [] } }, '제조')).toBe('check'));
   it('매출채권보험은 음식점 제외', () => expect(industryGate({ category: '경영', title: '매출채권보험료지원', fit: { industries: [] } }, '음식점')).toBe('out'));
+});
+
+describe('districtGate: 요약에 적힌 시·군·구', () => {
+  const b = { title: '하수도요금 감면(소상공인)', summary: '거창군 소재 소상공인 사업장을 대상으로 하수도 사용료를 감면' };
+  it('다른 시·군·구 사업장은 제외', () => expect(districtGate(b, '경상남도', '의령군')).toBe('out'));
+  it('그 시·군·구면 해당', () => expect(districtGate(b, '경상남도', '거창군')).toBe('ok'));
+  it('제목 앞 [시도] 시·군·구 목록', () => {
+    const t = { title: '[경기] 수원시ㆍ용인시ㆍ화성시 2026년 청년일자리도약장려금', summary: '' };
+    expect(districtGate(t, '경기도', '용인시')).toBe('ok');
+    expect(districtGate(t, '경기도', '고양시')).toBe('out');
+  });
+  it('시·군·구가 없으면 그대로', () => expect(districtGate({ title: '경상남도 소상공인 지원', summary: '도내 소상공인' }, '경상남도', '의령군')).toBe('ok'));
+});
+describe('orgTargetGate: 조직 대상 공고', () => {
+  it('농협·영농조합 대상은 확인 필요', () => expect(orgTargetGate({ summary: '농협조직, 농업법인, 협동조합 등이 대상' })).toBe('check'));
+  it('소상공인도 대상이면 그대로', () => expect(orgTargetGate({ summary: '협동조합 및 소상공인 대상' })).toBe('ok'));
 });

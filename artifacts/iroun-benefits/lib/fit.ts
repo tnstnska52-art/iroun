@@ -1,4 +1,5 @@
 import type { Benefit } from '@workspace/api-client-react';
+import { DISTRICTS } from './regions';
 
 /** 매장·현장 중심 업종. 수출·기술개발 공고는 해당 사업이 있는지 확인이 필요하다. */
 const LOCAL_INDUSTRIES = ['음식점', '숙박', '서비스', '교육', '보건·복지', '운수', '건설'];
@@ -31,7 +32,7 @@ const STRONG_HINTS: [RegExp, string[]][] = [
   [/학원|교습소/, ['교육']],
   [/약국|의원|병원/, ['보건·복지']],
 ];
-const SECTOR = /화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
+const SECTOR = /쌀|꿀|벌꿀|화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
 /** 매장 업종에 벤처·스타트업 전용 공고는 확인 필요 */
 const VENTURE = /벤처|스타트업|딥테크|예비\s*창업|창업\s*기업|창업\s*도약|창업\s*패키지/;
 export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fit?: { industries?: string[] } }, industry?: string): 'ok' | 'check' | 'out' {
@@ -55,7 +56,7 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
 }
 
 /** 직원을 두고 있어야 받는 사업(채용·고용유지·근로자 복지). 자영업자 본인 보험료 지원은 뺀다. */
-const EMPLOYER = /내일\s*채움|가족\s*친화|재택\s*근무|어린이집|일\s*생활|워라밸|인재|대체\s*인력|일\s*경험|계절\s*학기|고용|취업|사업주|근로\s*복지|채용|인턴|근로자|직원|인력|퇴직\s*연금|정규직|육아\s*휴직|출산|작업\s*환경|산재|일자리/;
+const EMPLOYER = /산재\s*예방|클린\s*사업장|안전\s*보건|내일\s*채움|가족\s*친화|재택\s*근무|어린이집|일\s*생활|워라밸|인재|대체\s*인력|일\s*경험|계절\s*학기|고용|취업|사업주|근로\s*복지|채용|인턴|근로자|직원|인력|퇴직\s*연금|정규직|육아\s*휴직|출산|작업\s*환경|산재|일자리/;
 const SELF = /자영업자|1인|대표자|본인|보험료/;
 /** 4대보험 직원이 없다고 답한 사업장에 직원 고용 사업을 빼는지 */
 export function needsEmployees(b: Pick<Benefit, 'title'>, employeeBand?: string, employees?: number): boolean {
@@ -66,7 +67,7 @@ export function needsEmployees(b: Pick<Benefit, 'title'>, employeeBand?: string,
 }
 
 const WOMAN_ONLY = /여성\s*(기업|벤처|창업|대표|CEO|경제인|기업인)/;
-const SPECIAL_OWNER = /북한\s*이탈|새터민|사회\s*연대|사회적\s*(기업|경제)|협동\s*조합|마을\s*기업|비영리|보훈|국가\s*유공|다문화|한부모|장애인|장애\s*(기업|창업)|보조\s*공학/;
+const SPECIAL_OWNER = /북한\s*이탈|새터민|사회적\s*가치|사회\s*연대|사회적\s*(기업|경제)|협동\s*조합|마을\s*기업|비영리|보훈|국가\s*유공|다문화|한부모|장애인|장애\s*(기업|창업)|보조\s*공학/;
 /** 특정한 일이 생겼을 때만 받는 사업(산재·휴직·고용조정·폐업·재기). 평소 사업장에는 '조건 일치'로 세지 않는다. */
 const SITUATIONAL = /기업\s*이전|이전\s*기업|공동\s*구매|협업\s*활성화|협업체|산재|고용\s*유지|육아\s*휴직|출산|실업\s*급여|사업\s*정리|폐업|재기|휴업|재해|피해\s*(지원|복구)|위기|부담금/;
 /**
@@ -108,7 +109,7 @@ export function smallBizGate(b: Pick<Benefit, 'title' | 'summary'>, x: { employe
   const text = `${b.title} ${b.summary ?? ''}`;
   const forSmall = /소상공인|자영업자|영세/.test(text) && !/중소\s*기업|중소\s*사업장|중견/.test(text);
   if (!forSmall) return 'ok';
-  if (/자영업자/.test(text) && !/소상공인/.test(text) && x.entity === '법인') return 'out';
+  if (/자영업자/.test(text) && (!/소상공인/.test(text) || /자영업자\s*고용\s*보험/.test(text) && !/사업주|산재/.test(text)) && x.entity === '법인') return 'out';
   const band = x.employeeBand;
   if (!band || band === '없음' || band === '1~4명') return 'ok';
   if (band === '5~9명') return ['제조', '건설', '운수'].includes(x.industry ?? '') ? 'ok' : 'out';
@@ -152,4 +153,25 @@ export function textLimitGate(b: Pick<Benefit, 'summary' | 'rules'>, x: { revenu
     if (ev[0] < lo || ev[1] > hi) res = 'check';
   }
   return res;
+}
+
+/** 공고 요약에 적힌 신청 대상이 조직(농협·영농조합·협동조합·사회적기업 등)이면 개별 사업장은 확인 필요 */
+const ORG_TARGET = /농협|영농\s*조합|농업\s*(회사\s*)?법인|협동\s*조합|생산자\s*단체|유통\s*(법인|조직)|산지\s*유통|사회적\s*기업|예비\s*사회적\s*기업/;
+export function orgTargetGate(b: Pick<Benefit, 'summary'>): 'ok' | 'check' {
+  return ORG_TARGET.test(b.summary ?? '') && !/소상공인|개인\s*사업자|중소\s*기업/.test(b.summary ?? '') ? 'check' : 'ok';
+}
+
+/**
+ * 시·군·구 관문. 공고 지역이 시·도까지만 적혀 있어도 요약에 "거창군 소재"처럼 시·군·구가 적혀 있으면 그 시·군·구만 해당한다.
+ */
+export function districtGate(b: Pick<Benefit, 'title' | 'summary'>, province?: string, district?: string): 'ok' | 'out' {
+  if (!province || !district) return 'ok';
+  const list = DISTRICTS[province] ?? [];
+  const text = `${b.title} ${b.summary ?? ''}`;
+  const named = new Set<string>();
+  const head = b.title.match(/^\s*\[[^\]]+\]\s*((?:[가-힣]+(?:시|군|구)\s*[ㆍ·,]?\s*)+)/);
+  if (head) for (const d of head[1].match(/[가-힣]+(?:시|군|구)/g) ?? []) if (list.includes(d)) named.add(d);
+  for (const m of text.matchAll(/([가-힣]{1,4}(?:시|군|구))\s*(?:소재|내|관내|거주|지역\s*(?:소재|내))/g)) if (list.includes(m[1])) named.add(m[1]);
+  if (!named.size || named.has(district)) return 'ok';
+  return 'out';
 }
