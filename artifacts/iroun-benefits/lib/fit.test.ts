@@ -209,3 +209,8 @@ describe('rentGate: 자가 사업장', () => {
   it('임차면 그대로', () => expect(rentGate({ title: '청년 사업자 및 창업자 월 임차료 지원' }, '임차')).toBe('ok'));
   it('기숙사 임차비는 거르지 않는다', () => expect(rentGate({ title: '중소기업 노동자 기숙사 임차비 지원' }, '자가')).toBe('ok'));
 });
+
+describe('마지막 회차', () => {
+  it('식품·공중위생업소 공고는 음식점도 해당', () => expect(industryGate({ category: '경영', title: '[경남] 함안군 2026년 식품ㆍ공중위생업소 시설개선비 지원사업', fit: { industries: [] } }, '음식점')).toBe('ok'));
+  it('공중위생업소만이면 음식점 제외', () => expect(industryGate({ category: '경영', title: '공중위생업소(숙박업 및 이미용업소) 시설개선 지원', fit: { industries: [] } }, '음식점')).toBe('out'));
+});
