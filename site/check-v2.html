@@ -288,11 +288,13 @@ function bindPick(id,items,note,delay){var el=document.getElementById(id);if(!el
 function rollList(id,items){if(!items.length)return '';var many=items.length>3;var rows=many?items.concat(items.slice(0,3)):items;return '<div class="c2-list'+(many?' c2-roll':'')+'" id="'+id+'"><div>'+rows.map(function(x){return row(x,false);}).join('')+'</div></div>';}
 function bindRoll(id,n){var el=document.getElementById(id);if(!el||n<=3)return;var inner=el.firstChild,off=0;var t=setInterval(function(){off++;inner.style.transition='transform .5s ease';inner.style.transform='translateY('+(-off*73)+'px)';if(off>=n){var s=setTimeout(function(){inner.style.transition='none';off=0;inner.style.transform='translateY(0)';},560);S.timers.push(s);}},3500);S.timers.push(t);}
 function bindRows(){[].forEach.call(box.querySelectorAll('.c2-row[data-id]'),function(r){r.onclick=function(){openDetail(r.getAttribute('data-id'));};});}
+/* 30일 안 마감: 통장 입금·바우처 중 고객에게 잘 맞는 순으로 5건을 고른 뒤 마감 순으로 */
+function closingOf(pool){var c=pool.filter(function(x){var d=daysLeft(x.benefit.endsAt);return d!==null&&d>=0&&d<=30&&moneyType(x.benefit)!=='service';}).sort(order);var top=c.filter(function(x){return rank(x.benefit)<=1;});if(top.length<3)top=top.concat(c.filter(function(x){return rank(x.benefit)>1;}).slice(0,3-top.length));return top.slice(0,5).sort(function(a,b){return left(a.benefit)-left(b.benefit);});}
 /* ===== 홈 (조건 입력 전) ===== */
 function homePool(){return (S.list||[]).filter(function(b){return openToday(b)&&moneyType(b)!=='loan';}).map(function(b){return {benefit:b,result:'추가 확인 필요',m:null};}).sort(order);}
 function renderHome(){stopTimers();if(!S.list){box.innerHTML='<div class="c2-loading">공고를 불러오는 중이에요…</div>';return;}
  var pool=homePool();var refunds=pool.filter(function(x){return moneyType(x.benefit)==='refund';}).slice(0,5);var picks=todayPicks(pool);var used={};refunds.concat(picks).forEach(function(x){used[x.benefit.id]=1;});var now=pool.filter(function(x){return !used[x.benefit.id];}).slice(0,10);
- var closing=pool.filter(function(x){var d=daysLeft(x.benefit.endsAt);return d!==null&&d>=0&&d<=30&&moneyType(x.benefit)!=='service';}).sort(function(a,b){return left(a.benefit)-left(b.benefit);}).slice(0,5);
+ var closing=closingOf(pool);
  S.cache={items:pool};
  var h='<div class="c2-card"><div class="c2-lab">받을 수 있는 지원금, 놓치고 있지 않나요?</div><p class="c2-head">지금 신청할 수 있는 공고 '+pool.length.toLocaleString('ko-KR')+'건 중에서<br>우리 사업장에 맞는 것만 골라드려요</p></div>';
  h+='<button type="button" class="c2-cta" data-start><span class="c2-fill"><b>내 사업자 지원금은<br>얼마일까?</b><small>버튼만 누르면 1분이면 끝나요</small></span><i aria-hidden="true">→</i></button>';
@@ -361,7 +363,7 @@ function analyzing(){stopTimers();S.ans.done=true;save('irw_c2_ans',S.ans);var n
 function compute(){var p=profile();S.est=estimate(S.list||[],p);S.past=missed(S.list||[],p,YEAR-1);S.pastAll=missed(S.list||[],p);}
 function renderR(){stopTimers();if(!S.list){box.innerHTML='<div class="c2-loading">공고를 불러오는 중이에요…</div>';return;}compute();var est=S.est,past=S.past;
  var pool=est.items.filter(function(x){return openToday(x.benefit);});var refunds=pool.filter(function(x){return moneyType(x.benefit)==='refund';}).slice(0,5);var picks=todayPicks(pool);var used={};refunds.concat(picks).forEach(function(x){used[x.benefit.id]=1;});var now=pool.filter(function(x){return !used[x.benefit.id];}).slice(0,10);
- var closing=pool.filter(function(x){var d=daysLeft(x.benefit.endsAt);return d!==null&&d>=0&&d<=30&&moneyType(x.benefit)!=='service';}).sort(function(a,b){return left(a.benefit)-left(b.benefit);}).slice(0,5);
+ var closing=closingOf(pool);
  var h=totalCard('신청 가능 지원금',est,false,null,'data-list="now"');
  if(past.items.length)h+=totalCard((YEAR-1)+'년에 놓친 지원금',past,true,'올해는 놓치지 마세요','data-list="past"');
  h+=pickCard('c2-p1','놓치기 쉬운 지원금','🎯',picks)+pickCard('c2-p2','놓치기 쉬운 환급금','🎁',refunds);
