@@ -56,3 +56,14 @@ export function easyToMiss(b: Benefit) {
 export function refundLike(b: Benefit) {
   return moneyType(b) === 'refund';
 }
+
+const BIG_AMOUNT = 100_000_000;
+/** 30일 안 마감 목록: 교육·컨설팅과 1억 넘는 대형 사업은 빼고, 통장 입금·바우처 중 고객에게 잘 맞는 5건을 마감 순으로. */
+export function closingOf<T extends Item & { tailored?: boolean }>(items: T[], count = 5): T[] {
+  const c = items.filter((x) => moneyType(x.benefit) !== 'service' && (x.benefit.maxAmount ?? 0) <= BIG_AMOUNT)
+    .sort((x, y) => (x.result === y.result ? 0 : x.result === '조건 일치' ? -1 : 1) || Number(!!y.tailored) - Number(!!x.tailored) || Number(!!y.benefit.maxAmount) - Number(!!x.benefit.maxAmount) || moneyRank(x.benefit) - moneyRank(y.benefit));
+  let top = c.filter((x) => moneyRank(x.benefit) <= 1);
+  if (top.length < 3) top = top.concat(c.filter((x) => moneyRank(x.benefit) > 1).slice(0, 3 - top.length));
+  const left = (x: T) => daysLeft(x.benefit.endsAt) ?? 9999;
+  return top.slice(0, count).sort((x, y) => left(x) - left(y));
+}
