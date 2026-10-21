@@ -295,10 +295,10 @@ function likely(x){var b=x.benefit;if(x.result==='조건 일치'||!x.m)return fa
 function amtOf(b){return b.maxAmount||estOf(b);}
 function sumOf(xs){var t=0;xs.forEach(function(x){var a=amtOf(x.benefit)||0;if(a>0&&a<=BIG&&rank(x.benefit)<=2)t+=a;});return t;}
 /* 대표님들이 신청할 일이 없는 공고: 다른 업종 전용, 특정 대상 전용, 오래된 사업장의 창업 초기 전용, 조회 안내. 빈 문자열이면 '신청해볼 만한' */
-var FIT_SECTOR=/글로벌|바이오|Biotech|천일염|광산|광업|탐광|굴진|굴뚝|어촌|수산|양식|어선|축산|방송|기획\s*취재|영상|연구\s*(시설|장비|인력)|나눔\s*장비|공공연|특허|직무\s*발명|위조\s*방지|온실가스|배출권|방지\s*시설|에너지\s*효율\s*시장|산업\s*집적|인버터|압축기|변압기|물류|수출|중동|국내\s*복귀|기술\s*보호|디지털\s*포렌식|산업\s*현장\s*교수|전통\s*시장|상인회|방송\s*광고|TV\s*수신료|스포츠|관광객\s*유치|기능성\s*평가/,
- FIT_TARGET=/장애|보조\s*공학|북한|이탈\s*주민|산재|재기|재도약|폐업|휴업|고령자|연계\s*고용|희망\s*리턴|국가\s*유공|보훈|고용\s*유지/,
+var FIT_SECTOR=/글로벌|바이오|Biotech|치과|의료\s*기기|인구\s*감소|천일염|광산|광업|탐광|굴진|굴뚝|어촌|수산|양식|어선|축산|방송|기획\s*취재|영상|연구\s*(시설|장비|인력)|나눔\s*장비|공공연|특허|직무\s*발명|위조\s*방지|온실가스|배출권|방지\s*시설|에너지\s*효율\s*시장|산업\s*집적|인버터|압축기|변압기|물류|수출|중동|국내\s*복귀|기술\s*보호|디지털\s*포렌식|산업\s*현장\s*교수|전통\s*시장|상인회|방송\s*광고|TV\s*수신료|스포츠|관광객\s*유치|기능성\s*평가/,
+ FIT_TARGET=/소셜\s*임팩트|사회\s*적\s*(기업|가치|경제)|장애|보조\s*공학|북한|이탈\s*주민|산재|재기|재도약|폐업|휴업|고령자|연계\s*고용|희망\s*리턴|국가\s*유공|보훈|고용\s*유지/,
  FIT_INFO=/조회\s*안내|제도\s*안내/,FIT_START=/팁스|TIPS|창업\s*[·ㆍ]?\s*벤처|벤처\s*기업|스타트업|예비\s*창업|초기\s*창업/,
- FIT_OWN={'농림어업':/수산|어촌|양식|어선|축산|천일염/,'제조':/인버터|압축기|변압기|방지\s*시설|온실가스|배출권|수출|물류|특허|기술\s*보호|위조\s*방지|기능성\s*평가|디지털\s*포렌식|산업\s*집적/,'정보통신':/특허|기술\s*보호|디지털\s*포렌식|영상|방송/,'숙박':/관광객\s*유치/,'도소매':/물류|수출/,'운수':/물류/};
+ FIT_OWN={'농림어업':/수산|어촌|양식|어선|축산|천일염/,'제조':/인버터|압축기|변압기|방지\s*시설|온실가스|배출권|수출|물류|특허|기술\s*보호|위조\s*방지|기능성\s*평가|디지털\s*포렌식|산업\s*집적/,'정보통신':/특허|기술\s*보호|디지털\s*포렌식|영상|방송/,'숙박':/관광객\s*유치/,'도소매':/물류|수출/,'운수':/물류/,'보건·복지':/치과|의료\s*기기/};
 function fitWhy(b){var t=String(b.title||''),a=S.ans,own=FIT_OWN[a.industry];if(FIT_INFO.test(t))return '조회 안내';if(FIT_TARGET.test(t))return '특정 대상 전용';if(FIT_SECTOR.test(t)&&!(own&&own.test(t)))return '다른 업종 전용';if(FIT_START.test(t)&&a.openedYear&&a.openedYear<=YEAR-7)return '창업 초기 전용';return '';}
 function summarize(items){var r=__sum(items);r.recTotal=sumOf(r.recItems);var rs=r.recItems.filter(function(x){return x.result==='조건 일치';});r.recSure=rs.length;r.recSureTotal=sumOf(rs);return r;}
 function __sum(items){items.sort(order);items=dedupe(items);var sure=items.filter(function(x){return x.result==='조건 일치';});var big=items.filter(function(x){return (x.benefit.maxAmount||0)>BIG;}).length;return {items:items,sure:sure.length,sureTotal:sumOf(sure),sureCounted:sure.filter(function(x){var a=amtOf(x.benefit)||0;return a>0&&a<=BIG&&rank(x.benefit)<=2;}).length,maybe:items.length-sure.length,likelyTotal:sumOf(items.filter(likely)),total:sumOf(items),recItems:items.filter(function(x){return !fitWhy(x.benefit);}),big:big,tailored:items.filter(function(x){return tailored(x.benefit);}).length};}
