@@ -5,7 +5,7 @@ import { loadDraft } from '@/lib/draft';
 import { daysLeft, endTime } from '@/lib/util';
 import { difficulty } from '@/lib/difficulty';
 import { moneyRank, moneyType } from '@/lib/money';
-import { dedupePrograms, industryGate, needsEmployees, ownerGate, stageGate } from '@/lib/fit';
+import { dedupePrograms, industryGate, needsEmployees, ownerGate, smallBizGate, stageGate } from '@/lib/fit';
 export { industryGate };
 
 /** 첫 화면 숫자: 사업자가 1년에 놓치는 지원금 평균(만원). 근거 자료 확인 전에는 실제 앱에 노출하지 않는다. */
@@ -53,7 +53,7 @@ export const order = (x: EstimateItem, y: EstimateItem) =>
   || left(x.benefit) - left(y.benefit);
 const industryOf = (p: Profile) => (p.businesses[0] as { industry?: string } | undefined)?.industry;
 /** 업종·대표자 관문을 합친 결과 */
-const gateOf = (b: Benefit, p: Profile): 'ok' | 'check' | 'out' => { const x = p.businesses[0] as { womanOwned?: string; openedYear?: number } | undefined; const g = [industryGate(b, industryOf(p)), ownerGate(b, x?.womanOwned), stageGate(b, x?.openedYear)]; return g.includes('out') ? 'out' : g.includes('check') ? 'check' : 'ok'; };
+const gateOf = (b: Benefit, p: Profile): 'ok' | 'check' | 'out' => { const x = p.businesses[0] as { womanOwned?: string; openedYear?: number; employeeBand?: string; industry?: string; entity?: string } | undefined; const g = [industryGate(b, industryOf(p)), ownerGate(b, x?.womanOwned), stageGate(b, x?.openedYear), smallBizGate(b, x ?? {})]; return g.includes('out') ? 'out' : g.includes('check') ? 'check' : 'ok'; };
 const noStaff = (b: Benefit, p: Profile) => { const x = p.businesses[0] as { employeeBand?: string; employees?: number } | undefined; return needsEmployees(b, x?.employeeBand, x?.employees); };
 function summarize(items: EstimateItem[], profile: Profile): Estimate {
   const ind = industryOf(profile);

@@ -93,6 +93,10 @@
     if (a.entity === '개인' && /법인\s*(사업자|기업)?\s*(만|에\s*한함|대상으로\s*함)/.test(body)) return '내용상 법인 전용';
     if (a.openedYear <= 2022 && /예비\s*창업자\s*(만|대상)|창업\s*\d\s*년\s*(이내|미만)\s*(인|의)?\s*(기업|자)/.test(body) && !(b.rules || []).some(function (r) { return r.field === 'openedAt'; })) return '내용상 창업 초기 전용';
     if (/만\s*\d{2}\s*세\s*(이하|미만|이상)/.test(body) && !/고용|취업|일자리|채용|인턴|일\s*경험/.test(t) && !(b.rules || []).some(function (r) { return r.field === 'age'; })) return '내용상 나이 조건(규칙 없음)';
+    // 10) 소상공인 규모·자영업자
+    var tt = t + ' ' + (b.summary || '');
+    if (/소상공인|자영업자/.test(tt) && !/중소\s*기업|중소\s*사업장|중견/.test(tt) && (a.employeeBand === '10~29명' || a.employeeBand === '30명 이상')) return '소상공인 규모 초과';
+    if (/사회\s*연대|사회적\s*(기업|경제)|협동\s*조합|마을\s*기업|비영리/.test(tt)) return '사회적경제·협동조합 대상';
     // 8) 특정 상황
     if (/산재|폐업|재기|사업\s*정리|휴업|고용\s*유지|실업\s*급여|재해|피해/.test(t)) return '특정 상황 전용';
     return null;

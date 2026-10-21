@@ -44,7 +44,7 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
 }
 
 /** 직원을 두고 있어야 받는 사업(채용·고용유지·근로자 복지). 자영업자 본인 보험료 지원은 뺀다. */
-const EMPLOYER = /재택\s*근무|어린이집|일\s*생활|워라밸|인재|대체\s*인력|일\s*경험|계절\s*학기|고용|취업|사업주|근로\s*복지|채용|인턴|근로자|직원|인력|퇴직\s*연금|정규직|육아\s*휴직|출산|작업\s*환경|산재|일자리/;
+const EMPLOYER = /가족\s*친화|재택\s*근무|어린이집|일\s*생활|워라밸|인재|대체\s*인력|일\s*경험|계절\s*학기|고용|취업|사업주|근로\s*복지|채용|인턴|근로자|직원|인력|퇴직\s*연금|정규직|육아\s*휴직|출산|작업\s*환경|산재|일자리/;
 const SELF = /자영업자|1인|대표자|본인|보험료/;
 /** 4대보험 직원이 없다고 답한 사업장에 직원 고용 사업을 빼는지 */
 export function needsEmployees(b: Pick<Benefit, 'title'>, employeeBand?: string, employees?: number): boolean {
@@ -53,7 +53,7 @@ export function needsEmployees(b: Pick<Benefit, 'title'>, employeeBand?: string,
 }
 
 const WOMAN_ONLY = /여성\s*(기업|벤처|창업|대표|CEO|경제인|기업인)/;
-const SPECIAL_OWNER = /북한\s*이탈|새터민|보훈|국가\s*유공|다문화|한부모|장애인|장애\s*(기업|창업)|보조\s*공학/;
+const SPECIAL_OWNER = /북한\s*이탈|새터민|사회\s*연대|사회적\s*(기업|경제)|협동\s*조합|마을\s*기업|비영리|보훈|국가\s*유공|다문화|한부모|장애인|장애\s*(기업|창업)|보조\s*공학/;
 /** 특정한 일이 생겼을 때만 받는 사업(산재·휴직·고용조정·폐업·재기). 평소 사업장에는 '조건 일치'로 세지 않는다. */
 const SITUATIONAL = /산재|고용\s*유지|육아\s*휴직|출산|실업\s*급여|사업\s*정리|폐업|재기|휴업|재해|피해\s*(지원|복구)|위기|부담금/;
 /**
@@ -85,4 +85,19 @@ export function stageGate(b: Pick<Benefit, 'title'>, openedYear?: number, now = 
   if (!openedYear) return 'ok';
   const year = new Date(now.getTime() + 9 * 3600000).getUTCFullYear();
   return EARLY_STAGE.test(b.title) && openedYear <= year - 3 ? 'out' : 'ok';
+}
+
+/**
+ * 소상공인 규모 관문. 공고가 소상공인·자영업자 대상인데 고객이 그 규모를 넘으면 뺀다.
+ * 소상공인: 상시근로자 5명 미만(제조·건설·운수는 10명 미만). 자영업자 공고는 개인사업자만.
+ */
+export function smallBizGate(b: Pick<Benefit, 'title' | 'summary'>, x: { employeeBand?: string; industry?: string; entity?: string }): 'ok' | 'out' {
+  const text = `${b.title} ${b.summary ?? ''}`;
+  const forSmall = /소상공인|자영업자|영세/.test(text) && !/중소\s*기업|중소\s*사업장|중견/.test(text);
+  if (!forSmall) return 'ok';
+  if (/자영업자/.test(text) && !/소상공인/.test(text) && x.entity === '법인') return 'out';
+  const band = x.employeeBand;
+  if (!band || band === '없음' || band === '1~4명') return 'ok';
+  if (band === '5~9명') return ['제조', '건설', '운수'].includes(x.industry ?? '') ? 'ok' : 'out';
+  return 'out';
 }

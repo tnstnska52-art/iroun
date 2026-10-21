@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stageGate, dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
+import { smallBizGate, stageGate, dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
 
 const b = (category: string, industries?: string[]) => ({ category, fit: industries ? { industries } : undefined });
 
@@ -94,4 +94,16 @@ describe('제목에 업종이 분명하면 제목을 따른다', () => {
     expect(industryGate({ category: '경영', title: '축산물판매업소 기자재 구입비용 지원', fit: { industries: ['제조', '도소매'] } }, '제조')).toBe('out');
     expect(industryGate({ category: '경영', title: '축산물판매업소 기자재 구입비용 지원', fit: { industries: ['제조', '도소매'] } }, '도소매')).toBe('ok');
   });
+});
+
+describe('smallBizGate: 소상공인 규모', () => {
+  const b = { title: '2026년 소상공인 고용보험료 지원사업 공고', summary: '소상공인이 자영업자 고용보험에 가입·유지할 때 납부한 보험료 지원' };
+  it('직원 10명 넘으면 소상공인 공고 제외', () => expect(smallBizGate(b, { employeeBand: '10~29명', industry: '건설' })).toBe('out'));
+  it('5~9명은 제조·건설·운수만', () => {
+    expect(smallBizGate(b, { employeeBand: '5~9명', industry: '음식점' })).toBe('out');
+    expect(smallBizGate(b, { employeeBand: '5~9명', industry: '제조' })).toBe('ok');
+  });
+  it('4명 이하는 그대로', () => expect(smallBizGate(b, { employeeBand: '1~4명', industry: '음식점' })).toBe('ok'));
+  it('중소기업 공고는 거르지 않는다', () => expect(smallBizGate({ title: '중소기업 수출 부대비용 지원', summary: '' }, { employeeBand: '30명 이상' })).toBe('ok'));
+  it('자영업자 공고는 법인 제외', () => expect(smallBizGate({ title: '서울특별시 자영업자 고용보험료 지원', summary: '' }, { entity: '법인', employeeBand: '1~4명' })).toBe('out'));
 });
