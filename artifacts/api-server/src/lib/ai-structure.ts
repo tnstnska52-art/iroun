@@ -252,7 +252,14 @@ export function aiReviewStatus(prev: Benefit, next: Benefit, x: AiResult): Benef
   if (prev.reviewStatus === "비공개" && !prev.extraction?.ai) return "비공개";
   // 다른 출처에 같은 사업이 공개돼 있으면 계속 숨긴다(중복 정리).
   if (prev.duplicateOf) return "비공개";
-  if (next.status === "마감") return prev.reviewStatus === "공개" ? "공개" : "검토대기";
+  // 마감 공고는 고객 화면의 '작년에 놓친 지원금'에만 쓰인다(신청 가능 목록에는 나오지 않음).
+  // 작년 1월 1일 이후에 끝난 공고만 공개하고, 그보다 오래된 공고는 검토대기로 둔다.
+  if (next.status === "마감") {
+    if (prev.reviewStatus === "공개") return "공개";
+    const lastYear = new Date().getFullYear() - 1;
+    const ended = Date.parse(next.endsAt);
+    return Number.isFinite(ended) && ended >= Date.parse(`${lastYear}-01-01T00:00:00+09:00`) && publicBenefit({ ...next, reviewStatus: "공개" }) ? "공개" : "검토대기";
+  }
   return publicBenefit({ ...next, reviewStatus: "공개" }) ? "공개" : prev.reviewStatus;
 }
 

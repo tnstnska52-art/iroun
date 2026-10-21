@@ -100,3 +100,34 @@ describe("정보 추가: 더 물을 조건과 답변 재사용", () => {
     expect(match2(a, p, now)[0]!.exclusions.join()).toContain("연매출");
   });
 });
+
+describe("체납·연체 제외 조건", () => {
+  const notice: Benefit = { ...fixture, checks: ["국세·지방세 체납 중인 자는 신청할 수 없습니다"] };
+  const who = (arrears?: "예" | "아니오") => ({ personal: {}, step: 0, businesses: [{ id: "a", province: "경상남도", district: "김해시", ...(arrears ? { arrears } : {}) }] });
+  const day = new Date("2026-10-10T00:00:00Z");
+  it("체납이 있으면 대상 제외", () => expect(matchBenefit(notice, who("예"), day)[0].result).toBe("대상 제외"));
+  it("체납이 없으면 그 확인 문구가 빠져 조건 일치", () => expect(matchBenefit(notice, who("아니오"), day)[0].result).toBe("조건 일치"));
+  it("답하지 않았으면 추가 확인 필요 그대로", () => expect(matchBenefit(notice, who(), day)[0].result).toBe("추가 확인 필요"));
+  it("공고에 체납 조건이 없으면 체납 고객도 제외하지 않음", () => expect(matchBenefit(fixture, who("예"), day)[0].result).toBe("조건 일치"));
+  it("금융 연체·보증사고 조건", () => {
+    const loanCheck: Benefit = { ...fixture, checks: ["금융기관 연체 또는 보증사고(대위변제) 기업 제외"] };
+    const p = { personal: {}, step: 0, businesses: [{ id: "a", province: "경상남도", district: "김해시", delinquency: "예" as const }] };
+    expect(matchBenefit(loanCheck, p, day)[0].result).toBe("대상 제외");
+  });
+  it("고객 정보 형식이 새 항목을 받아들임", () => expect(profileSchema.safeParse({ personal: {}, step: 0, businesses: [{ id: "a", arrears: "아니오", delinquency: "예" }] }).success).toBe(true));
+});
+
+describe("관할 확인 필요 공고는 공고 기관으로 관할을 정한다", () => {
+  const day = new Date("2026-10-10T00:00:00Z");
+  const at = (province: string) => ({ personal: {}, step: 0, businesses: [{ id: "a", province }] });
+  const notice: Benefit = { ...fixture, region: "관할 확인 필요", agency: "경상북도", rules: [] , openToAll: true } as Benefit;
+  it("기관이 경상북도면 경북 사업장은 해당", () => expect(matchBenefit(notice, at("경상북도"), day)[0].result).toBe("조건 일치"));
+  it("다른 시·도 사업장은 제외", () => expect(matchBenefit(notice, at("경기도"), day)[0].result).toBe("대상 제외"));
+  it("전남광주통합특별시 공고는 전남·광주 모두 해당", () => {
+    const n: Benefit = { ...notice, agency: "전남광주통합특별시" } as Benefit;
+    expect(matchBenefit(n, at("광주광역시"), day)[0].result).toBe("조건 일치");
+    expect(matchBenefit(n, at("전라남도"), day)[0].result).toBe("조건 일치");
+    expect(matchBenefit(n, at("부산광역시"), day)[0].result).toBe("대상 제외");
+  });
+  it("기관으로도 모르면 확인 필요", () => expect(matchBenefit({ ...notice, agency: "테스트 기관" } as Benefit, at("경상북도"), day)[0].result).toBe("추가 확인 필요"));
+});

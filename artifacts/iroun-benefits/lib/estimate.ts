@@ -4,6 +4,9 @@ import { matchBenefit, type Benefit as DomainBenefit, type Profile as DomainProf
 import { loadDraft } from '@/lib/draft';
 import { daysLeft, endTime } from '@/lib/util';
 import { difficulty } from '@/lib/difficulty';
+import { moneyRank, moneyType } from '@/lib/money';
+import { dedupePrograms, districtGate, rentGate, easeOf, industryGate, orgTargetGate, textLimitGate, needsEmployees, ownerGate, smallBizGate, stageGate } from '@/lib/fit';
+export { industryGate };
 
 /** 첫 화면 숫자: 사업자가 1년에 놓치는 지원금 평균(만원). 근거 자료 확인 전에는 실제 앱에 노출하지 않는다. */
 export const HEADLINE_STAT = { label: '1년에 놓치는 지원금 평균', manwon: 1273, verified: false };
@@ -12,9 +15,9 @@ export const IS_PREVIEW = process.env.EXPO_PUBLIC_PREVIEW === '1';
 export const FREE_COUNT = 3;
 
 export interface EstimateItem { benefit: Benefit; result: '조건 일치' | '추가 확인 필요'; /** 고른 업종에 맞춤인 공고 */ tailored?: boolean }
-export interface Estimate { items: EstimateItem[]; total: number; counted: number; noAmount: number; /** 합계에서 뺀 10억 초과 대형사업 수 */ big: number; /** 업종 맞춤 건수 */ tailored: number; /** 소상공인 적합(4~5점) 건수 */ small: number; /** 정밀 모드에서 목록에서 뺀 '추가 확인 필요' 공고(담당자가 원문 확인) */ pending: EstimateItem[] }
-/** 이 금액을 넘는 공고(대형 R&D·인프라)는 합계에서 빼고 뒤로 보낸다. 홈페이지와 같다. */
-export const BIG = 1_000_000_000;
+export interface Estimate { /** 조건 일치 건수와 금액 합계(10억 이하, 금액 있는 것) */ sure: number; sureTotal: number; /** 추가 확인 필요 건수와 금액 합계 */ maybe: number; maybeTotal: number; items: EstimateItem[]; total: number; counted: number; noAmount: number; /** 합계에서 뺀 10억 초과 대형사업 수 */ big: number; /** 업종 맞춤 건수 */ tailored: number; /** 소상공인 적합(4~5점) 건수 */ small: number; /** 정밀 모드에서 목록에서 뺀 '추가 확인 필요' 공고(담당자가 원문 확인) */ pending: EstimateItem[] }
+/** 이 금액을 넘는 공고(대형 R&D·투자·인프라)는 동네 사업장이 받을 돈이 아니라 합계에서 빼고 뒤로 보낸다. 홈페이지와 같다. */
+export const BIG = 100_000_000;
 type Fit = { industries: string[]; small: number };
 const fitOf = (b: Benefit) => (b as unknown as { fit?: Fit }).fit;
 /** 업종 맞춤: AI 가 정한 관련 업종 또는 공고 자격 업종에 고른 업종이 들어 있다. 자격 판정이 아니라 정렬·표시용. */
@@ -28,22 +31,50 @@ export const smallFit = (b: Benefit) => fitOf(b)?.small ?? 3;
 const tier = (b: Benefit) => { const a = b.maxAmount ?? 0; return a && a <= BIG ? 0 : !a ? 1 : 2; };
 
 const isClosed = (b: Benefit) => b.status === '마감' || b.budgetStatus === '소진' || (daysLeft(b.endsAt) ?? 0) < 0;
+/** 아직 접수가 시작되지 않은 공고(시작일이 미래). '지금 신청 가능'에 넣지 않는다. */
+const notStarted = (b: Benefit) => !!b.startsAt && Number.isFinite(Date.parse(b.startsAt)) && Date.parse(b.startsAt) > Date.now();
 const match = (b: Benefit, p: Profile, at?: Date) => matchBenefit(b as unknown as DomainBenefit, p as unknown as DomainProfile, at).map((m) => m.result);
-// 업종 맞춤 → 받을 가능성이 높은 것 → 소상공인 적합 → 금액 있는 것(10억 이하) → 금액이 큰 것 → 신청이 쉬운 것 (홈페이지와 같은 순서)
-const order = (x: EstimateItem, y: EstimateItem) =>
-  Number(!!y.tailored) - Number(!!x.tailored)
-  || (x.result === y.result ? 0 : x.result === '조건 일치' ? -1 : 1)
+const left = (b: Benefit) => daysLeft(b.endsAt) ?? 9999;
+/** 고객 목록에 넣는 공고: 통장 입금·환급·바우처·구입비 보조. 융자, 교육·컨설팅 같은 서비스, 1억 넘는 대형 사업은 뺀다. 홈페이지와 같다. */
+export const customerMoney = (b: Benefit) => { const t = moneyType(b); return t !== 'loan' && t !== 'service' && (b.maxAmount ?? 0) <= BIG; };
+/**
+ * 고객이 받고 싶은 순서. 조건이 확실히 맞는 것을 먼저, 그 안에서 금액보다 "통장에 돈이 들어오는지"를 본다.
+ * 조건 일치 → 신청만 하면 받는 돈(노란우산·보험료·수수료·바우처) → 통장 입금(현금 지원·환급) → 바우처·감면 → 구입비 보조
+ * → 직원을 새로 뽑아야 받는 돈은 같은 종류 안에서 뒤로
+ * → 업종 맞춤 → 소상공인 적합 → 신청이 쉬운 것 → 금액 있는 것(1억 이하) → 금액이 큰 것 → 마감이 가까운 것
+ */
+export const order = (x: EstimateItem, y: EstimateItem) =>
+  (x.result === y.result ? 0 : x.result === '조건 일치' ? -1 : 1)
+  || Number(easeOf(x.benefit) > 0) - Number(easeOf(y.benefit) > 0)
+  || moneyRank(x.benefit) - moneyRank(y.benefit)
+  || Number(easeOf(x.benefit) === 2) - Number(easeOf(y.benefit) === 2)
+  || Number(!!y.tailored) - Number(!!x.tailored)
   || smallFit(y.benefit) - smallFit(x.benefit)
+  || difficulty(x.benefit) - difficulty(y.benefit)
   || tier(x.benefit) - tier(y.benefit)
-  || (y.benefit.maxAmount ?? 0) - (x.benefit.maxAmount ?? 0) || difficulty(x.benefit) - difficulty(y.benefit);
+  || (y.benefit.maxAmount ?? 0) - (x.benefit.maxAmount ?? 0)
+  || left(x.benefit) - left(y.benefit);
 const industryOf = (p: Profile) => (p.businesses[0] as { industry?: string } | undefined)?.industry;
+/** 업종·대표자 관문을 합친 결과 */
+const gateOf = (b: Benefit, p: Profile): 'ok' | 'check' | 'out' => { const x = p.businesses[0] as { womanOwned?: string; openedYear?: number; employeeBand?: string; industry?: string; entity?: string; revenue?: string } | undefined; const g = [industryGate(b, industryOf(p)), ownerGate(b, x?.womanOwned), stageGate(b, x?.openedYear), smallBizGate(b, x ?? {}), textLimitGate(b, (x ?? {}) as { revenue?: string; employeeBand?: string; openedYear?: number }), orgTargetGate(b), rentGate(b, (x as { premises?: string } | undefined)?.premises), districtGate(b, (x as { province?: string } | undefined)?.province, (x as { district?: string } | undefined)?.district)]; return g.includes('out') ? 'out' : g.includes('check') ? 'check' : 'ok'; };
+const noStaff = (b: Benefit, p: Profile) => { const x = p.businesses[0] as { employeeBand?: string; employees?: number } | undefined; return needsEmployees(b, x?.employeeBand, x?.employees); };
 function summarize(items: EstimateItem[], profile: Profile): Estimate {
   const ind = industryOf(profile);
   for (const x of items) x.tailored = isTailored(x.benefit, ind);
   items.sort(order);
-  const withAmount = items.filter((x) => (x.benefit.maxAmount ?? 0) > 0 && (x.benefit.maxAmount ?? 0) <= BIG);
+  // 같은 사업이 여러 출처에서 들어온 중복은 순서가 높은 것 하나만 남긴다.
+  const unique = dedupePrograms(items);
+  items.length = 0;
+  items.push(...unique);
+  // 합계는 돈으로 받는 공고(현금·환급·바우처·구입비 보조)만, 1억 이하 공고만 더한다. 홈페이지와 같다.
+  const withAmount = items.filter((x) => (x.benefit.maxAmount ?? 0) > 0 && (x.benefit.maxAmount ?? 0) <= BIG && moneyRank(x.benefit) <= 2);
+  const sum = (xs: EstimateItem[]) => xs.reduce((n, x) => n + (x.benefit.maxAmount ?? 0), 0);
+  // 화면 맨 위 건수·금액은 조건이 확실히 맞는 공고만 센다. 확인이 필요한 공고는 따로 알려 준다.
+  const sureItems = items.filter((x) => x.result === '조건 일치');
   return {
-    items, total: withAmount.reduce((n, x) => n + (x.benefit.maxAmount ?? 0), 0), counted: withAmount.length,
+    sure: sureItems.length, sureTotal: sum(sureItems.filter((x) => withAmount.includes(x))),
+    maybe: items.length - sureItems.length, maybeTotal: sum(items.filter((x) => x.result !== '조건 일치' && withAmount.includes(x))),
+    items, total: sum(withAmount), counted: withAmount.length,
     noAmount: items.filter((x) => !(x.benefit.maxAmount ?? 0)).length, big: items.filter((x) => (x.benefit.maxAmount ?? 0) > BIG).length,
     tailored: items.filter((x) => x.tailored).length, small: items.filter((x) => smallFit(x.benefit) >= 4).length, pending: [],
   };
@@ -56,15 +87,23 @@ function summarize(items: EstimateItem[], profile: Profile): Estimate {
 export function estimate(benefits: Benefit[], profile: Profile, strict = false): Estimate {
   const items: EstimateItem[] = [], pending: EstimateItem[] = [];
   for (const b of benefits) {
-    if (isClosed(b)) continue;
+    // 마감·예산 소진·접수 전 공고와 저금리 융자·대출은 고객 목록에 넣지 않는다.
+    if (isClosed(b) || notStarted(b) || !customerMoney(b)) continue;
+    const gate = gateOf(b, profile);
+    if (gate === 'out' || noStaff(b, profile)) continue;
     const r = match(b, profile);
-    if (r.includes('조건 일치')) items.push({ benefit: b, result: '조건 일치' });
-    else if (r.includes('추가 확인 필요')) (strict ? pending : items).push({ benefit: b, result: '추가 확인 필요' });
+    if (r.includes('조건 일치') && gate === 'ok') items.push({ benefit: b, result: '조건 일치' });
+    else if (r.includes('추가 확인 필요') || r.includes('조건 일치')) (strict ? pending : items).push({ benefit: b, result: '추가 확인 필요' });
   }
   const est = summarize(items, profile);
   // 정밀 모드(패키지 고객): 목록·금액은 조건이 확실히 맞는 공고만. 나머지는 담당자 확인용으로 따로 둔다.
   if (strict) est.pending = summarize(pending, profile).items;
   return est;
+}
+
+/** 조건을 고르기 전 전체 공고 목록: 융자를 빼고 고객이 받고 싶은 순서로 정렬한다. */
+export function customerOrder<T extends EstimateItem>(items: T[]): T[] {
+  return items.filter((x) => customerMoney(x.benefit)).sort(order);
 }
 
 /** 정밀 조건(대표자 출생연도·사업자 형태·여성 대표 여부)을 다 골랐는지 */
@@ -86,15 +125,18 @@ export function missed(benefits: Benefit[], profile: Profile, year?: number): Es
   const opened = (profile.businesses[0] as { openedYear?: number } | undefined)?.openedYear;
   const items: EstimateItem[] = [];
   for (const b of benefits) {
-    if (!isClosed(b)) continue;
+    // 1억이 넘는 대형 사업은 동네 사업장이 '놓친 돈'으로 보기 어려워 뺀다.
+    if (!isClosed(b) || !customerMoney(b)) continue;
+    const gate = gateOf(b, profile);
+    if (gate === 'out' || noStaff(b, profile)) continue;
     const end = endTime(b.endsAt);
     const endYear = end !== null ? new Date(end + 9 * 3600000).getUTCFullYear() : null;
     if (year && endYear !== year) continue;
     if (opened && endYear !== null && opened > endYear) continue;
     const open = { ...b, status: '접수 중', budgetStatus: '해당 없음', startsAt: '', endsAt: '' } as Benefit;
     const r = match(open, profile, end !== null ? new Date(end) : undefined);
-    if (r.includes('조건 일치')) items.push({ benefit: b, result: '조건 일치' });
-    else if (r.includes('추가 확인 필요')) items.push({ benefit: b, result: '추가 확인 필요' });
+    if (r.includes('조건 일치') && gate === 'ok') items.push({ benefit: b, result: '조건 일치' });
+    else if (r.includes('추가 확인 필요') || r.includes('조건 일치')) items.push({ benefit: b, result: '추가 확인 필요' });
   }
   return summarize(items, profile);
 }

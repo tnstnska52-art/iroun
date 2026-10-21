@@ -6,7 +6,8 @@ import { Feather } from '@expo/vector-icons';
 import { useUnreadReplies } from '@/lib/replies';
 import { TodayPicks } from '@/components/TodayPicks';
 import { RotatingRows } from '@/components/RotatingRows';
-import { refundLike, todayPicks } from '@/lib/picks';
+import { closingOf, openToday, refundLike, todayPicks } from '@/lib/picks';
+import { moneyType } from '@/lib/money';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
 import { BigMoney, Btn, CountUp, Disclaimer, Emoji, ErrorState, FooterLinks, Loading, Page, SectionHead, T, useBeat } from '@/components/ui';
@@ -14,7 +15,8 @@ import { GrantRow, Total, useJoinHref } from '@/components/GrantList';
 import { apiErrorMessage } from '@/lib/text';
 import { daysLeft, fmtDate } from '@/lib/util';
 import { remaining, useServiceStateView } from '@/lib/service';
-import { FREE_COUNT, HEADLINE_STAT, IS_PREVIEW, estimate, hasConditions, missed, strictMode, useDraftProfile, won } from '@/lib/estimate';
+import { industryGate } from '@/lib/fit';
+import { FREE_COUNT, HEADLINE_STAT, IS_PREVIEW, customerMoney, customerOrder, estimate, hasConditions, missed, strictMode, useDraftProfile, won } from '@/lib/estimate';
 import { difficulty } from '@/lib/difficulty';
 
 export default function Home() {
@@ -44,12 +46,16 @@ export default function Home() {
   const unread = (svc.data?.inbox ?? []).filter((x) => !x.read_at).length + (svc.data?.companyUpdates ?? []).filter((x) => !x.read).length;
   const alertCount = est ? est.items.length : list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0).length;
   const showStat = IS_PREVIEW || HEADLINE_STAT.verified;
-  const open = list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0);
+  // 오늘 실제로 접수 중인 공고만(시작 전·예산 소진·마감 제외). 저금리 융자·대출은 고객 목록에서 뺀다.
+  const open = list.filter((b) => openToday(b) && customerMoney(b));
   const within30 = (b: { endsAt: string }) => { const d = daysLeft(b.endsAt); return d !== null && d >= 0 && d <= 30; };
-  // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 마감 7일 안쪽을 보여준다.
-  const closing = (est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }))).filter((x) => within30(x.benefit)).sort((x, y) => (daysLeft(x.benefit.endsAt) ?? 0) - (daysLeft(y.benefit.endsAt) ?? 0)).slice(0, 5);
+  // 홈 목록의 바탕: 조건을 고른 뒤에는 내 조건에 맞는 것, 그 전에는 전체. 어느 쪽이든 오늘 접수 중인 것만, 받고 싶은 순서로.
+  const pool = (est ? est.items : customerOrder(open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const })))).filter((x) => openToday(x.benefit));
+  // 30일 안에 마감: 마감이 가까운 순. 교육·컨설팅처럼 손에 돈이 들어오지 않는 사업은 뺀다.
+  // 통장 입금·바우처 중 조건 일치·업종 맞춤·금액 있는 것부터 5건을 고른 뒤 마감 순으로 보여준다. 홈페이지와 같다.
+  const myIndustry = (profile?.businesses[0] as { industry?: string } | undefined)?.industry;
+  const closing = closingOf(pool.filter((x) => within30(x.benefit) && industryGate(x.benefit, myIndustry) === 'ok'));
   // 홈 목록: '놓치기 쉬운 지원금'(카드) · '놓치기 쉬운 환급금'(카드) · '지금 신청 가능한 지원금'(목록)은 서로 겹치지 않게 나눈다.
-  const pool = est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }));
   const refunds = pool.filter((x) => refundLike(x.benefit)).slice(0, 5);
   const picks = todayPicks(pool.filter((x) => !refundLike(x.benefit)));
   const used = new Set([...refunds, ...picks].map((x) => x.benefit.id));
@@ -113,11 +119,11 @@ export default function Home() {
       ) : (
         <>
           {/* 조건을 고른 뒤: 받을 수 있는 금액과 놓친 금액 */}
-          <Total testID="home-summary" label="신청 가능 지원금" count={est.items.length} total={est.total} onPress={() => router.push('/benefits')}>
+          <Total testID="home-summary" label="신청 가능 지원금" count={est.sure} total={est.sureTotal} extra={est.maybe} onPress={() => router.push('/benefits')}>
             {acc.active && until && acc.me ? <T v="small" color={c.primary} style={{ fontWeight: '700', marginTop: 4 }}>{ent?.trialActive ? '무료체험' : '이용'} {remaining(until, acc.me.serverNow ?? new Date().toISOString())}</T> : null}
           </Total>
           {past && past.items.length > 0 ? (
-            <Total testID="home-missed" tone="red" label={`${lastYear}년에 놓친 지원금`} count={past.items.length} total={past.total} note="올해는 놓치지 마세요" onPress={() => router.push({ pathname: '/benefits', params: { tab: 'missed' } })} />
+            <Total testID="home-missed" tone="red" label={`${lastYear}년에 놓친 지원금`} count={past.sure} total={past.sureTotal} extra={past.maybe} note="올해는 놓치지 마세요" onPress={() => router.push({ pathname: '/benefits', params: { tab: 'missed' } })} />
           ) : null}
 
           {newReplies > 0 ? (

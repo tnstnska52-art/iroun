@@ -2,7 +2,7 @@ import { bizinfoFeedConfiguration,runBizinfoFeed } from "./official-feed";
 import { deliverDeadlines,checkPushReceipts } from "./push-delivery";
 import { logger } from "./logger";
 import {catalog} from "./public-feed-model";
-import {runPublicFeed,publicFeedScheduleReady} from "./public-feeds";
+import {runPublicFeed,publicFeedScheduleReady,storedFeedState} from "./public-feeds";
 import {crmSyncReady,startCrmSync} from "./crm-contracts";
 import {aiReady,runAiStructuring} from "./ai-structure";
 import {gov24BulkReady,hideDuplicates,kstartupReady,runGov24Bulk,runKstartup} from "./bulk-feeds";
@@ -11,6 +11,12 @@ export async function collectAll(){
   await runBizinfoFeed().catch(()=>logger.warn("기업마당 수집 실패: 관리자 확인 필요"));
   if(gov24BulkReady())await runGov24Bulk().catch(e=>logger.warn({err:(e as Error).message},"정부24 전체 수집 실패"));
   if(kstartupReady())await runKstartup().catch(e=>logger.warn({err:(e as Error).message},"K-Startup 수집 실패"));
+  // 작년 마감 공고('놓친 지원금')는 아직 다 모으지 못했으면 한 번 모은다.
+  if(kstartupReady()){
+    const last=new Date().getFullYear()-1;
+    const done=(await storedFeedState(`kstartup:archive:${last}`) as {lastSuccess?:string}).lastSuccess;
+    if(!done)await runKstartup(fetch,{archiveYear:last}).catch(e=>logger.warn({err:(e as Error).message},"K-Startup 작년 공고 수집 실패"));
+  }
   if(aiReady())await runAiStructuring().catch(()=>logger.warn("AI 공고 정리 실패"));
   await hideDuplicates().catch(()=>logger.warn("중복 공고 정리 실패"));
 }

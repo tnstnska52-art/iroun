@@ -79,7 +79,7 @@ export default function Grants() {
       </View>
 
       {contract && !preciseDone(profile) ? <PreciseBanner /> : null}
-      <Total testID={`grants-total-${tab}`} tone={tab === 'now' ? 'blue' : 'red'} label={tab === 'now' ? (strict ? '조건이 확실히 맞는 지원금' : '신청 가능 지원금') : '놓친 지원금'} count={cur.items.length} total={cur.total} note={tab === 'missed' ? '올해는 놓치지 마세요' : undefined} />
+      <Total testID={`grants-total-${tab}`} tone={tab === 'now' ? 'blue' : 'red'} label={tab === 'now' ? (strict ? '조건이 확실히 맞는 지원금' : '신청 가능 지원금') : '놓친 지원금'} count={cur.sure} total={cur.sureTotal} extra={cur.maybe} note={tab === 'missed' ? '올해는 놓치지 마세요' : undefined} />
 
       {cur.items.length === 0 ? (
         <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, padding: 20, gap: 6 }}>

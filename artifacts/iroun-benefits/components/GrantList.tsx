@@ -8,6 +8,7 @@ import { FREE_COUNT, won, type EstimateItem } from '@/lib/estimate';
 import { useAccount } from '@/lib/session';
 import { dday } from '@/components/BenefitCard';
 import { fmtDate } from '@/lib/util';
+import { MONEY_LABEL, moneyType } from '@/lib/money';
 
 const ICON: Record<string, keyof typeof Feather.glyphMap> = { 경영: 'briefcase', 고용: 'users', 생활: 'home', 세금: 'percent', 교육: 'book-open', 수출: 'globe', 보험: 'shield', 마케팅: 'trending-up', 육아: 'heart' };
 
@@ -24,7 +25,7 @@ export function GrantRow({ item, missed, locked, last }: { item: EstimateItem; m
   const b = item.benefit;
   const dd = dday(b);
   const amount = b.maxAmount ? won(b.maxAmount) : '금액 확인';
-  const sub = missed ? `${b.endsAt ? `${fmtDate(b.endsAt)} 마감` : '마감'} · ${b.agency}` : `${item.result === '조건 일치' ? '조건 일치' : '확인 필요'} · ${dd.label === '상시' || dd.label === '접수 중' || dd.label === '기간 확인' ? dd.label : `${dd.label.replace('D-', '')}일 남음`}`;
+  const sub = missed ? `${b.endsAt ? `${fmtDate(b.endsAt)} 마감` : '마감'} · ${b.agency}` : `${MONEY_LABEL[moneyType(b)]} · ${item.result === '조건 일치' ? '조건 일치' : '확인 필요'} · ${dd.label === '상시' || dd.label === '접수 중' || dd.label === '기간 확인' ? dd.label : `${dd.label.replace('D-', '')}일 남음`}`;
   return (
     <Pressable testID={`grant-${b.id}`} accessibilityRole="button" accessibilityLabel={locked ? '가입하면 볼 수 있는 지원금' : `${b.title}. ${amount}. 자세히 보기`} disabled={locked}
       onPress={() => router.push({ pathname: '/benefit/[id]', params: { id: b.id } })}
@@ -71,7 +72,7 @@ export function GrantList({ items, missed, unlocked }: { items: EstimateItem[]; 
 }
 
 /** 건수와 금액을 위아래로 크게 보여주는 카드. 한 줄에 한 가지 정보만 둔다. */
-export function Total({ label, count, total, tone = 'blue', note, onPress, testID, children }: { label: string; count: number; total: number; tone?: 'blue' | 'red'; note?: string; onPress?: () => void; testID?: string; children?: React.ReactNode }) {
+export function Total({ label, count, total, tone = 'blue', note, extra, onPress, testID, children }: { label: string; count: number; total: number; tone?: 'blue' | 'red'; note?: string; /** 조건 확인이 더 필요한 공고 수. 위 건수·금액에는 넣지 않고 따로 알려 준다. */ extra?: number; onPress?: () => void; testID?: string; children?: React.ReactNode }) {
   const c = useColors();
   const color = tone === 'red' ? c.destructive : c.primary;
   return (
@@ -87,6 +88,7 @@ export function Total({ label, count, total, tone = 'blue', note, onPress, testI
       </View>
       {total > 0 ? <BigMoney key={`${label}${total}`} manwon={Math.floor(total / 10000)} color={color} /> : null}
       <T v="small" color={tone === 'red' ? c.destructive : c.mutedForeground}>{note ?? (total > 0 ? '공고 기준 최대 금액' : '금액은 공고에서 확인')}</T>
+      {extra ? <T v="small" color={tone === 'red' ? c.destructive : c.primary} style={{ fontWeight: '700', marginTop: 4 }} testID={testID ? `${testID}-extra` : undefined}>+ 조건을 확인하면 더 받을 수 있는 {extra}건</T> : null}
       {children}
     </Pressable>
   );
