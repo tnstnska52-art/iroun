@@ -5,7 +5,7 @@ import { loadDraft } from '@/lib/draft';
 import { daysLeft, endTime } from '@/lib/util';
 import { difficulty } from '@/lib/difficulty';
 import { isLoan, moneyRank } from '@/lib/money';
-import { industryGate } from '@/lib/fit';
+import { industryGate, needsEmployees } from '@/lib/fit';
 export { industryGate };
 
 /** 첫 화면 숫자: 사업자가 1년에 놓치는 지원금 평균(만원). 근거 자료 확인 전에는 실제 앱에 노출하지 않는다. */
@@ -50,6 +50,7 @@ export const order = (x: EstimateItem, y: EstimateItem) =>
   || (y.benefit.maxAmount ?? 0) - (x.benefit.maxAmount ?? 0)
   || left(x.benefit) - left(y.benefit);
 const industryOf = (p: Profile) => (p.businesses[0] as { industry?: string } | undefined)?.industry;
+const noStaff = (b: Benefit, p: Profile) => { const x = p.businesses[0] as { employeeBand?: string; employees?: number } | undefined; return needsEmployees(b, x?.employeeBand, x?.employees); };
 function summarize(items: EstimateItem[], profile: Profile): Estimate {
   const ind = industryOf(profile);
   for (const x of items) x.tailored = isTailored(x.benefit, ind);
@@ -78,7 +79,7 @@ export function estimate(benefits: Benefit[], profile: Profile, strict = false):
     // 마감·예산 소진·접수 전 공고와 저금리 융자·대출은 고객 목록에 넣지 않는다.
     if (isClosed(b) || notStarted(b) || isLoan(b)) continue;
     const gate = industryGate(b, industryOf(profile));
-    if (gate === 'out') continue;
+    if (gate === 'out' || noStaff(b, profile)) continue;
     const r = match(b, profile);
     if (r.includes('조건 일치') && gate === 'ok') items.push({ benefit: b, result: '조건 일치' });
     else if (r.includes('추가 확인 필요') || r.includes('조건 일치')) (strict ? pending : items).push({ benefit: b, result: '추가 확인 필요' });
@@ -116,7 +117,7 @@ export function missed(benefits: Benefit[], profile: Profile, year?: number): Es
     // 1억이 넘는 대형 사업은 동네 사업장이 '놓친 돈'으로 보기 어려워 뺀다.
     if (!isClosed(b) || isLoan(b) || (b.maxAmount ?? 0) > BIG) continue;
     const gate = industryGate(b, industryOf(profile));
-    if (gate === 'out') continue;
+    if (gate === 'out' || noStaff(b, profile)) continue;
     const end = endTime(b.endsAt);
     const endYear = end !== null ? new Date(end + 9 * 3600000).getUTCFullYear() : null;
     if (year && endYear !== year) continue;

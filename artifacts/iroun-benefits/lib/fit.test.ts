@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { industryGate } from './fit';
+import { industryGate, needsEmployees } from './fit';
 
 const b = (category: string, industries?: string[]) => ({ category, fit: industries ? { industries } : undefined });
 
@@ -24,5 +24,20 @@ describe('industryGate: 다른 업종 공고 거르기', () => {
   it('업종을 안 골랐거나 기타면 거르지 않는다', () => {
     expect(industryGate(b('경영', ['농림어업']))).toBe('ok');
     expect(industryGate(b('경영', ['농림어업']), '기타')).toBe('ok');
+  });
+});
+
+describe('needsEmployees: 직원이 없으면 고용 사업을 뺀다', () => {
+  it('직원 없음 + 고용 사업 → 뺀다', () => {
+    for (const t of ['산재근로자 대체인력지원금', '고용안정장려금지원(정규직전환지원)', '2026년 시니어인턴십 사업 참여 기업 모집 공고', '중소기업퇴직연금기금제도(푸른씨앗) 사업주 및 근로자 지원', '작업환경측정 비용 지원'])
+      expect(needsEmployees({ title: t }, '없음')).toBe(true);
+  });
+  it('자영업자 본인 보험료 지원은 남긴다', () => {
+    expect(needsEmployees({ title: '소상공인 고용보험료 지원' }, '없음')).toBe(false);
+    expect(needsEmployees({ title: '[충남] 2026년 2차 1인 자영업자 고용보험료 지원사업' }, '없음')).toBe(false);
+  });
+  it('직원이 있으면 그대로', () => {
+    expect(needsEmployees({ title: '산재근로자 대체인력지원금' }, '1~4명')).toBe(false);
+    expect(needsEmployees({ title: '산재근로자 대체인력지원금' })).toBe(false);
   });
 });

@@ -16,3 +16,12 @@ export function industryGate(b: Pick<Benefit, 'category'> & { fit?: { industries
   if (FAR_CATEGORY.test(b.category) && LOCAL_INDUSTRIES.includes(industry)) return 'check';
   return 'ok';
 }
+
+/** 직원을 두고 있어야 받는 사업(채용·고용유지·근로자 복지). 자영업자 본인 보험료 지원은 뺀다. */
+const EMPLOYER = /고용|채용|인턴|근로자|직원|인력|퇴직\s*연금|정규직|육아\s*휴직|출산|작업\s*환경|산재|일자리/;
+const SELF = /자영업자|1인|대표자|본인|보험료/;
+/** 4대보험 직원이 없다고 답한 사업장에 직원 고용 사업을 빼는지 */
+export function needsEmployees(b: Pick<Benefit, 'title'>, employeeBand?: string, employees?: number): boolean {
+  const none = employeeBand === '없음' || employees === 0;
+  return none && EMPLOYER.test(b.title) && !SELF.test(b.title);
+}
