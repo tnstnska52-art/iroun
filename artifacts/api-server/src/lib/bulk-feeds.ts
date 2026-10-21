@@ -152,22 +152,31 @@ export function mapKstartup(r: Row, checkedAt = new Date().toISOString()): Benef
   });
 }
 
-export async function runKstartup(fetcher: typeof fetch = fetch) {
+/**
+ * K-Startup 공고 수집.
+ * archiveYear 를 주면 그 해에 접수가 끝난(마감된) 공고를 모은다. 고객 화면의 '작년에 놓친 지원금'에 쓴다.
+ * 기업마당 API 는 최신 공고만 주고 기간 검색이 없어서, 과거 공고는 기간 조회가 되는 K-Startup 으로 채운다.
+ */
+export async function runKstartup(fetcher: typeof fetch = fetch, opts: { archiveYear?: number; maxPages?: number } = {}) {
+  const archive = opts.archiveYear;
+  const stateKey = archive ? `kstartup:archive:${archive}` : "kstartup";
   if (!kstartupReady()) return { blocked: true, reason: "K-Startup 활용신청·수집 승인(IROUN_KSTARTUP_APPROVED) 필요" };
   const key = serviceKey("KSTARTUP_API_KEY", catalog.gov24.key, "DATA_GO_KR_SERVICE_KEY");
   const daily = Math.max(1, Number(process.env.IROUN_KSTARTUP_DAILY_LIMIT) || 2000);
   const lock = await pool.connect();
   let acquired = false;
-  const prior = await storedFeedState("kstartup") as Record<string, unknown>;
+  const prior = await storedFeedState(stateKey) as Record<string, unknown>;
   const state: Record<string, unknown> = { ...prior, lastAttempt: new Date().toISOString(), calls: 0, seen: 0, created: 0, updated: 0, unchanged: 0, excluded: 0, invalid: 0, status: "수집 중" };
   try {
     acquired = (await lock.query("SELECT pg_try_advisory_lock(84101) AS ok")).rows[0]?.ok === true;
     if (!acquired) return { busy: true };
     const checkedAt = new Date().toISOString();
-    for (let page = 1; page <= 30; page++) {
+    const lastPage = Math.min(opts.maxPages ?? (archive ? 200 : 30), 300);
+    for (let page = 1; page <= lastPage; page++) {
       if (!await reserve("kstartup", daily)) throw new Error("오늘 K-Startup 호출 한도 도달");
       const url = new URL(KSTARTUP_URL);
-      url.search = new URLSearchParams({ serviceKey: key, page: String(page), perPage: "100", returnType: "json", rcrt_prgs_yn: "Y", "cond[rcrt_prgs_yn::EQ]": "Y" }).toString();
+      const progress = archive ? "N" : "Y";
+      url.search = new URLSearchParams({ serviceKey: key, page: String(page), perPage: "100", returnType: "json", rcrt_prgs_yn: progress, "cond[rcrt_prgs_yn::EQ]": progress }).toString();
       const r = await fetcher(url, { signal: AbortSignal.timeout(30000) });
       state.calls = Number(state.calls) + 1;
       const body = await r.text();
@@ -175,10 +184,12 @@ export async function runKstartup(fetcher: typeof fetch = fetch) {
       let parsed: { data?: unknown; totalCount?: number; response?: { body?: { items?: { item?: unknown } } } };
       try { parsed = JSON.parse(body); } catch { throw new Error(`K-Startup 응답이 JSON 이 아님${/SERVICE_KEY|등록되지/.test(body) ? " (활용신청·키 확인 필요)" : ""}`); }
       const data = rows(parsed.data ?? parsed.response?.body?.items?.item);
-      if (page === 1 && !data.length) throw new Error("K-Startup 모집 중 공고가 비었습니다.");
+      if (page === 1 && !data.length) throw new Error(archive ? "K-Startup 마감 공고가 비었습니다." : "K-Startup 모집 중 공고가 비었습니다.");
       for (const item of data) {
         state.seen = Number(state.seen) + 1;
-        if (text(item.rcrt_prgs_yn) && text(item.rcrt_prgs_yn) !== "Y") continue;
+        if (!archive && text(item.rcrt_prgs_yn) && text(item.rcrt_prgs_yn) !== "Y") continue;
+        // 과거 수집은 그 해에 접수가 끝난 공고만 남긴다.
+        if (archive && ymd(item.pbanc_rcpt_end_dt).slice(0, 4) !== String(archive)) { state.outOfYear = Number(state.outOfYear ?? 0) + 1; continue; }
         let b: Benefit;
         try { b = mapKstartup(item, checkedAt); } catch { state.invalid = Number(state.invalid) + 1; if (!state.sampleKeys) state.sampleKeys = Object.keys(item).slice(0, 40); continue; }
         if (excludedCategory(b)) { state.excluded = Number(state.excluded) + 1; continue; }
@@ -193,12 +204,12 @@ export async function runKstartup(fetcher: typeof fetch = fetch) {
       }
       if (data.length < 100 || Number(state.seen) >= Number(parsed.totalCount ?? Infinity)) break;
     }
-    Object.assign(state, { status: "검토대기", lastSuccess: new Date().toISOString(), reason: "K-Startup 모집 중 공고를 읽었습니다. 공개 여부는 AI 정리가 정합니다." });
-    await storeFeedState("kstartup", state);
+    Object.assign(state, { status: "검토대기", lastSuccess: new Date().toISOString(), reason: archive ? `K-Startup ${archive}년 마감 공고를 읽었습니다. 공개 여부는 AI 정리가 정합니다.` : "K-Startup 모집 중 공고를 읽었습니다. 공개 여부는 AI 정리가 정합니다." });
+    await storeFeedState(stateKey, state);
     return state;
   } catch (e) {
     Object.assign(state, { status: "확인 필요", reason: (e as Error).message.slice(0, 200) });
-    await storeFeedState("kstartup", state);
+    await storeFeedState(stateKey, state);
     throw e;
   } finally {
     if (acquired) await lock.query("SELECT pg_advisory_unlock(84101)");
