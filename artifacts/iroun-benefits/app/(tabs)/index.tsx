@@ -116,11 +116,11 @@ export default function Home() {
       ) : (
         <>
           {/* 조건을 고른 뒤: 받을 수 있는 금액과 놓친 금액 */}
-          <Total testID="home-summary" label="신청 가능 지원금" count={est.items.length} total={est.total} onPress={() => router.push('/benefits')}>
+          <Total testID="home-summary" label="신청 가능 지원금" count={est.sure} total={est.sureTotal} extra={est.maybe} onPress={() => router.push('/benefits')}>
             {acc.active && until && acc.me ? <T v="small" color={c.primary} style={{ fontWeight: '700', marginTop: 4 }}>{ent?.trialActive ? '무료체험' : '이용'} {remaining(until, acc.me.serverNow ?? new Date().toISOString())}</T> : null}
           </Total>
           {past && past.items.length > 0 ? (
-            <Total testID="home-missed" tone="red" label={`${lastYear}년에 놓친 지원금`} count={past.items.length} total={past.total} note="올해는 놓치지 마세요" onPress={() => router.push({ pathname: '/benefits', params: { tab: 'missed' } })} />
+            <Total testID="home-missed" tone="red" label={`${lastYear}년에 놓친 지원금`} count={past.sure} total={past.sureTotal} extra={past.maybe} note="올해는 놓치지 마세요" onPress={() => router.push({ pathname: '/benefits', params: { tab: 'missed' } })} />
           ) : null}
 
           {newReplies > 0 ? (

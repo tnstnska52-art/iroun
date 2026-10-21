@@ -71,7 +71,7 @@ export function GrantList({ items, missed, unlocked }: { items: EstimateItem[]; 
 }
 
 /** 건수와 금액을 위아래로 크게 보여주는 카드. 한 줄에 한 가지 정보만 둔다. */
-export function Total({ label, count, total, tone = 'blue', note, onPress, testID, children }: { label: string; count: number; total: number; tone?: 'blue' | 'red'; note?: string; onPress?: () => void; testID?: string; children?: React.ReactNode }) {
+export function Total({ label, count, total, tone = 'blue', note, extra, onPress, testID, children }: { label: string; count: number; total: number; tone?: 'blue' | 'red'; note?: string; /** 조건 확인이 더 필요한 공고 수. 위 건수·금액에는 넣지 않고 따로 알려 준다. */ extra?: number; onPress?: () => void; testID?: string; children?: React.ReactNode }) {
   const c = useColors();
   const color = tone === 'red' ? c.destructive : c.primary;
   return (
@@ -87,6 +87,7 @@ export function Total({ label, count, total, tone = 'blue', note, onPress, testI
       </View>
       {total > 0 ? <BigMoney key={`${label}${total}`} manwon={Math.floor(total / 10000)} color={color} /> : null}
       <T v="small" color={tone === 'red' ? c.destructive : c.mutedForeground}>{note ?? (total > 0 ? '공고 기준 최대 금액' : '금액은 공고에서 확인')}</T>
+      {extra ? <T v="small" color={tone === 'red' ? c.destructive : c.primary} style={{ fontWeight: '700', marginTop: 4 }} testID={testID ? `${testID}-extra` : undefined}>+ 조건을 확인하면 더 받을 수 있는 {extra}건</T> : null}
       {children}
     </Pressable>
   );

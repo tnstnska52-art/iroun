@@ -13,7 +13,7 @@ export const IS_PREVIEW = process.env.EXPO_PUBLIC_PREVIEW === '1';
 export const FREE_COUNT = 3;
 
 export interface EstimateItem { benefit: Benefit; result: '조건 일치' | '추가 확인 필요'; /** 고른 업종에 맞춤인 공고 */ tailored?: boolean }
-export interface Estimate { items: EstimateItem[]; total: number; counted: number; noAmount: number; /** 합계에서 뺀 10억 초과 대형사업 수 */ big: number; /** 업종 맞춤 건수 */ tailored: number; /** 소상공인 적합(4~5점) 건수 */ small: number; /** 정밀 모드에서 목록에서 뺀 '추가 확인 필요' 공고(담당자가 원문 확인) */ pending: EstimateItem[] }
+export interface Estimate { /** 조건 일치 건수와 금액 합계(10억 이하, 금액 있는 것) */ sure: number; sureTotal: number; /** 추가 확인 필요 건수와 금액 합계 */ maybe: number; maybeTotal: number; items: EstimateItem[]; total: number; counted: number; noAmount: number; /** 합계에서 뺀 10억 초과 대형사업 수 */ big: number; /** 업종 맞춤 건수 */ tailored: number; /** 소상공인 적합(4~5점) 건수 */ small: number; /** 정밀 모드에서 목록에서 뺀 '추가 확인 필요' 공고(담당자가 원문 확인) */ pending: EstimateItem[] }
 /** 이 금액을 넘는 공고(대형 R&D·인프라)는 합계에서 빼고 뒤로 보낸다. 홈페이지와 같다. */
 export const BIG = 1_000_000_000;
 type Fit = { industries: string[]; small: number };
@@ -53,8 +53,13 @@ function summarize(items: EstimateItem[], profile: Profile): Estimate {
   for (const x of items) x.tailored = isTailored(x.benefit, ind);
   items.sort(order);
   const withAmount = items.filter((x) => (x.benefit.maxAmount ?? 0) > 0 && (x.benefit.maxAmount ?? 0) <= BIG);
+  const sum = (xs: EstimateItem[]) => xs.reduce((n, x) => n + (x.benefit.maxAmount ?? 0), 0);
+  // 화면 맨 위 건수·금액은 조건이 확실히 맞는 공고만 센다. 확인이 필요한 공고는 따로 알려 준다.
+  const sureItems = items.filter((x) => x.result === '조건 일치');
   return {
-    items, total: withAmount.reduce((n, x) => n + (x.benefit.maxAmount ?? 0), 0), counted: withAmount.length,
+    sure: sureItems.length, sureTotal: sum(sureItems.filter((x) => withAmount.includes(x))),
+    maybe: items.length - sureItems.length, maybeTotal: sum(items.filter((x) => x.result !== '조건 일치' && withAmount.includes(x))),
+    items, total: sum(withAmount), counted: withAmount.length,
     noAmount: items.filter((x) => !(x.benefit.maxAmount ?? 0)).length, big: items.filter((x) => (x.benefit.maxAmount ?? 0) > BIG).length,
     tailored: items.filter((x) => x.tailored).length, small: items.filter((x) => smallFit(x.benefit) >= 4).length, pending: [],
   };

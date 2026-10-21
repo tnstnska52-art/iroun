@@ -33,7 +33,13 @@ export const businessSchema = z.object({
   premises: z.enum(["임차", "자가"]).optional(),
   // 정밀 조건(패키지 고객): 여성 대표 여부
   womanOwned: z.enum(["예", "아니오"]).optional(),
+  // 제외 조건 확인용: 국세·지방세·4대보험 체납, 금융 연체·보증사고(대위변제)
+  arrears: z.enum(["예", "아니오"]).optional(),
+  delinquency: z.enum(["예", "아니오"]).optional(),
 }).strict();
+/** 공고 원문에 체납·연체 제외 조건이 적혀 있는지 */
+export const ARREARS_TEXT = /체납/;
+export const DELINQUENCY_TEXT = /연체|신용\s*불량|금융\s*질서\s*문란|채무\s*불이행|대위\s*변제|보증\s*사고/;
 export const profileSchema = z.object({
   unknownAnswers: z.array(z.string().min(1).max(120)).max(500).optional(),
   personal: personalSchema, businesses: z.array(businessSchema).max(30),
@@ -217,6 +223,22 @@ export function matchBenefit(b: Benefit, p: Profile, now = new Date()) {
       if (result === true) reasons.push(`${r.label}: 입력 조건과 일치합니다.`);
       else if (result === false) exclusions.push(`${r.label}: 입력 조건과 다릅니다.`);
       else unknowns.push(`${r.label}: 추가 확인이 필요합니다.`);
+    }
+    // 체납·연체: 공고에 제외 조건이 적혀 있고 고객이 답했으면 그 답으로 판정한다.
+    // "없음"이면 그 확인 문구는 남은 확인 사항에서 뺀다. 답하지 않았으면 원래대로 확인 사항으로 둔다.
+    const biz = business as {arrears?: string; delinquency?: string};
+    const noticeText = [...b.checks, ...b.rules.map(r => r.label), b.summary, b.support].join(" ");
+    const gates: [RegExp, string | undefined, string, string][] = [
+      [ARREARS_TEXT, biz.arrears, "세금·4대보험 체납이 있으면 신청할 수 없는 공고입니다.", "체납이 없습니다."],
+      [DELINQUENCY_TEXT, biz.delinquency, "금융 연체·보증사고가 있으면 신청할 수 없는 공고입니다.", "연체·보증사고가 없습니다."],
+    ];
+    for (const [re, answer, bad, good] of gates) {
+      if (!re.test(noticeText) || !answer) continue;
+      if (answer === "예") exclusions.push(bad);
+      else {
+        reasons.push(good);
+        for (let i = unknowns.length - 1; i >= 0; i--) if (re.test(unknowns[i]!) && b.checks.includes(unknowns[i]!)) unknowns.splice(i, 1);
+      }
     }
     return {benefitId: b.id, businessId: business.id, result: exclusions.length ? "대상 제외" : unknowns.length ? "추가 확인 필요" : "조건 일치", reasons, unknowns, exclusions};
   });

@@ -45,9 +45,9 @@ export default function Result() {
       <T v="small" color={c.mutedForeground} style={{ textAlign: 'center' }}>3일 무료 · 자동결제 없음</T>
     </> : undefined}>
       {contract && !preciseDone(profile) ? <PreciseBanner /> : null}
-      <Total testID="result-summary" label={strict ? '조건이 확실히 맞는 지원금' : '신청 가능 지원금'} count={est.items.length} total={est.total} note={est.total > 0 ? `공고 기준 최대 금액 합계${est.big ? ` · 10억 초과 대형사업 ${est.big}건 제외` : ''}` : undefined} />
+      <Total testID="result-summary" label={strict ? '조건이 확실히 맞는 지원금' : '신청 가능 지원금'} count={est.sure} total={est.sureTotal} extra={est.maybe} note={est.sureTotal > 0 ? `공고 기준 최대 금액 합계${est.big ? ` · 10억 초과 대형사업 ${est.big}건 제외` : ''}` : undefined} />
       {past.items.length > 0 ? (
-        <Total testID="result-missed" tone="red" label={`${lastYear}년에 놓친 지원금`} count={past.items.length} total={past.total} note="올해는 놓치지 마세요" onPress={() => router.push({ pathname: '/benefits', params: { tab: 'missed' } })} />
+        <Total testID="result-missed" tone="red" label={`${lastYear}년에 놓친 지원금`} count={past.sure} total={past.sureTotal} extra={past.maybe} note="올해는 놓치지 마세요" onPress={() => router.push({ pathname: '/benefits', params: { tab: 'missed' } })} />
       ) : null}
 
       {fitText || smallText ? (
