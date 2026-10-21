@@ -198,3 +198,8 @@ describe('18회차', () => {
   it('요약상 근로자를 고용한 사업주 대상이면 직원 없음 제외', () => expect(needsEmployees({ title: '[충남] 2026년 3분기분 소상공인 사회보험료 지원사업 공고', summary: '10인 미만 근로자를 고용한 소상공인 중 두루누리 지원을 받고 있는 사업주' }, '없음')).toBe(true));
   it('자영업자 본인 보험료는 그대로', () => expect(needsEmployees({ title: '[전북] 2026년 자영업자 사회보험료 지원', summary: '고용보험 또는 산재보험에 가입한 자영업자의 사회보험료 일부 지원' }, '없음')).toBe(false));
 });
+
+describe('20회차', () => {
+  it('1인 소상공인 사업은 직원이 있으면 제외', () => expect(smallBizGate({ title: '1인 소상공인 고용보험료 지원', summary: '근로자가 없는 1인 소상공인' }, { employeeBand: '1~4명', industry: '도소매' })).toBe('out'));
+  it('1인 소상공인 사업은 직원 없음이면 그대로', () => expect(smallBizGate({ title: '1인 소상공인 고용보험료 지원', summary: '근로자가 없는 1인 소상공인' }, { employeeBand: '없음', industry: '도소매' })).toBe('ok'));
+});
