@@ -116,3 +116,18 @@ describe("체납·연체 제외 조건", () => {
   });
   it("고객 정보 형식이 새 항목을 받아들임", () => expect(profileSchema.safeParse({ personal: {}, step: 0, businesses: [{ id: "a", arrears: "아니오", delinquency: "예" }] }).success).toBe(true));
 });
+
+describe("관할 확인 필요 공고는 공고 기관으로 관할을 정한다", () => {
+  const day = new Date("2026-10-10T00:00:00Z");
+  const at = (province: string) => ({ personal: {}, step: 0, businesses: [{ id: "a", province }] });
+  const notice: Benefit = { ...fixture, region: "관할 확인 필요", agency: "경상북도", rules: [] , openToAll: true } as Benefit;
+  it("기관이 경상북도면 경북 사업장은 해당", () => expect(matchBenefit(notice, at("경상북도"), day)[0].result).toBe("조건 일치"));
+  it("다른 시·도 사업장은 제외", () => expect(matchBenefit(notice, at("경기도"), day)[0].result).toBe("대상 제외"));
+  it("전남광주통합특별시 공고는 전남·광주 모두 해당", () => {
+    const n: Benefit = { ...notice, agency: "전남광주통합특별시" } as Benefit;
+    expect(matchBenefit(n, at("광주광역시"), day)[0].result).toBe("조건 일치");
+    expect(matchBenefit(n, at("전라남도"), day)[0].result).toBe("조건 일치");
+    expect(matchBenefit(n, at("부산광역시"), day)[0].result).toBe("대상 제외");
+  });
+  it("기관으로도 모르면 확인 필요", () => expect(matchBenefit({ ...notice, agency: "테스트 기관" } as Benefit, at("경상북도"), day)[0].result).toBe("추가 확인 필요"));
+});

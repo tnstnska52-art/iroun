@@ -8,6 +8,7 @@ import { FREE_COUNT, won, type EstimateItem } from '@/lib/estimate';
 import { useAccount } from '@/lib/session';
 import { dday } from '@/components/BenefitCard';
 import { fmtDate } from '@/lib/util';
+import { MONEY_LABEL, moneyType } from '@/lib/money';
 
 const ICON: Record<string, keyof typeof Feather.glyphMap> = { 경영: 'briefcase', 고용: 'users', 생활: 'home', 세금: 'percent', 교육: 'book-open', 수출: 'globe', 보험: 'shield', 마케팅: 'trending-up', 육아: 'heart' };
 
@@ -24,7 +25,7 @@ export function GrantRow({ item, missed, locked, last }: { item: EstimateItem; m
   const b = item.benefit;
   const dd = dday(b);
   const amount = b.maxAmount ? won(b.maxAmount) : '금액 확인';
-  const sub = missed ? `${b.endsAt ? `${fmtDate(b.endsAt)} 마감` : '마감'} · ${b.agency}` : `${item.result === '조건 일치' ? '조건 일치' : '확인 필요'} · ${dd.label === '상시' || dd.label === '접수 중' || dd.label === '기간 확인' ? dd.label : `${dd.label.replace('D-', '')}일 남음`}`;
+  const sub = missed ? `${b.endsAt ? `${fmtDate(b.endsAt)} 마감` : '마감'} · ${b.agency}` : `${MONEY_LABEL[moneyType(b)]} · ${item.result === '조건 일치' ? '조건 일치' : '확인 필요'} · ${dd.label === '상시' || dd.label === '접수 중' || dd.label === '기간 확인' ? dd.label : `${dd.label.replace('D-', '')}일 남음`}`;
   return (
     <Pressable testID={`grant-${b.id}`} accessibilityRole="button" accessibilityLabel={locked ? '가입하면 볼 수 있는 지원금' : `${b.title}. ${amount}. 자세히 보기`} disabled={locked}
       onPress={() => router.push({ pathname: '/benefit/[id]', params: { id: b.id } })}

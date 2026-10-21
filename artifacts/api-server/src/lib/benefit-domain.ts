@@ -196,12 +196,13 @@ export function matchBenefit(b: Benefit, p: Profile, now = new Date()) {
   const businesses = b.audience === "사업" || b.rules.some(r => r.scope === "business") ? (p.businesses.length ? p.businesses : [{id: ""}]) : [{id: ""}];
   return businesses.map(business => {
     const reasons: string[] = [], unknowns: string[] = [...b.checks], exclusions: string[] = [];
-    if(b.region!=="전국"){
+    const region=effectiveRegion(b);
+    if(region!=="전국"){
       const subject=b.audience==="사업"?business:p.personal;
-      const parts=b.region.trim().split(/\s+/),regionProvince=provinceKey(parts[0]);
+      const parts=region.trim().split(/\s+/),regionProvince=provinceKey(parts[0]);
       if(!regionProvince) unknowns.push("공고의 지원 관할을 공식 출처에서 확인해야 합니다.");
       else if(!subject.province) unknowns.push(`${b.audience==="사업"?"사업장":"거주지"} 시·도를 입력하거나 확인해 주세요.`);
-      else if(provinceKey(subject.province)!==regionProvince) exclusions.push(`${b.audience==="사업"?"사업장":"거주지"}이 공고의 지원 관할(${b.region})과 다릅니다.`);
+      else if(!sameProvince(provinceKey(subject.province),regionProvince)) exclusions.push(`${b.audience==="사업"?"사업장":"거주지"}이 공고의 지원 관할(${region})과 다릅니다.`);
       else {
         reasons.push(`${b.audience==="사업"?"사업장":"거주지"} 시·도가 지원 관할과 일치합니다.`);
         if(parts[1]){
@@ -249,8 +250,21 @@ const PROVINCE_ALIASES = [
   ["광주","광주광역시"],["대전","대전광역시"],["울산","울산광역시"],["세종","세종특별자치시"],
   ["경기","경기도"],["강원","강원도","강원특별자치도"],["충북","충청북도"],["충남","충청남도"],
   ["전북","전라북도","전북특별자치도"],["전남","전라남도"],["경북","경상북도"],["경남","경상남도"],["제주","제주도","제주특별자치도"],
+  ["전남광주","전남광주통합특별시","전남광주특별시"],
 ];
 function provinceKey(s:string) {return PROVINCE_ALIASES.find(a=>a.includes(s.trim()))?.[0];}
+/** 전남·광주 통합특별시 공고는 전남과 광주 사업장 모두 해당한다. */
+function sameProvince(a?:string,b?:string){return !!a&&!!b&&(a===b||(b==="전남광주"&&(a==="전남"||a==="광주"))||(a==="전남광주"&&(b==="전남"||b==="광주")));}
+/**
+ * 공고의 지원 관할. 수집할 때 '관할 확인 필요'로 들어온 공고는 공고 기관(경상북도·충청남도 등)으로 관할을 정한다.
+ * 기관으로도 모르면 그대로 두어 '확인 필요'가 된다.
+ */
+export function effectiveRegion(b:Pick<Benefit,"region"|"agency">):string{
+  const r=(b.region??"").trim();
+  if(r==="전국"||provinceKey(r.split(/\s+/)[0]??""))return r;
+  const agency=(b.agency??"").trim().split(/\s+/)[0]??"";
+  return provinceKey(agency)?agency:r;
+}
 export function noticeTime(value:string,boundary:"start"|"end"){
   return /^\d{4}-\d{2}-\d{2}$/.test(value)?Date.parse(`${value}T${boundary==="start"?"00:00:00.000":"23:59:59.999"}+09:00`):Date.parse(value);
 }
