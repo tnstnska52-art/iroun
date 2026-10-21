@@ -214,3 +214,19 @@ describe('마지막 회차', () => {
   it('식품·공중위생업소 공고는 음식점도 해당', () => expect(industryGate({ category: '경영', title: '[경남] 함안군 2026년 식품ㆍ공중위생업소 시설개선비 지원사업', fit: { industries: [] } }, '음식점')).toBe('ok'));
   it('공중위생업소만이면 음식점 제외', () => expect(industryGate({ category: '경영', title: '공중위생업소(숙박업 및 이미용업소) 시설개선 지원', fit: { industries: [] } }, '음식점')).toBe('out'));
 });
+
+describe('stageGate: 창업 공고 업력·대상', () => {
+  const now = new Date('2026-10-21T00:00:00Z');
+  it('예비창업자만 모집하면 사업장은 제외', () => expect(stageGate({ title: '앤틀러 스타트업 제너레이터 프로그램 6기 예비창업자 모집' }, 2024, now)).toBe('out'));
+  it('예비창업자·창업기업 함께면 그대로', () => expect(stageGate({ title: '2025년도 에코스타트업 지원사업 예비창업자‧창업기업 모집 공고' }, 2024, now)).toBe('ok'));
+  it('사업자등록 안 한 사람만 대상이면 제외', () => expect(stageGate({ title: '2025년도 예비창업패키지(특화분야) 사내벤처팀 모집공고', summary: '사업자등록 및 법인설립을 하지 않은 자를 대상으로 함' }, 2024, now)).toBe('out'));
+  it('주관기관 모집은 제외', () => expect(stageGate({ title: '2025년 강한 소상공인 성장지원사업 주관기관 모집 공고' }, 2022, now)).toBe('out'));
+  it('업력 3년 미만: 2025년 공고에 2022년 개업은 제외', () => expect(stageGate({ title: '배치 프로그램 6기', summary: '업력 3년 미만의 스타트업이 대상', endsAt: '2025-05-01' }, 2021, now)).toBe('out'));
+  it('업력 3년 미만: 2025년 공고에 2024년 개업은 그대로', () => expect(stageGate({ title: '배치 프로그램 6기', summary: '업력 3년 미만의 스타트업이 대상', endsAt: '2025-05-01' }, 2024, now)).toBe('ok'));
+  it('7년 이내 창업기업: 2015년 개업은 제외', () => expect(stageGate({ title: '입주기업 모집', summary: '초기 창업기업(1인 창조기업, 7년 이내 일반창업기업)' }, 2015, now)).toBe('out'));
+});
+
+describe('industryGate: 기술 창업 공고', () => {
+  it('음식점에 탄소중립 사업화는 제외', () => expect(industryGate({ title: '「2025년도 탄소중립 사업화 지원」사업 공고', category: '사업화' } as never, '음식점')).toBe('out'));
+  it('정보통신에 초격차 스타트업은 그대로 검토', () => expect(industryGate({ title: '2025년 초격차 스타트업 1000+ 프로젝트(DIPS)', category: '사업화' } as never, '정보통신')).not.toBe('out'));
+});

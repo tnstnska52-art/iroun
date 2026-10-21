@@ -1,3 +1,4 @@
+import { runBizinfoArchive } from "../lib/bizinfo-archive";
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { getAuth, clerkClient } from "@clerk/express";
 import { pool } from "@workspace/db";
@@ -211,9 +212,9 @@ benefitsRouter.get("/admin/ai/status",async(_req,res)=>res.json({ready:aiReady()
 // 정부24 전체·K-Startup 수집과 중복 정리를 지금 바로 돌린다(결과를 기다리지 않음).
 benefitsRouter.post("/admin/feeds/all/run",async(req,res)=>{
   // kstartup-archive: 작년(또는 body.year) 마감 공고를 모아 '놓친 지원금'을 채운다.
-  const which=z.enum(["all","gov24","kstartup","kstartup-archive","dedupe"]).default("all").parse(req.body?.source);
+  const which=z.enum(["all","gov24","kstartup","kstartup-archive","bizinfo-archive","dedupe"]).default("all").parse(req.body?.source);
   const year=z.coerce.number().int().min(2015).max(new Date().getFullYear()-1).default(new Date().getFullYear()-1).parse(req.body?.year??undefined);
-  const job=which==="gov24"?runGov24Bulk(fetch,true):which==="kstartup"?runKstartup():which==="kstartup-archive"?runKstartup(fetch,{archiveYear:year}):which==="dedupe"?hideDuplicates():collectAll();
+  const job=which==="gov24"?runGov24Bulk(fetch,true):which==="kstartup"?runKstartup():which==="kstartup-archive"?runKstartup(fetch,{archiveYear:year}):which==="bizinfo-archive"?runBizinfoArchive(fetch,{year,restart:req.body?.restart===true}):which==="dedupe"?hideDuplicates():collectAll();
   void Promise.resolve(job).then(async()=>{if(which!=="dedupe"&&which!=="all"&&aiReady()){await runAiStructuring();await hideDuplicates();}}).catch(()=>undefined);
   res.json({started:which});
 });

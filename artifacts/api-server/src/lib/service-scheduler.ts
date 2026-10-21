@@ -5,6 +5,7 @@ import {catalog} from "./public-feed-model";
 import {runPublicFeed,publicFeedScheduleReady,storedFeedState} from "./public-feeds";
 import {crmSyncReady,startCrmSync} from "./crm-contracts";
 import {aiReady,runAiStructuring} from "./ai-structure";
+import {runBizinfoArchive} from "./bizinfo-archive";
 import {gov24BulkReady,hideDuplicates,kstartupReady,runGov24Bulk,runKstartup} from "./bulk-feeds";
 /** 기업마당 → 정부24 전체(하루 1번) → K-Startup → AI 정리 → 중복 정리. 출처 하나가 실패해도 나머지는 계속한다. */
 export async function collectAll(){
@@ -17,6 +18,8 @@ export async function collectAll(){
     const done=(await storedFeedState(`kstartup:archive:${last}`) as {lastSuccess?:string}).lastSuccess;
     if(!done)await runKstartup(fetch,{archiveYear:last}).catch(e=>logger.warn({err:(e as Error).message},"K-Startup 작년 공고 수집 실패"));
   }
+  // 기업마당 작년 마감 공고도 다 읽을 때까지 수집할 때마다 이어서 읽는다.
+  if(bizinfoFeedConfiguration().ready)await runBizinfoArchive().catch(e=>logger.warn({err:(e as Error).message},"기업마당 작년 공고 수집 실패"));
   if(aiReady())await runAiStructuring().catch(()=>logger.warn("AI 공고 정리 실패"));
   await hideDuplicates().catch(()=>logger.warn("중복 공고 정리 실패"));
 }

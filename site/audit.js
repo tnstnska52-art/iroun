@@ -118,7 +118,7 @@
     L.forEach(function (b) { delete b._mt; });
     ps.forEach(function (a, i) {
       C.S.ans = a;
-      var e = C.estimate(L, C.profile());
+      var e = opts.missed ? C.missed(L, C.profile(), opts.missed) : C.estimate(L, C.profile());
       var sure = e.items.filter(function (x) { return x.result === '조건 일치'; });
       sureTotal += sure.length;
       sure.forEach(function (x) {
