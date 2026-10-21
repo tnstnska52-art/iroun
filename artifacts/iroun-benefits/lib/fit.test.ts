@@ -88,3 +88,10 @@ describe('stageGate: 창업 초기 전용 공고', () => {
   it('올해·작년 개업은 그대로', () => expect(stageGate({ title: '초기 창업기업 지원' }, 2025, now)).toBe('ok'));
   it('창업 초기 공고가 아니면 그대로', () => expect(stageGate({ title: '소상공인 고용보험료 지원' }, 2010, now)).toBe('ok'));
 });
+
+describe('제목에 업종이 분명하면 제목을 따른다', () => {
+  it('축산물판매업소 공고는 제조에 안 나온다', () => {
+    expect(industryGate({ category: '경영', title: '축산물판매업소 기자재 구입비용 지원', fit: { industries: ['제조', '도소매'] } }, '제조')).toBe('out');
+    expect(industryGate({ category: '경영', title: '축산물판매업소 기자재 구입비용 지원', fit: { industries: ['제조', '도소매'] } }, '도소매')).toBe('ok');
+  });
+});

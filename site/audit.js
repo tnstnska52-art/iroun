@@ -89,10 +89,10 @@
       [/소프트웨어\s*(기업|사업자)|정보통신\s*(업|기업)|ICT\s*기업/, ['정보통신']],
       [/건설\s*(업|사업자|기업)\s*(을|를|대상|등록)/, ['건설']],
     ];
-    if (a.industry !== '기타') for (var j = 0; j < TXT.length; j++) if (TXT[j][0].test(body) && TXT[j][1].indexOf(a.industry) < 0 && !TXT[j][0].test(t + '소상공인')) return '내용상 ' + TXT[j][1][0] + ' 대상';
+    if (a.industry !== '기타') for (var j = 0; j < TXT.length; j++) if (!(j === 0 && /식품|가공/.test(t) && a.industry === '제조') && TXT[j][0].test(body) && TXT[j][1].indexOf(a.industry) < 0 && !TXT[j][0].test(t + '소상공인')) return '내용상 ' + TXT[j][1][0] + ' 대상';
     if (a.entity === '개인' && /법인\s*(사업자|기업)?\s*(만|에\s*한함|대상으로\s*함)/.test(body)) return '내용상 법인 전용';
     if (a.openedYear <= 2022 && /예비\s*창업자\s*(만|대상)|창업\s*\d\s*년\s*(이내|미만)\s*(인|의)?\s*(기업|자)/.test(body) && !(b.rules || []).some(function (r) { return r.field === 'openedAt'; })) return '내용상 창업 초기 전용';
-    if (/만\s*\d{2}\s*세\s*(이하|미만|이상)/.test(body) && !(b.rules || []).some(function (r) { return r.field === 'age'; })) return '내용상 나이 조건(규칙 없음)';
+    if (/만\s*\d{2}\s*세\s*(이하|미만|이상)/.test(body) && !/고용|취업|일자리|채용|인턴|일\s*경험/.test(t) && !(b.rules || []).some(function (r) { return r.field === 'age'; })) return '내용상 나이 조건(규칙 없음)';
     // 8) 특정 상황
     if (/산재|폐업|재기|사업\s*정리|휴업|고용\s*유지|실업\s*급여|재해|피해/.test(t)) return '특정 상황 전용';
     return null;

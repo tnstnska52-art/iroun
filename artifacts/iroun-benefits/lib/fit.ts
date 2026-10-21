@@ -19,11 +19,20 @@ const INDUSTRY_HINTS: [RegExp, string[]][] = [
   [/수출|해외\s*(진출|마케팅|시장|인증)|글로벌/, ['제조', '도소매', '정보통신', '농림어업']],
   [/물류|운송|화물|택시|버스/, ['운수', '도소매']],
 ];
+const STRONG_HINTS: [RegExp, string[]][] = [
+  [/축산물\s*판매|정육/, ['도소매', '농림어업', '음식점']],
+  [/택시|화물\s*운송/, ['운수']],
+  [/학원|교습소/, ['교육']],
+  [/약국|의원|병원/, ['보건·복지']],
+];
 /** 매장 업종에 벤처·스타트업 전용 공고는 확인 필요 */
 const VENTURE = /벤처|스타트업|딥테크|예비\s*창업|창업\s*기업|창업\s*도약|창업\s*패키지/;
 export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fit?: { industries?: string[] } }, industry?: string): 'ok' | 'check' | 'out' {
   if (!industry || industry === '기타') return 'ok';
   const title = b.title ?? '';
+  // 제목에 업종이 분명히 적힌 공고(예: 축산물판매업소)는 AI가 정한 관련 업종보다 제목을 따른다.
+  const strong = STRONG_HINTS.find(([re]) => re.test(title));
+  if (strong) return strong[1].includes(industry) ? 'ok' : 'out';
   if (b.fit?.industries?.includes(industry)) return 'ok';
   const inds = b.fit?.industries ?? [];
   if (inds.length) return inds.includes(industry) ? 'ok' : inds.length <= 2 ? 'out' : 'check';
