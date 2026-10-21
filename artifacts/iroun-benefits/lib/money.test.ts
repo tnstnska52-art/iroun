@@ -34,6 +34,8 @@ describe('moneyType: 공고가 주는 돈의 형태', () => {
     ['2026 산업단지 오픈이노베이션프로그램 KICXUP 챌린지 2차 모집 공고', 'service'],
     ['초기창업패키지 로켓십 IR 경진대회 참가기업 모집', 'service'],
     ['2026년 대구국제기계산업대전 참가지원 추가모집 공고', 'service'],
+    ['2026년 제2차 고용노동부 예비사회적기업 지정 계획 공고', 'service'],
+    ['의정부 FIT데이(Demo Day) 2회차 기업 모집 공고', 'service'],
   ])('%s → %s', (title, want) => {
     expect(moneyType(b(title))).toBe(want);
   });
