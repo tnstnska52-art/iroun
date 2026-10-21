@@ -6,7 +6,8 @@ import { Feather } from '@expo/vector-icons';
 import { useUnreadReplies } from '@/lib/replies';
 import { TodayPicks } from '@/components/TodayPicks';
 import { RotatingRows } from '@/components/RotatingRows';
-import { refundLike, todayPicks } from '@/lib/picks';
+import { openToday, refundLike, todayPicks } from '@/lib/picks';
+import { isLoan, moneyType } from '@/lib/money';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
 import { BigMoney, Btn, CountUp, Disclaimer, Emoji, ErrorState, FooterLinks, Loading, Page, SectionHead, T, useBeat } from '@/components/ui';
@@ -14,7 +15,7 @@ import { GrantRow, Total, useJoinHref } from '@/components/GrantList';
 import { apiErrorMessage } from '@/lib/text';
 import { daysLeft, fmtDate } from '@/lib/util';
 import { remaining, useServiceStateView } from '@/lib/service';
-import { FREE_COUNT, HEADLINE_STAT, IS_PREVIEW, estimate, hasConditions, missed, strictMode, useDraftProfile, won } from '@/lib/estimate';
+import { FREE_COUNT, HEADLINE_STAT, IS_PREVIEW, customerOrder, estimate, hasConditions, missed, strictMode, useDraftProfile, won } from '@/lib/estimate';
 import { difficulty } from '@/lib/difficulty';
 
 export default function Home() {
@@ -44,12 +45,14 @@ export default function Home() {
   const unread = (svc.data?.inbox ?? []).filter((x) => !x.read_at).length + (svc.data?.companyUpdates ?? []).filter((x) => !x.read).length;
   const alertCount = est ? est.items.length : list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0).length;
   const showStat = IS_PREVIEW || HEADLINE_STAT.verified;
-  const open = list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0);
+  // 오늘 실제로 접수 중인 공고만(시작 전·예산 소진·마감 제외). 저금리 융자·대출은 고객 목록에서 뺀다.
+  const open = list.filter((b) => openToday(b) && !isLoan(b));
   const within30 = (b: { endsAt: string }) => { const d = daysLeft(b.endsAt); return d !== null && d >= 0 && d <= 30; };
-  // 조건을 고른 뒤에는 내 조건에 맞는 것 중에서, 그 전에는 전체에서 마감 7일 안쪽을 보여준다.
-  const closing = (est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }))).filter((x) => within30(x.benefit)).sort((x, y) => (daysLeft(x.benefit.endsAt) ?? 0) - (daysLeft(y.benefit.endsAt) ?? 0)).slice(0, 5);
+  // 홈 목록의 바탕: 조건을 고른 뒤에는 내 조건에 맞는 것, 그 전에는 전체. 어느 쪽이든 오늘 접수 중인 것만, 받고 싶은 순서로.
+  const pool = (est ? est.items : customerOrder(open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const })))).filter((x) => openToday(x.benefit));
+  // 30일 안에 마감: 마감이 가까운 순. 교육·컨설팅처럼 손에 돈이 들어오지 않는 사업은 뺀다.
+  const closing = pool.filter((x) => within30(x.benefit) && moneyType(x.benefit) !== 'service').sort((x, y) => (daysLeft(x.benefit.endsAt) ?? 0) - (daysLeft(y.benefit.endsAt) ?? 0)).slice(0, 5);
   // 홈 목록: '놓치기 쉬운 지원금'(카드) · '놓치기 쉬운 환급금'(카드) · '지금 신청 가능한 지원금'(목록)은 서로 겹치지 않게 나눈다.
-  const pool = est ? est.items : open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const }));
   const refunds = pool.filter((x) => refundLike(x.benefit)).slice(0, 5);
   const picks = todayPicks(pool.filter((x) => !refundLike(x.benefit)));
   const used = new Set([...refunds, ...picks].map((x) => x.benefit.id));

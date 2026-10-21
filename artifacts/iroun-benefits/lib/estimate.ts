@@ -4,6 +4,7 @@ import { matchBenefit, type Benefit as DomainBenefit, type Profile as DomainProf
 import { loadDraft } from '@/lib/draft';
 import { daysLeft, endTime } from '@/lib/util';
 import { difficulty } from '@/lib/difficulty';
+import { isLoan, moneyRank } from '@/lib/money';
 
 /** 첫 화면 숫자: 사업자가 1년에 놓치는 지원금 평균(만원). 근거 자료 확인 전에는 실제 앱에 노출하지 않는다. */
 export const HEADLINE_STAT = { label: '1년에 놓치는 지원금 평균', manwon: 1273, verified: false };
@@ -28,14 +29,24 @@ export const smallFit = (b: Benefit) => fitOf(b)?.small ?? 3;
 const tier = (b: Benefit) => { const a = b.maxAmount ?? 0; return a && a <= BIG ? 0 : !a ? 1 : 2; };
 
 const isClosed = (b: Benefit) => b.status === '마감' || b.budgetStatus === '소진' || (daysLeft(b.endsAt) ?? 0) < 0;
+/** 아직 접수가 시작되지 않은 공고(시작일이 미래). '지금 신청 가능'에 넣지 않는다. */
+const notStarted = (b: Benefit) => !!b.startsAt && Number.isFinite(Date.parse(b.startsAt)) && Date.parse(b.startsAt) > Date.now();
 const match = (b: Benefit, p: Profile, at?: Date) => matchBenefit(b as unknown as DomainBenefit, p as unknown as DomainProfile, at).map((m) => m.result);
-// 업종 맞춤 → 받을 가능성이 높은 것 → 소상공인 적합 → 금액 있는 것(10억 이하) → 금액이 큰 것 → 신청이 쉬운 것 (홈페이지와 같은 순서)
-const order = (x: EstimateItem, y: EstimateItem) =>
-  Number(!!y.tailored) - Number(!!x.tailored)
+const left = (b: Benefit) => daysLeft(b.endsAt) ?? 9999;
+/**
+ * 고객이 받고 싶은 순서. 금액보다 "통장에 돈이 들어오는지"를 먼저 본다.
+ * 통장 입금(현금 지원·환급) → 바우처·감면 → 구입비 보조 → 교육·컨설팅
+ * → 조건 일치 → 업종 맞춤 → 소상공인 적합 → 신청이 쉬운 것 → 금액 있는 것(10억 이하) → 금액이 큰 것 → 마감이 가까운 것
+ */
+export const order = (x: EstimateItem, y: EstimateItem) =>
+  moneyRank(x.benefit) - moneyRank(y.benefit)
   || (x.result === y.result ? 0 : x.result === '조건 일치' ? -1 : 1)
+  || Number(!!y.tailored) - Number(!!x.tailored)
   || smallFit(y.benefit) - smallFit(x.benefit)
+  || difficulty(x.benefit) - difficulty(y.benefit)
   || tier(x.benefit) - tier(y.benefit)
-  || (y.benefit.maxAmount ?? 0) - (x.benefit.maxAmount ?? 0) || difficulty(x.benefit) - difficulty(y.benefit);
+  || (y.benefit.maxAmount ?? 0) - (x.benefit.maxAmount ?? 0)
+  || left(x.benefit) - left(y.benefit);
 const industryOf = (p: Profile) => (p.businesses[0] as { industry?: string } | undefined)?.industry;
 function summarize(items: EstimateItem[], profile: Profile): Estimate {
   const ind = industryOf(profile);
@@ -56,7 +67,8 @@ function summarize(items: EstimateItem[], profile: Profile): Estimate {
 export function estimate(benefits: Benefit[], profile: Profile, strict = false): Estimate {
   const items: EstimateItem[] = [], pending: EstimateItem[] = [];
   for (const b of benefits) {
-    if (isClosed(b)) continue;
+    // 마감·예산 소진·접수 전 공고와 저금리 융자·대출은 고객 목록에 넣지 않는다.
+    if (isClosed(b) || notStarted(b) || isLoan(b)) continue;
     const r = match(b, profile);
     if (r.includes('조건 일치')) items.push({ benefit: b, result: '조건 일치' });
     else if (r.includes('추가 확인 필요')) (strict ? pending : items).push({ benefit: b, result: '추가 확인 필요' });
@@ -65,6 +77,11 @@ export function estimate(benefits: Benefit[], profile: Profile, strict = false):
   // 정밀 모드(패키지 고객): 목록·금액은 조건이 확실히 맞는 공고만. 나머지는 담당자 확인용으로 따로 둔다.
   if (strict) est.pending = summarize(pending, profile).items;
   return est;
+}
+
+/** 조건을 고르기 전 전체 공고 목록: 융자를 빼고 고객이 받고 싶은 순서로 정렬한다. */
+export function customerOrder<T extends EstimateItem>(items: T[]): T[] {
+  return items.filter((x) => !isLoan(x.benefit)).sort(order);
 }
 
 /** 정밀 조건(대표자 출생연도·사업자 형태·여성 대표 여부)을 다 골랐는지 */
@@ -86,7 +103,7 @@ export function missed(benefits: Benefit[], profile: Profile, year?: number): Es
   const opened = (profile.businesses[0] as { openedYear?: number } | undefined)?.openedYear;
   const items: EstimateItem[] = [];
   for (const b of benefits) {
-    if (!isClosed(b)) continue;
+    if (!isClosed(b) || isLoan(b)) continue;
     const end = endTime(b.endsAt);
     const endYear = end !== null ? new Date(end + 9 * 3600000).getUTCFullYear() : null;
     if (year && endYear !== year) continue;

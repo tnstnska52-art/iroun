@@ -87,6 +87,19 @@ const SAMPLES: Benefit[] = [
   sample({ id: 'ex-2025-online', title: '[예시] 2025 소상공인 온라인 판로 지원', audience: '사업', category: '마케팅', region: '전국', agency: '중소기업유통센터',
     sourceUrl: 'https://www.sbiz24.kr/', summary: '화면 확인용 예시 공고입니다. 온라인몰 입점과 홍보 비용을 지원했던 형태입니다.', support: '입점·홍보 비용 일부를 지원했던 형태입니다.', calculation: '예시 자료입니다.',
     documents: ['사업자등록증명', '소상공인확인서'], startsAt: '2025-04-01', endsAt: '2025-05-30', status: '마감', maxAmount: 2000000 }),
+  /* 보여주는 순서 확인용: 통장 입금 → 바우처 → 구입비 보조 → 교육. 융자와 접수 전 공고는 목록에 나오지 않아야 한다. */
+  sample({ id: 'ex-rent-cash', title: '[예시] 소상공인 임차료 지원', audience: '사업', category: '경영', region: '전국', agency: '소상공인시장진흥공단',
+    sourceUrl: 'https://www.sbiz24.kr/', summary: '화면 확인용 예시 공고입니다. 월 임차료 일부를 사업자 통장으로 지급하는 형태입니다.', support: '임차료 일부를 현금으로 지급하는 형태입니다.',
+    documents: ['사업자등록증명', '임대차계약서'], startsAt: ymdIn(-5), endsAt: ymdIn(20), maxAmount: 1000000 }),
+  sample({ id: 'ex-equip', title: '[예시] 소상공인 스마트기기 도입 지원', audience: '사업', category: '경영', region: '전국', agency: '소상공인시장진흥공단',
+    sourceUrl: 'https://www.sbiz24.kr/', summary: '화면 확인용 예시 공고입니다. 키오스크·서빙로봇 구입비 일부를 보조하는 형태입니다(자부담 있음).', support: '기기 구입비의 일부를 보조하는 형태입니다.',
+    documents: ['사업자등록증명', '견적서', '사업계획서'], startsAt: ymdIn(-3), endsAt: ymdIn(40), maxAmount: 5000000 }),
+  sample({ id: 'ex-loan', title: '[예시] 소상공인 정책자금 (일반경영안정자금)', audience: '사업', category: '금융', region: '전국', agency: '소상공인시장진흥공단',
+    sourceUrl: 'https://www.sbiz24.kr/', summary: '화면 확인용 예시 공고입니다. 저금리 융자는 고객 목록에 나오지 않아야 합니다.', support: '업체당 최대 7천만원 융자',
+    documents: ['사업자등록증명'], startsAt: ymdIn(-10), endsAt: ymdIn(15), maxAmount: 70000000 }),
+  sample({ id: 'ex-not-yet', title: '[예시] 하반기 소상공인 고용장려금 (접수 예정)', audience: '사업', category: '고용', region: '전국', agency: '고용노동부',
+    sourceUrl: 'https://www.moel.go.kr/', summary: '화면 확인용 예시 공고입니다. 접수 시작 전이라 지금 신청 가능 목록에 나오지 않아야 합니다.', support: '신규 채용 1인당 지원금을 지급하는 형태입니다.',
+    documents: ['사업자등록증명'], startsAt: ymdIn(10), endsAt: ymdIn(60), maxAmount: 3000000 }),
 ];
 const benefits: Benefit[] = [...(official as Benefit[]), ...SAMPLES];
 /** 실제 서버(Render)에 공개된 공고를 불러와 미리보기 자료로 쓴다. 실패하면 예시 자료를 그대로 쓴다. */
