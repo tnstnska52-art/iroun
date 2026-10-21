@@ -15,6 +15,7 @@ import { GrantRow, Total, useJoinHref } from '@/components/GrantList';
 import { apiErrorMessage } from '@/lib/text';
 import { daysLeft, fmtDate } from '@/lib/util';
 import { remaining, useServiceStateView } from '@/lib/service';
+import { industryGate } from '@/lib/fit';
 import { FREE_COUNT, HEADLINE_STAT, IS_PREVIEW, customerMoney, customerOrder, estimate, hasConditions, missed, strictMode, useDraftProfile, won } from '@/lib/estimate';
 import { difficulty } from '@/lib/difficulty';
 
@@ -52,7 +53,8 @@ export default function Home() {
   const pool = (est ? est.items : customerOrder(open.map((b) => ({ benefit: b, result: '추가 확인 필요' as const })))).filter((x) => openToday(x.benefit));
   // 30일 안에 마감: 마감이 가까운 순. 교육·컨설팅처럼 손에 돈이 들어오지 않는 사업은 뺀다.
   // 통장 입금·바우처 중 조건 일치·업종 맞춤·금액 있는 것부터 5건을 고른 뒤 마감 순으로 보여준다. 홈페이지와 같다.
-  const closing = closingOf(pool.filter((x) => within30(x.benefit)));
+  const myIndustry = (profile?.businesses[0] as { industry?: string } | undefined)?.industry;
+  const closing = closingOf(pool.filter((x) => within30(x.benefit) && industryGate(x.benefit, myIndustry) === 'ok'));
   // 홈 목록: '놓치기 쉬운 지원금'(카드) · '놓치기 쉬운 환급금'(카드) · '지금 신청 가능한 지원금'(목록)은 서로 겹치지 않게 나눈다.
   const refunds = pool.filter((x) => refundLike(x.benefit)).slice(0, 5);
   const picks = todayPicks(pool.filter((x) => !refundLike(x.benefit)));
