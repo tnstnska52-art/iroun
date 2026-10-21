@@ -292,10 +292,13 @@ export async function hideDuplicates() {
 }
 
 export async function bulkFeedStatus() {
-  const [g, k] = await Promise.all([storedFeedState("gov24:bulk"), storedFeedState("kstartup")]);
+  const last = new Date().getFullYear() - 1;
+  const [g, k, ka, ba] = await Promise.all([storedFeedState("gov24:bulk"), storedFeedState("kstartup"), storedFeedState(`kstartup:archive:${last}`), storedFeedState(`bizinfo:archive:${last}`)]);
   return [
     { name: "정부24 사업자 서비스(전체)", source: "gov24:bulk", documentation: catalog.gov24.doc, ...g, status: gov24BulkReady() ? (g as Row).status ?? "아직 수집하지 않음" : "미연동" },
     { name: "K-Startup 창업지원 공고", source: "kstartup", documentation: KSTARTUP_DOC, ...k, status: kstartupReady() ? (k as Row).status ?? "아직 수집하지 않음" : "미연동",
       reason: kstartupReady() ? (k as Row).reason ?? "수집 대기" : "공공데이터포털 'K-Startup 조회서비스' 활용신청 후 Render 에 IROUN_KSTARTUP_APPROVED=true 추가 필요" },
+    { name: `K-Startup ${last}년 마감 공고`, source: `kstartup:archive:${last}`, ...ka },
+    { name: `기업마당 ${last}년 마감 공고`, source: `bizinfo:archive:${last}`, ...ba },
   ];
 }
