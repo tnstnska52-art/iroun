@@ -170,3 +170,9 @@ describe('10회차 표본에서 찾은 오류', () => {
   it('착한가격업소 지원은 지정 업소만이라 확인 필요', () => expect(ownerGate({ title: '착한가격업소 인센티브 지원' })).toBe('check'));
   it('노동자 휴게시설은 직원이 있어야', () => expect(needsEmployees({ title: '[경남] 양산시 2026년 노동자 휴게시설 지원사업' }, '없음')).toBe(true));
 });
+
+describe('11회차 표본에서 찾은 오류', () => {
+  it('업종 기타에 벤처 공고는 확인 필요', () => expect(industryGate({ category: '사업화', title: '2026년 벤처나라 벤처창업기업제품 등록 지원', fit: { industries: [] } }, '기타')).toBe('check'));
+  it('요약에 폐업 후 재창업이 조건이면 확인 필요', () => expect(ownerGate({ title: '소상공인 임차료 지원', summary: '서구에서 60일 이상 사업 후 폐업하고 재창업한 임차 소상공인' })).toBe('check'));
+  it('요약상 양식장 대상은 확인 필요', () => expect(industryGate({ category: '농림축산어업', title: '육상수조 EHP 지원', summary: '양식장 어가가 교체할 때', fit: { industries: [] } } as never, '농림어업')).toBe('check'));
+});

@@ -40,15 +40,16 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
   const title = b.title ?? '';
   if (!industry) return 'ok';
   // 업종을 '기타'로 고르면 특정 업종 공고는 조건 일치로 세지 않는다.
-  if (industry === '기타') return STRONG_HINTS.some(([re]) => re.test(title)) || INDUSTRY_HINTS.some(([re]) => re.test(title)) || SECTOR.test(title) || (b.fit?.industries?.length ?? 0) > 0 || b.category === '농림축산어업' ? 'check' : 'ok';
+  if (industry === '기타') return STRONG_HINTS.some(([re]) => re.test(title)) || INDUSTRY_HINTS.some(([re]) => re.test(title)) || SECTOR.test(title) || VENTURE.test(title) || (b.fit?.industries?.length ?? 0) > 0 || b.category === '농림축산어업' ? 'check' : 'ok';
   // 제목에 업종이 분명히 적힌 공고(예: 축산물판매업소)는 AI가 정한 관련 업종보다 제목을 따른다.
   const strong = STRONG_HINTS.find(([re]) => re.test(title));
   if (strong) return strong[1].includes(industry) ? 'ok' : 'out';
   // 화장품·자동차부품·수산처럼 세부 산업 공고는 업종이 맞아도 그 산업인지 확인이 필요하다.
   if (SECTOR.test(title)) return (b.fit?.industries?.length && !b.fit.industries.includes(industry)) ? 'out' : 'check';
+  if (/식육\s*(가공|포장)|양식장|어선|원양|도축/.test((b as { summary?: string }).summary ?? '')) return 'check';
   if (/여행사|여행업\s*(등록|체)/.test((b as { summary?: string }).summary ?? '') && industry !== '서비스') return 'check';
   if (/여행사를?\s*대상|여행업\s*등록/.test((b as { summary?: string }).summary ?? '')) return 'check';
-  if (/(모빌리티|자동차|뿌리|항만|수리\s*조선|조선|석유\s*화학|철강|바이오|반도체|화장품|의료\s*기기|항공|방산|이차\s*전지|수소)\s*(산업|업종|부품\s*업종|기업)/.test((b as { summary?: string }).summary ?? '')) return 'check';
+  if (/(식육|도축|양식장|어가|어선|원양|모빌리티|자동차|뿌리|항만|수리\s*조선|조선|석유\s*화학|철강|바이오|반도체|화장품|의료\s*기기|항공|방산|이차\s*전지|수소)\s*(산업|업종|부품\s*업종|기업)/.test((b as { summary?: string }).summary ?? '')) return 'check';
   if (b.fit?.industries?.includes(industry)) return 'ok';
   const inds = b.fit?.industries ?? [];
   if (inds.length) return inds.includes(industry) ? 'ok' : inds.length <= 2 ? 'out' : 'check';
@@ -81,7 +82,9 @@ const SITUATIONAL = /적립\s*운영|착한\s*가격|모범\s*업소|지정\s*�
  *  - out: 여성 기업 전용인데 여성 대표가 아니라고 답함
  *  - check: 북한이탈주민·보훈·장애인 사업자처럼 특정 대표자 대상 → '조건 일치'로 세지 않는다
  */
-export function ownerGate(b: Pick<Benefit, 'title'>, womanOwned?: string): 'ok' | 'check' | 'out' {
+export function ownerGate(b: Pick<Benefit, 'title'> & { summary?: string }, womanOwned?: string): 'ok' | 'check' | 'out' {
+  // 요약에 '폐업 후 재창업한'처럼 특정 상황이 신청 조건으로 적혀 있으면 확인 필요
+  if (/폐업\s*(후|하고|한)|재\s*창업/.test(b.summary ?? '') && !WOMAN_ONLY.test(b.title)) return 'check';
   if (WOMAN_ONLY.test(b.title)) return womanOwned === '아니오' ? 'out' : womanOwned === '예' ? 'ok' : 'check';
   return SPECIAL_OWNER.test(b.title) || SITUATIONAL.test(b.title) ? 'check' : 'ok';
 }
