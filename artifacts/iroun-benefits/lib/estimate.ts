@@ -113,7 +113,8 @@ export function missed(benefits: Benefit[], profile: Profile, year?: number): Es
   const opened = (profile.businesses[0] as { openedYear?: number } | undefined)?.openedYear;
   const items: EstimateItem[] = [];
   for (const b of benefits) {
-    if (!isClosed(b) || isLoan(b)) continue;
+    // 1억이 넘는 대형 사업은 동네 사업장이 '놓친 돈'으로 보기 어려워 뺀다.
+    if (!isClosed(b) || isLoan(b) || (b.maxAmount ?? 0) > BIG) continue;
     const gate = industryGate(b, industryOf(profile));
     if (gate === 'out') continue;
     const end = endTime(b.endsAt);
