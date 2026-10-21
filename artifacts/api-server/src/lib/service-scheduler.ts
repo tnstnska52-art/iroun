@@ -4,6 +4,7 @@ import { logger } from "./logger";
 import {catalog} from "./public-feed-model";
 import {runPublicFeed,publicFeedScheduleReady,storedFeedState} from "./public-feeds";
 import {crmSyncReady,startCrmSync} from "./crm-contracts";
+import {checkLeadReady,flushCheckLeads} from "./check-leads";
 import {aiReady,runAiStructuring} from "./ai-structure";
 import {runBizinfoArchive} from "./bizinfo-archive";
 import {gov24BulkReady,hideDuplicates,kstartupReady,runGov24Bulk,runKstartup} from "./bulk-feeds";
@@ -49,6 +50,8 @@ export function startServiceScheduler(){
   }
   // 회사 전산 패키지 계약 수신: 공동 키(CRM_APP_INBOUND_SECRET)가 있을 때만 60초마다.
   const stopCrm=crmSyncReady()?startCrmSync():()=>{};
+  // 홈페이지 조회 고객: 전산이 못 받은 것을 1분마다 다시 보낸다.
+  if(checkLeadReady()){void flushCheckLeads().catch(()=>undefined);timers.push(setInterval(()=>{void flushCheckLeads().catch(()=>undefined);},60000));}
   for(const t of timers)t.unref();
   return ()=>{timers.forEach(clearInterval);stopCrm();};
 }
