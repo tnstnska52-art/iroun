@@ -4,7 +4,7 @@ import { matchBenefit, type Benefit as DomainBenefit, type Profile as DomainProf
 import { loadDraft } from '@/lib/draft';
 import { daysLeft, endTime } from '@/lib/util';
 import { difficulty } from '@/lib/difficulty';
-import { isLoan, moneyRank } from '@/lib/money';
+import { moneyRank, moneyType } from '@/lib/money';
 import { industryGate, needsEmployees } from '@/lib/fit';
 export { industryGate };
 
@@ -35,6 +35,8 @@ const isClosed = (b: Benefit) => b.status === '마감' || b.budgetStatus === '�
 const notStarted = (b: Benefit) => !!b.startsAt && Number.isFinite(Date.parse(b.startsAt)) && Date.parse(b.startsAt) > Date.now();
 const match = (b: Benefit, p: Profile, at?: Date) => matchBenefit(b as unknown as DomainBenefit, p as unknown as DomainProfile, at).map((m) => m.result);
 const left = (b: Benefit) => daysLeft(b.endsAt) ?? 9999;
+/** 고객 목록에 넣는 공고: 통장 입금·환급·바우처·구입비 보조. 융자, 교육·컨설팅 같은 서비스, 1억 넘는 대형 사업은 뺀다. 홈페이지와 같다. */
+export const customerMoney = (b: Benefit) => { const t = moneyType(b); return t !== 'loan' && t !== 'service' && (b.maxAmount ?? 0) <= BIG; };
 /**
  * 고객이 받고 싶은 순서. 금액보다 "통장에 돈이 들어오는지"를 먼저 본다.
  * 통장 입금(현금 지원·환급) → 바우처·감면 → 구입비 보조 → 교육·컨설팅
@@ -77,7 +79,7 @@ export function estimate(benefits: Benefit[], profile: Profile, strict = false):
   const items: EstimateItem[] = [], pending: EstimateItem[] = [];
   for (const b of benefits) {
     // 마감·예산 소진·접수 전 공고와 저금리 융자·대출은 고객 목록에 넣지 않는다.
-    if (isClosed(b) || notStarted(b) || isLoan(b)) continue;
+    if (isClosed(b) || notStarted(b) || !customerMoney(b)) continue;
     const gate = industryGate(b, industryOf(profile));
     if (gate === 'out' || noStaff(b, profile)) continue;
     const r = match(b, profile);
@@ -92,7 +94,7 @@ export function estimate(benefits: Benefit[], profile: Profile, strict = false):
 
 /** 조건을 고르기 전 전체 공고 목록: 융자를 빼고 고객이 받고 싶은 순서로 정렬한다. */
 export function customerOrder<T extends EstimateItem>(items: T[]): T[] {
-  return items.filter((x) => !isLoan(x.benefit)).sort(order);
+  return items.filter((x) => customerMoney(x.benefit)).sort(order);
 }
 
 /** 정밀 조건(대표자 출생연도·사업자 형태·여성 대표 여부)을 다 골랐는지 */
@@ -115,7 +117,7 @@ export function missed(benefits: Benefit[], profile: Profile, year?: number): Es
   const items: EstimateItem[] = [];
   for (const b of benefits) {
     // 1억이 넘는 대형 사업은 동네 사업장이 '놓친 돈'으로 보기 어려워 뺀다.
-    if (!isClosed(b) || isLoan(b) || (b.maxAmount ?? 0) > BIG) continue;
+    if (!isClosed(b) || !customerMoney(b)) continue;
     const gate = industryGate(b, industryOf(profile));
     if (gate === 'out' || noStaff(b, profile)) continue;
     const end = endTime(b.endsAt);
