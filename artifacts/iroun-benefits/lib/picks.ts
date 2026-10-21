@@ -29,6 +29,8 @@ export function openToday(b: Benefit, now = Date.now()) {
  * 순서: 통장 입금 → 조건 일치 → 신청이 쉬움 → 몰라서 못 받는 유형 → 마감이 가까움.
  */
 export function todayPicks(items: Item[], count = 5): Item[] {
+  // 조건을 고른 뒤에는 조건이 확실히 맞는 공고만 추천한다(확인 필요 공고로 채우지 않는다).
+  if (items.some((x) => x.result === '조건 일치')) items = items.filter((x) => x.result === '조건 일치');
   return items
     .filter((x) => openToday(x.benefit) && moneyRank(x.benefit) <= 1 && moneyType(x.benefit) !== 'refund')
     .map((x) => {
