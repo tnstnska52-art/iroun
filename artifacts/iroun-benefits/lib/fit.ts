@@ -14,6 +14,7 @@ const INDUSTRY_HINTS: [RegExp, string[]][] = [
   [/농업|농가|농촌|어업|어가|어촌|축산|임업|산림|수산|양식|귀농/, ['농림어업']],
   [/제조|공장|소공인|뿌리\s*기업|스마트\s*공장|인버터|압축기|변압기|사출|공정|모빌리티|자동차\s*부품/, ['제조']],
   [/작업\s*환경\s*측정/, ['제조', '건설']],
+  [/기술\s*보호|기술\s*유출/, ['제조', '정보통신']],
   [/쌀|꿀|양봉|발효|축산물|수산물|수산\s*식품|농산물|농식품|식품\s*(소재|가공|기능성)|가공\s*산업/, ['농림어업']],
   [/신문|잡지|출판/, ['정보통신', '서비스']],
   [/관광|숙박|호텔|펜션|마이스|MICE/, ['숙박', '서비스']],
@@ -23,16 +24,21 @@ const INDUSTRY_HINTS: [RegExp, string[]][] = [
   [/물류|운송|화물|택시|버스/, ['운수', '도소매']],
 ];
 const STRONG_HINTS: [RegExp, string[]][] = [
+  [/신문사|신문\s*우송/, ['정보통신']],
+  [/매출\s*채권/, ['제조', '도소매', '건설', '정보통신']],
   [/축산물\s*판매|정육/, ['도소매', '농림어업', '음식점']],
   [/택시|화물\s*운송/, ['운수']],
   [/학원|교습소/, ['교육']],
   [/약국|의원|병원/, ['보건·복지']],
 ];
+const SECTOR = /화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
 /** 매장 업종에 벤처·스타트업 전용 공고는 확인 필요 */
 const VENTURE = /벤처|스타트업|딥테크|예비\s*창업|창업\s*기업|창업\s*도약|창업\s*패키지/;
 export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fit?: { industries?: string[] } }, industry?: string): 'ok' | 'check' | 'out' {
-  if (!industry || industry === '기타') return 'ok';
   const title = b.title ?? '';
+  if (!industry) return 'ok';
+  // 업종을 '기타'로 고르면 특정 업종 공고는 조건 일치로 세지 않는다.
+  if (industry === '기타') return STRONG_HINTS.some(([re]) => re.test(title)) || INDUSTRY_HINTS.some(([re]) => re.test(title)) || SECTOR.test(title) || (b.fit?.industries?.length ?? 0) > 0 || b.category === '농림축산어업' ? 'check' : 'ok';
   // 제목에 업종이 분명히 적힌 공고(예: 축산물판매업소)는 AI가 정한 관련 업종보다 제목을 따른다.
   const strong = STRONG_HINTS.find(([re]) => re.test(title));
   if (strong) return strong[1].includes(industry) ? 'ok' : 'out';
@@ -43,6 +49,8 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
   if (FAR_CATEGORY.test(b.category) && LOCAL_INDUSTRIES.includes(industry)) return 'check';
   if (INDUSTRY_HINTS.some(([re, inds]) => re.test(title) && !inds.includes(industry))) return 'check';
   if (VENTURE.test(title) && [...LOCAL_INDUSTRIES, '도소매'].includes(industry)) return 'check';
+  // 화장품·바이오·조선처럼 세부 산업 공고는 우리 업종이 맞아도 그 산업인지 확인이 필요하다.
+  if (SECTOR.test(title)) return 'check';
   return 'ok';
 }
 
@@ -116,4 +124,32 @@ const HIRING = /채용|정규직|전환|인턴|일\s*경험|고용\s*창출|신�
 export function easeOf(b: Pick<Benefit, 'title'>): 0 | 1 | 2 {
   if (EASY_AUTO.test(b.title)) return 0;
   return HIRING.test(b.title) ? 2 : 1;
+}
+
+const REV_RANGE: Record<string, [number, number]> = { '5천만 원 미만': [0, 5e7 - 1], '5천만~1억 원': [5e7, 1e8 - 1], '1억~3억 원': [1e8, 3e8 - 1], '3억~5억 원': [3e8, 5e8 - 1], '5억~10억 원': [5e8, 1e9 - 1], '10억 원 이상': [1e9, Infinity], '1억 원 미만': [0, 1e8 - 1], '3억~10억 원': [3e8, 1e9 - 1] };
+const EMP_RANGE: Record<string, [number, number]> = { '없음': [0, 0], '1~4명': [1, 4], '5~9명': [5, 9], '10~29명': [10, 29], '30명 이상': [30, Infinity] };
+/**
+ * 공고 요약에 적힌 매출·직원 수 한도. 자격 규칙으로 뽑히지 않았을 때만 쓴다.
+ * 예) "연매출 3억원 이하 소상공인", "고용보험 피보험자 5인 이상 기업"
+ */
+export function textLimitGate(b: Pick<Benefit, 'summary' | 'rules'>, x: { revenue?: string; employeeBand?: string }): 'ok' | 'check' | 'out' {
+  const text = b.summary ?? '';
+  const has = (field: string) => (b.rules ?? []).some((r) => r.field === field);
+  let res: 'ok' | 'check' | 'out' = 'ok';
+  const rv = x.revenue ? REV_RANGE[x.revenue] : undefined;
+  const mr = text.match(/매출(?:액)?\s*(?:이|은|가)?\s*(\d+(?:\.\d+)?)\s*억\s*원?\s*(이하|미만)/);
+  if (mr && rv && !has('revenue')) {
+    const cap = parseFloat(mr[1]) * 1e8 - (mr[2] === '미만' ? 1 : 0);
+    if (rv[0] > cap) return 'out';
+    if (rv[1] > cap) res = 'check';
+  }
+  const ev = x.employeeBand ? EMP_RANGE[x.employeeBand] : undefined;
+  const me = text.match(/(?:근로자|노동자|직원|피보험자)\s*(?:수\s*)?(?:가\s*)?(\d+)\s*(?:인|명)\s*(이상|미만|이하)/);
+  if (me && ev && !has('employees')) {
+    const n = parseInt(me[1], 10);
+    const [lo, hi] = me[2] === '이상' ? [n, Infinity] : [0, me[2] === '미만' ? n - 1 : n];
+    if (ev[1] < lo || ev[0] > hi) return 'out';
+    if (ev[0] < lo || ev[1] > hi) res = 'check';
+  }
+  return res;
 }

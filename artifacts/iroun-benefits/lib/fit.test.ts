@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { easeOf, smallBizGate, stageGate, dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
+import { textLimitGate, easeOf, smallBizGate, stageGate, dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
 
 const b = (category: string, industries?: string[]) => ({ category, fit: industries ? { industries } : undefined });
 
@@ -120,4 +120,17 @@ describe('easeOf: 받기 쉬운 정도', () => {
   it('직원을 뽑아야 받는 돈은 2', () => { for (const t of ['고용안정장려금지원(정규직전환지원)', '2026년 청년일자리 도약장려금', '고령자 계속고용장려금']) expect(easeOf({ title: t })).toBe(2); });
   it('그 밖에는 1', () => expect(easeOf({ title: '소상공인 스마트상점 기술보급' })).toBe(1));
   it('식품·농산물 가공 공고는 제조에서 확인 필요', () => expect(industryGate({ category: '경영', title: '꿀 가공산업 육성 지원', fit: { industries: ['제조'] } }, '제조')).toBe('ok'));
+});
+
+describe('textLimitGate: 요약에 적힌 한도', () => {
+  const nr = { summary: '부산시 소재 연매출액 3억원 이하 소상공인 대상', rules: [] };
+  it('매출 한도를 넘으면 제외', () => expect(textLimitGate(nr, { revenue: '5억~10억 원' })).toBe('out'));
+  it('한도 안이면 그대로', () => expect(textLimitGate(nr, { revenue: '1억~3억 원' })).toBe('ok'));
+  it('직원 5인 이상 사업은 직원 1~4명이면 제외', () => expect(textLimitGate({ summary: '고용보험 피보험자 5인 이상 기업 대상', rules: [] }, { employeeBand: '1~4명' })).toBe('out'));
+  it('규칙이 있으면 요약은 보지 않는다', () => expect(textLimitGate({ summary: '연매출 3억원 이하', rules: [{ field: 'revenue' }] as never }, { revenue: '10억 원 이상' })).toBe('ok'));
+});
+describe('기타 업종·세부 산업', () => {
+  it('업종 기타면 농업 공고는 확인 필요', () => expect(industryGate({ category: '농림축산어업', title: '농업용 면세유 유가연동보조금', fit: { industries: [] } }, '기타')).toBe('check'));
+  it('화장품 박람회는 도소매라도 확인 필요', () => expect(industryGate({ category: '수출', title: '[충북] 이탈리아 볼로냐 코스모프로프 화장품 박람회', fit: { industries: [] } }, '제조')).toBe('check'));
+  it('매출채권보험은 음식점 제외', () => expect(industryGate({ category: '경영', title: '매출채권보험료지원', fit: { industries: [] } }, '음식점')).toBe('out'));
 });
