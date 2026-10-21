@@ -73,8 +73,10 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
 const EMPLOYER = /출근제|단축\s*근로|근로\s*시간|기숙사|노동자|휴게\s*시설|산재\s*예방|클린\s*사업장|안전\s*보건|내일\s*채움|가족\s*친화|재택\s*근무|어린이집|일\s*생활|워라밸|인재|대체\s*인력|일\s*경험|계절\s*학기|고용|취업|사업주|근로\s*복지|채용|인턴|근로자|직원|인력|퇴직\s*연금|정규직|육아\s*휴직|출산|작업\s*환경|산재|일자리/;
 const SELF = /고용\s*보험\s*(가입|료)|자영업자|1인|대표자|본인|보험료/;
 /** 4대보험 직원이 없다고 답한 사업장에 직원 고용 사업을 빼는지 */
-export function needsEmployees(b: Pick<Benefit, 'title'>, employeeBand?: string, employees?: number): boolean {
+export function needsEmployees(b: Pick<Benefit, 'title'> & { summary?: string }, employeeBand?: string, employees?: number): boolean {
   const none = employeeBand === '없음' || employees === 0;
+  // 요약에 '근로자를 고용한 사업주', '두루누리 지원을 받는 사업주'처럼 직원이 있어야 하는 조건이 적힌 경우
+  if (none && /근로자를?\s*고용한|두루누리|사업주\s*부담(분|금)|신규\s*채용/.test(b.summary ?? '')) return true;
   // '일자리창출 사회보험료 지원'처럼 새로 뽑은 직원 몫을 주는 사업은 보험료라도 직원이 있어야 한다.
   const hiring = /일자리\s*창출|신규\s*채용|채용/.test(b.title);
   return none && EMPLOYER.test(b.title) && (!SELF.test(b.title) || hiring);

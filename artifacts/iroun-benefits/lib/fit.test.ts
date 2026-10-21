@@ -193,3 +193,8 @@ describe('15회차', () => {
   it('축산물 판매업소 공고는 음식점 제외', () => expect(industryGate({ category: '경영', title: '축산물 판매업소 위생시설 개선 지원', fit: { industries: [] } }, '음식점')).toBe('out'));
   it('코로나 손실보상은 특정 상황', () => expect(ownerGate({ title: '소상공인 손실보상금 지원(현장신청 지원)' })).toBe('check'));
 });
+
+describe('18회차', () => {
+  it('요약상 근로자를 고용한 사업주 대상이면 직원 없음 제외', () => expect(needsEmployees({ title: '[충남] 2026년 3분기분 소상공인 사회보험료 지원사업 공고', summary: '10인 미만 근로자를 고용한 소상공인 중 두루누리 지원을 받고 있는 사업주' }, '없음')).toBe(true));
+  it('자영업자 본인 보험료는 그대로', () => expect(needsEmployees({ title: '[전북] 2026년 자영업자 사회보험료 지원', summary: '고용보험 또는 산재보험에 가입한 자영업자의 사회보험료 일부 지원' }, '없음')).toBe(false));
+});
