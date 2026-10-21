@@ -5,7 +5,7 @@ import { loadDraft } from '@/lib/draft';
 import { daysLeft, endTime } from '@/lib/util';
 import { difficulty } from '@/lib/difficulty';
 import { moneyRank, moneyType } from '@/lib/money';
-import { industryGate, needsEmployees } from '@/lib/fit';
+import { dedupePrograms, industryGate, needsEmployees, ownerGate } from '@/lib/fit';
 export { industryGate };
 
 /** 첫 화면 숫자: 사업자가 1년에 놓치는 지원금 평균(만원). 근거 자료 확인 전에는 실제 앱에 노출하지 않는다. */
@@ -52,11 +52,17 @@ export const order = (x: EstimateItem, y: EstimateItem) =>
   || (y.benefit.maxAmount ?? 0) - (x.benefit.maxAmount ?? 0)
   || left(x.benefit) - left(y.benefit);
 const industryOf = (p: Profile) => (p.businesses[0] as { industry?: string } | undefined)?.industry;
+/** 업종·대표자 관문을 합친 결과 */
+const gateOf = (b: Benefit, p: Profile): 'ok' | 'check' | 'out' => { const g = [industryGate(b, industryOf(p)), ownerGate(b, (p.businesses[0] as { womanOwned?: string } | undefined)?.womanOwned)]; return g.includes('out') ? 'out' : g.includes('check') ? 'check' : 'ok'; };
 const noStaff = (b: Benefit, p: Profile) => { const x = p.businesses[0] as { employeeBand?: string; employees?: number } | undefined; return needsEmployees(b, x?.employeeBand, x?.employees); };
 function summarize(items: EstimateItem[], profile: Profile): Estimate {
   const ind = industryOf(profile);
   for (const x of items) x.tailored = isTailored(x.benefit, ind);
   items.sort(order);
+  // 같은 사업이 여러 출처에서 들어온 중복은 순서가 높은 것 하나만 남긴다.
+  const unique = dedupePrograms(items);
+  items.length = 0;
+  items.push(...unique);
   // 합계는 통장에 들어오는 돈(현금·환급·바우처)만, 1억 이하 공고만 더한다. 홈페이지와 같다.
   const withAmount = items.filter((x) => (x.benefit.maxAmount ?? 0) > 0 && (x.benefit.maxAmount ?? 0) <= BIG && moneyRank(x.benefit) <= 1);
   const sum = (xs: EstimateItem[]) => xs.reduce((n, x) => n + (x.benefit.maxAmount ?? 0), 0);
@@ -80,7 +86,7 @@ export function estimate(benefits: Benefit[], profile: Profile, strict = false):
   for (const b of benefits) {
     // 마감·예산 소진·접수 전 공고와 저금리 융자·대출은 고객 목록에 넣지 않는다.
     if (isClosed(b) || notStarted(b) || !customerMoney(b)) continue;
-    const gate = industryGate(b, industryOf(profile));
+    const gate = gateOf(b, profile);
     if (gate === 'out' || noStaff(b, profile)) continue;
     const r = match(b, profile);
     if (r.includes('조건 일치') && gate === 'ok') items.push({ benefit: b, result: '조건 일치' });
@@ -118,7 +124,7 @@ export function missed(benefits: Benefit[], profile: Profile, year?: number): Es
   for (const b of benefits) {
     // 1억이 넘는 대형 사업은 동네 사업장이 '놓친 돈'으로 보기 어려워 뺀다.
     if (!isClosed(b) || !customerMoney(b)) continue;
-    const gate = industryGate(b, industryOf(profile));
+    const gate = gateOf(b, profile);
     if (gate === 'out' || noStaff(b, profile)) continue;
     const end = endTime(b.endsAt);
     const endYear = end !== null ? new Date(end + 9 * 3600000).getUTCFullYear() : null;

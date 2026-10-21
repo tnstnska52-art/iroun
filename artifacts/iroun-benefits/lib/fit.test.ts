@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { industryGate, needsEmployees } from './fit';
+import { dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
 
 const b = (category: string, industries?: string[]) => ({ category, fit: industries ? { industries } : undefined });
 
@@ -39,5 +39,28 @@ describe('needsEmployees: 직원이 없으면 고용 사업을 뺀다', () => {
   it('직원이 있으면 그대로', () => {
     expect(needsEmployees({ title: '산재근로자 대체인력지원금' }, '1~4명')).toBe(false);
     expect(needsEmployees({ title: '산재근로자 대체인력지원금' })).toBe(false);
+  });
+});
+
+describe('ownerGate: 대표자 자격', () => {
+  it('여성 기업 전용은 여성 대표만', () => {
+    expect(ownerGate({ title: '2026년 여성기업 육성사업 공고' }, '아니오')).toBe('out');
+    expect(ownerGate({ title: '여성 벤처 활성화 지원' }, '예')).toBe('ok');
+  });
+  it('특정 대표자 대상은 확인 필요', () => {
+    expect(ownerGate({ title: '북한이탈주민 경영개선자금 지원' }, '아니오')).toBe('check');
+    expect(ownerGate({ title: '1인 사업자 보조공학기기 지원' })).toBe('check');
+    expect(ownerGate({ title: '소상공인 고용보험료 지원' })).toBe('ok');
+  });
+});
+
+describe('dedupePrograms: 같은 사업 중복 빼기', () => {
+  it('출처마다 이름이 조금 달라도 같은 사업으로 본다', () => {
+    expect(sameProgramKey('산재근로자 대체인력지원금')).toBe(sameProgramKey('산재근로자 대체인력지원 사업'));
+    expect(sameProgramKey('2026년 소상공인 고용보험료 지원사업 공고')).toBe(sameProgramKey('소상공인 고용보험료 지원'));
+  });
+  it('다른 사업은 남긴다', () => {
+    const it = (title: string) => ({ benefit: { title } });
+    expect(dedupePrograms([it('고용유지지원금 지원'), it('고용유지지원금'), it('청년일자리 도약장려금')]).map((x) => x.benefit.title)).toEqual(['고용유지지원금 지원', '청년일자리 도약장려금']);
   });
 });
