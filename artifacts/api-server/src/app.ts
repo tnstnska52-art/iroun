@@ -2,6 +2,7 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
+import publicLeadsRouter from "./routes/public-leads";
 import { logger } from "./lib/logger";
 import { clerkMiddleware } from "@clerk/express";
 import { publishableKeyFromHost } from "@clerk/shared/keys";
@@ -49,6 +50,7 @@ app.use(clerkMiddleware(req=>({
 })));
 
 app.use("/api", router);
+app.use("/api", publicLeadsRouter);
 // Company router keeps /service and /office prefixes; public endpoints stay public.
 app.use("/api", (req,res,next)=>/^\/(service\/documents|office\/documents|office\/customers\/[^/]+\/documents)(\/|$)/.test(req.path)?documentsRouter(req,res,next):next());
 app.use("/api", (req,res,next)=>/^\/(fund\/|office\/fund-leads)/.test(req.path)?fundsRouter(req,res,next):next());
