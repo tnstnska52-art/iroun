@@ -237,8 +237,8 @@ var NEG=/(융자|대출|보증료|이자\s*지원|이차\s*보전)(\s*[·,\/및]
 var LOAN=/융자|대출|이차\s*보전|이자\s*(지원|보전|차액)|특례\s*보증|보증\s*(서|료|수수료|지원)|정책\s*자금|경영\s*안정\s*자금|운전\s*자금|시설\s*자금|육성\s*자금|저금리|대환/;
 var REFUND=/환급|근로\s*장려금|자녀\s*장려금|돌려\s*받|경정\s*청구/;
 var VOUCHER=/바우처|크레딧|감면|할인|포인트|상품권|지역\s*화폐|캐시백|페이백|쿠폰|요금\s*(특별\s*)?(지원|경감)/;
-var PURCHASE=/장비|기기|설비|시설\s*(개선|보수|구축)|도입|구입|구매|리모델링|인테리어|간판|키오스크|스마트\s*상점|기술\s*보급|환경\s*개선|점포\s*개선|자부담|매칭/;
-var SERVICE=/교육|컨설팅|멘토링|코칭|박람회|전시회|판로|마케팅|홍보|아카데미|역량|진단|입점|해외\s*진출|상담회|기술\s*개발|R&D|연구\s*개발/;
+var PURCHASE=/장비|기기|설비|시설\s*(개선|보수|구축)|냉장고|문\s*달기|설치|교체|개보수|도입|구입|구매|리모델링|인테리어|간판|키오스크|스마트\s*상점|기술\s*보급|환경\s*개선|점포\s*개선|자부담|매칭/;
+var SERVICE=/교육|컨설팅|멘토링|코칭|박람회|전시회|산업\s*대전|참가\s*지원|판로|마케팅|홍보|아카데미|역량|진단|입점|해외\s*진출|상담회|기술\s*개발|R&D|연구\s*개발/;
 var CASHWORD=/지원금|보조금|장려금|수당/;
 var RANK={cash:0,refund:0,voucher:1,purchase:2,service:3,loan:9};
 function moneyType(b){if(b._mt)return b._mt;var head=String(b.title||'').replace(NEG,'');var body=((b.support||'')+' '+(b.summary||'')).replace(NEG,'');var t;
@@ -268,10 +268,10 @@ function dday(b){var d=daysLeft(b.endsAt);if(b.status==='마감'||(d!==null&&d<0
 function fmtDate(s){var t=endTime(s);if(t===null)return '';var d=new Date(t+9*3600000);return d.getUTCFullYear()+'.'+String(d.getUTCMonth()+1).padStart(2,'0')+'.'+String(d.getUTCDate()).padStart(2,'0');}
 var ICON={경영:'💼',고용:'👥',생활:'🏠',세금:'％',교육:'📘',수출:'🌐',보험:'🛡️',마케팅:'📈',육아:'❤️'};
 function amountOf(b){return b.maxAmount?won(b.maxAmount):'금액 확인';}
-function subOf(x,red){var b=x.benefit,dd=dday(b);if(red)return (b.endsAt?fmtDate(b.endsAt)+' 마감':'마감')+' · '+b.agency;return (x.result==='조건 일치'?'조건 일치':'확인 필요')+' · '+(dd.days!==undefined?dd.days+'일 남음':dd.label);}
+function subOf(x,red){var b=x.benefit,dd=dday(b);if(red)return (b.endsAt?fmtDate(b.endsAt)+' 마감':'마감')+' · '+b.agency;return (x.result==='조건 일치'?'조건 일치 · ':x.m?'확인 필요 · ':'')+(dd.days!==undefined?dd.days+'일 남음':dd.label);}
 function row(x,red){var b=x.benefit,dd=dday(b);return '<button type="button" class="c2-row'+(red?' red':'')+'" data-id="'+esc(b.id)+'"><span class="ic">'+(ICON[b.category]||'📄')+'</span><span class="t"><b>'+(!red&&tailored(b)?'<span class="c2-tag">맞춤</span>':'')+esc(b.title)+'</b><small class="'+(!red&&dd.urgent?'u':'')+'">'+esc(subOf(x,red))+'</small></span><span class="c2-amt">'+esc(amountOf(b))+'</span></button>';}
 function lockRow(){return '<div class="c2-row"><span class="ic">🔒</span><span class="t"><span class="c2-sk" style="display:block;width:72%"></span><span class="c2-sk" style="display:block;width:44%;height:12px;margin-top:6px"></span></span><span class="c2-sk" style="width:64px"></span></div>';}
-function totalCard(label,est,red,note,act){var m=est.sureTotal>0?'<div class="m">'+Math.floor(est.sureTotal/1e4).toLocaleString('ko-KR')+'<small>만원</small></div>':'';
+function totalCard(label,est,red,note,act){var m=est.sureTotal>0?'<div class="m">'+(est.sureTotal>=1e8?Math.floor(est.sureTotal/1e8)+'<small>억</small> '+(Math.floor(est.sureTotal%1e8/1e4)?Math.floor(est.sureTotal%1e8/1e4).toLocaleString('ko-KR')+'<small>만원</small>':''):Math.floor(est.sureTotal/1e4).toLocaleString('ko-KR')+'<small>만원</small>')+'</div>':'';
  return '<button type="button" class="c2-total'+(red?' red':'')+'" '+(act||'')+'><div class="l">'+esc(label)+'<span>'+est.sure+'건</span></div>'+m+'<div class="n">'+esc(note||(est.sureTotal>0?'조건이 확실히 맞는 공고의 최대 금액 합계':'금액은 공고에서 확인'))+'</div>'+(est.maybe?'<div class="x">+ 조건을 확인하면 더 받을 수 있는 '+est.maybe+'건</div>':'')+'</button>';}
 function stopTimers(){S.timers.forEach(function(t){clearInterval(t);clearTimeout(t);});S.timers=[];}
 function scrollTop(){var r=box.getBoundingClientRect();if(r.top<0||r.top>innerHeight*.6)window.scrollTo({top:Math.max(0,r.top+scrollY-90),behavior:'smooth'});}
