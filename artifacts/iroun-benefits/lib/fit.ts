@@ -15,6 +15,7 @@ const INDUSTRY_HINTS: [RegExp, string[]][] = [
   [/농업|농가|농촌|어업|어가|어촌|축산|임업|산림|수산|양식|귀농/, ['농림어업']],
   [/제조|공장|소공인|뿌리\s*기업|스마트\s*공장|인버터|압축기|변압기|사출|공정|모빌리티|자동차\s*부품/, ['제조']],
   [/작업\s*환경\s*측정/, ['제조', '건설']],
+  [/추락|끼임|산업\s*재해|노후\s*안전\s*시설/, ['제조', '건설']],
   [/유해\s*물질|화학\s*물질|시험\s*분석/, ['제조']],
   [/기술\s*보호|기술\s*유출/, ['제조', '정보통신']],
   [/쌀|꿀|양봉|발효|축산물|수산물|수산\s*식품|농산물|농식품|식품\s*(소재|가공|기능성)|가공\s*산업/, ['농림어업']],
@@ -33,7 +34,7 @@ const STRONG_HINTS: [RegExp, string[]][] = [
   [/학원|교습소/, ['교육']],
   [/약국|의원|병원/, ['보건·복지']],
 ];
-const SECTOR = /어린이집\s*(차량|운영)|사일리지|조사료|물류\s*장비|태양광|ESS|산업\s*단지|농공\s*단지|웹소설|학교\s*급식|신문|우송|곤충|낙농|고수온|어업인|감귤|선과장|신발|미래차|전장|황태|명태|천일염|염전|쏙|축산|축사|한우|양돈|양계|가전|사출|성형기|여행사|여행업|관광\s*사업체|광산|광업|석유\s*화학|철강|어선|양식|원양|어가|채종|종자|퇴비|비료|수산|쌀|꿀|벌꿀|화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
+const SECTOR = /인버터|압축기|변압기|인삼|가축\s*분뇨|액비|어린이집\s*(차량|운영)|사일리지|조사료|물류\s*장비|태양광|ESS|산업\s*단지|농공\s*단지|웹소설|학교\s*급식|신문|우송|곤충|낙농|고수온|어업인|감귤|선과장|신발|미래차|전장|황태|명태|천일염|염전|쏙|축산|축사|한우|양돈|양계|가전|사출|성형기|여행사|여행업|관광\s*사업체|광산|광업|석유\s*화학|철강|어선|양식|원양|어가|채종|종자|퇴비|비료|수산|쌀|꿀|벌꿀|화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
 /** 매장 업종에 벤처·스타트업 전용 공고는 확인 필요 */
 const VENTURE = /벤처|스타트업|딥테크|예비\s*창업|창업\s*기업|창업\s*도약|창업\s*패키지/;
 export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fit?: { industries?: string[] } }, industry?: string): 'ok' | 'check' | 'out' {
@@ -41,7 +42,7 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
   if (!industry) return 'ok';
   // 업종을 '기타'로 고르면 특정 업종 공고는 조건 일치로 세지 않는다.
   const sum = (b as { summary?: string }).summary ?? '';
-  if (industry === '기타') return STRONG_HINTS.some(([re]) => re.test(title)) || INDUSTRY_HINTS.some(([re]) => re.test(title)) || SECTOR.test(title) || VENTURE.test(title) || /식육\s*(가공|포장)|양식장|어선|원양|도축|화장품|가전|천일염|축산\s*농가|철강|자동차\s*(부품|제조)|기계\s*[·ㆍ]\s*부품|식품\s*제조|신발|폐사어/.test(sum) || /(모빌리티|자동차|뿌리|항만|조선|석유\s*화학|철강|바이오|반도체|화장품)\s*(산업|업종|기업)/.test(sum) || (b.fit?.industries?.length ?? 0) > 0 || b.category === '농림축산어업' ? 'check' : 'ok';
+  if (industry === '기타') return STRONG_HINTS.some(([re]) => re.test(title)) || INDUSTRY_HINTS.some(([re]) => re.test(title)) || SECTOR.test(title) || VENTURE.test(title) || /인삼|가축\s*분뇨|식육\s*(가공|포장)|양식장|어선|원양|도축|화장품|가전|천일염|축산\s*농가|철강|자동차\s*(부품|제조)|기계\s*[·ㆍ]\s*부품|식품\s*제조|신발|폐사어/.test(sum) || /(모빌리티|자동차|뿌리|항만|조선|석유\s*화학|철강|바이오|반도체|화장품)\s*(산업|업종|기업)/.test(sum) || (b.fit?.industries?.length ?? 0) > 0 || b.category === '농림축산어업' ? 'check' : 'ok';
   // 제목에 업종이 분명히 적힌 공고(예: 축산물판매업소)는 AI가 정한 관련 업종보다 제목을 따른다.
   const strong = STRONG_HINTS.find(([re]) => re.test(title));
   if (strong) return strong[1].includes(industry) ? 'ok' : 'out';

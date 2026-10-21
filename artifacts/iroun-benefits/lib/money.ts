@@ -40,7 +40,7 @@ export function moneyType(b: Pick<Benefit, 'kind' | 'title' | 'category' | 'supp
   if (b.kind === '환급금' || REFUND.test(head)) return 'refund';
   if (CASH_WORD.test(head)) return 'cash';
   // '상품권 가맹점 등록'처럼 가맹점으로 등록하는 사업은 돈을 받는 게 아니다.
-  if (/가맹점\s*(등록|모집)/.test(head)) return 'service';
+  if (/가맹점\s*(등록|모집|가입)/.test(head)) return 'service';
   if (VOUCHER.test(head)) return 'voucher';
   // 제목에 센터·상담·활용 같은 말이 있으면 장비 얘기가 있어도 서비스다(예: '센터 보유 시험장비 활용 지원').
   if (SERVICE.test(head)) return 'service';
