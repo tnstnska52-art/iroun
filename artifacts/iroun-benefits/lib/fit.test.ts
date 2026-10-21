@@ -225,3 +225,8 @@ describe('stageGate: 창업 공고 업력·대상', () => {
   it('업력 3년 미만: 2025년 공고에 2024년 개업은 그대로', () => expect(stageGate({ title: '배치 프로그램 6기', summary: '업력 3년 미만의 스타트업이 대상', endsAt: '2025-05-01' }, 2024, now)).toBe('ok'));
   it('7년 이내 창업기업: 2015년 개업은 제외', () => expect(stageGate({ title: '입주기업 모집', summary: '초기 창업기업(1인 창조기업, 7년 이내 일반창업기업)' }, 2015, now)).toBe('out'));
 });
+
+describe('industryGate: 기술 창업 공고', () => {
+  it('음식점에 탄소중립 사업화는 제외', () => expect(industryGate({ title: '「2025년도 탄소중립 사업화 지원」사업 공고', category: '사업화' } as never, '음식점')).toBe('out'));
+  it('정보통신에 초격차 스타트업은 그대로 검토', () => expect(industryGate({ title: '2025년 초격차 스타트업 1000+ 프로젝트(DIPS)', category: '사업화' } as never, '정보통신')).not.toBe('out'));
+});

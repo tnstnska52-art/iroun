@@ -36,6 +36,7 @@ const STRONG_HINTS: [RegExp, string[]][] = [
 ];
 const SECTOR = /맑은\s*공기|대기\s*(배출|오염)|과수|작목반|아스콘|인버터|압축기|변압기|인삼|가축\s*분뇨|액비|어린이집\s*(차량|운영)|사일리지|조사료|물류\s*장비|태양광|ESS|산업\s*단지|농공\s*단지|웹소설|학교\s*급식|신문|우송|곤충|낙농|고수온|어업인|감귤|선과장|신발|미래차|전장|황태|명태|천일염|염전|쏙|축산|축사|한우|양돈|양계|가전|사출|성형기|여행사|여행업|관광\s*사업체|광산|광업|석유\s*화학|철강|어선|양식|원양|어가|채종|종자|퇴비|비료|수산|쌀|꿀|벌꿀|화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
 /** 매장 업종에 벤처·스타트업 전용 공고는 확인 필요 */
+const DEEP_TECH = /초격차|딥테크|DIPS|탄소\s*중립|기상\s*기술|HPC|헬스\s*케어|핀테크|금융\s*(혁신|기술)|\bAI\b|팹리스|기술\s*사업화|아이디어\s*거래|기후\s*테크|에코\s*스타트업|빅\s*데이터|메타버스|반도체|로봇|바이오/;
 const VENTURE = /벤처|스타트업|딥테크|예비\s*창업|창업\s*기업|창업\s*도약|창업\s*패키지/;
 export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fit?: { industries?: string[] } }, industry?: string): 'ok' | 'check' | 'out' {
   const title = b.title ?? '';
@@ -64,6 +65,8 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
   if (b.category === '농림축산어업') return industry === '농림어업' ? 'ok' : 'out';
   if (FAR_CATEGORY.test(b.category) && LOCAL_INDUSTRIES.includes(industry)) return 'check';
   if (INDUSTRY_HINTS.some(([re, inds]) => re.test(title) && !inds.includes(industry))) return 'check';
+  // 딥테크·탄소중립·기상기술처럼 기술 창업 공고는 매장·도소매 업종이 받을 수 없다.
+  if (DEEP_TECH.test(title) && (LOCAL_INDUSTRIES.includes(industry) || industry === '도소매')) return 'out';
   if (VENTURE.test(title) && !['정보통신', '제조'].includes(industry)) return 'check';
   // 화장품·바이오·조선처럼 세부 산업 공고는 우리 업종이 맞아도 그 산업인지 확인이 필요하다.
   if (SECTOR.test(title)) return 'check';
