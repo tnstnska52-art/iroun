@@ -30,7 +30,7 @@ const BIZ_Q: Q[] = [
   { key: 'district', title: '어느 시·군·구인가요?', hint: '시 단위까지 골라 주세요', kind: 'select', options: [] },
   { key: 'openedYear', title: '언제 개업하셨나요?', hint: '사업자등록증 기준', kind: 'select', options: YEARS, toValue: (o) => parseInt(o, 10) },
   { key: 'revenue', title: '지난해 매출은 어느 정도인가요?', hint: '1년 매출 합계', kind: 'select', options: ['1억 원 미만', '1억~3억 원', '3억~10억 원', '10억 원 이상'] },
-  { key: 'employeeBand', title: '고용보험에 가입된 직원은 몇 명인가요?', hint: '대표자 본인은 빼고', kind: 'select', options: ['없음', '1~4명', '5~9명', '10~29명', '30명 이상'] },
+  { key: 'employeeBand', title: '4대보험에 가입된 직원은 몇 명인가요?', hint: '대표자 본인은 빼고', kind: 'select', options: ['없음', '1~4명', '5~9명', '10~29명', '30명 이상'] },
   { key: 'premises', title: '사업장은 임차인가요, 자가인가요?', kind: 'select', options: ['임차', '자가'] },
 ];
 const QUICK = BIZ_Q.length;

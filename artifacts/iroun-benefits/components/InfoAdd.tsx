@@ -28,7 +28,7 @@ export function nextQuestion(b: Benefit, p: Profile, businessId: string): { q: Q
       if (r.field === 'district' && biz?.province && (DISTRICTS[biz.province] ?? []).length) return { left: open.length, q: { id: 'district', title: '어느 시·군·구인가요?', options: DISTRICTS[biz.province], apply: (pp, o) => setBiz(pp, businessId, { district: o }) } };
       if (r.field === 'openedAt') return { left: open.length, q: { id: 'openedYear', title: '언제 개업하셨나요?', hint: '사업자등록증 기준', options: YEARS, apply: (pp, o) => setBiz(pp, businessId, { openedYear: parseInt(o, 10) }) } };
       if (r.field === 'revenue') return { left: open.length, q: { id: 'revenue', title: '지난해 매출은 어느 정도인가요?', hint: '1년 매출 합계', options: ['1억 원 미만', '1억~3억 원', '3억~10억 원', '10억 원 이상'], apply: (pp, o) => setBiz(pp, businessId, { revenue: o }) } };
-      if (r.field === 'employees') return { left: open.length, q: { id: 'employeeBand', title: '고용보험에 가입된 직원은 몇 명인가요?', hint: '대표자 본인은 빼고', options: ['없음', '1~4명', '5~9명', '10~29명', '30명 이상'], apply: (pp, o) => setBiz(pp, businessId, { employeeBand: o }) } };
+      if (r.field === 'employees') return { left: open.length, q: { id: 'employeeBand', title: '4대보험에 가입된 직원은 몇 명인가요?', hint: '대표자 본인은 빼고', options: ['없음', '1~4명', '5~9명', '10~29명', '30명 이상'], apply: (pp, o) => setBiz(pp, businessId, { employeeBand: o }) } };
       if (r.field === 'premises') return { left: open.length, q: { id: 'premises', title: '사업장은 임차인가요, 자가인가요?', options: ['임차', '자가'], apply: (pp, o) => setBiz(pp, businessId, { premises: o }) } };
     }
     return { left: open.length, q: { id: x.key, title: r.label, hint: '해당하나요?', options: ['예', '아니오'], apply: (pp, o) => ({ ...pp, confirmations: { ...(pp.confirmations ?? {}), [x.key]: { answer: o as '예' | '아니오', label: r.label } } }) } };
