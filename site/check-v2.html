@@ -247,7 +247,7 @@ var CASHWORD=/지원금|보조금|장려금|수당/;
 var CASH_WORD=/장려금|보조금|지원금|수당|급여|보상금/;
 var RANK={cash:0,refund:0,voucher:1,purchase:2,service:3,loan:9};
 function moneyType(b){if(b._mt)return b._mt;var head=String(b.title||'').replace(NEG,'');var body=((b.support||'')+' '+(b.summary||'')).replace(NEG,'');var t;
- if(LOAN.test(head+' '+(b.category||''))||LOAN.test(body)&&!CASHWORD.test(head))t='loan';else if(b.kind==='환급금'||REFUND.test(head))t='refund';else if(CASH_WORD.test(head))t='cash';else if(VOUCHER.test(head))t='voucher';else if(PURCHASE.test(head))t='purchase';else if(SERVICE.test(head))t='service';else if(VOUCHER.test(body))t='voucher';else if(PURCHASE.test(body))t='purchase';else if(SERVICE.test(body)&&!/지원금|보조금|장려금|수당|인건비|임차료/.test(head+' '+body))t='service';else t='cash';
+ if(LOAN.test(head+' '+(b.category||''))||LOAN.test(body)&&!CASHWORD.test(head))t='loan';else if(b.kind==='환급금'||REFUND.test(head))t='refund';else if(CASH_WORD.test(head))t='cash';else if(VOUCHER.test(head))t='voucher';else if(PURCHASE.test(head))t='purchase';else if(SERVICE.test(head))t='service';else if(/^(기술|기술개발\(R&D\)|행사ㆍ네트워크|멘토링ㆍ컨설팅ㆍ교육|창업교육)$/.test(b.category||''))t='service';else if(VOUCHER.test(body))t='voucher';else if(PURCHASE.test(body))t='purchase';else if(SERVICE.test(body)&&!/지원금|보조금|장려금|수당|인건비|임차료/.test(head+' '+body))t='service';else t='cash';
  b._mt=t;return t;}
 function rank(b){return RANK[moneyType(b)];}
 var EASY=/민생|전기\s*요금|가스\s*요금|에너지\s*(바우처|비용)|요금\s*(지원|감면|경감)|캐시백|페이백|환급|바우처|상품권|지역\s*화폐|쿠폰|감면|장려금|수당/;

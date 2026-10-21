@@ -27,6 +27,8 @@ const VOUCHER = /바우처|크레딧|감면|할인|포인트|상품권|지역\s*
 const PURCHASE = /장비|기기|설비|시설\s*(개선|보수|구축)|냉장고|문\s*달기|설치|교체|개보수|도입|구입|(?<!공공\s?)구매|리모델링|인테리어|간판|키오스크|스마트\s*상점|기술\s*보급|환경\s*개선|점포\s*개선|자부담|매칭/;
 const SERVICE = /공모전|아이디어\s*공모|지정\s*공모|품질\s*대상|시상|어워드|포상|훈련|인정\s*신청|인증|세일|페스타|축제|피해\s*구제|상담|입주|공간|센터|대피소|법률|세무|노무|투자\s*연계|투자\s*유치|선정\s*(모집|공고|계획)|우수\s*기업|자율\s*개선|교육|컨설팅|멘토링|코칭|박람회|전시회|산업\s*대전|참가\s*지원|경진\s*대회|챌린지|개척단|오픈\s*이노베이션|액셀러레이팅|창업\s*패키지|(신규\s*)?지정\s*(계획|모집|신청)|데모\s*데이|Demo\s*Day|IR\b|판로|마케팅|홍보|아카데미|역량|진단|입점|해외\s*진출|상담회|기술\s*개발|R&D|연구\s*개발/;
 
+const SERVICE_CATEGORY = /^(기술|기술개발\(R&D\)|행사ㆍ네트워크|멘토링ㆍ컨설팅ㆍ교육|창업교육)$/;
+
 /** 공고가 주는 돈의 형태 */
 export function moneyType(b: Pick<Benefit, 'kind' | 'title' | 'category' | 'support' | 'summary'>): MoneyType {
   // 분야(category)는 '교육'·'마케팅'처럼 넓게 붙어서, 융자를 알아볼 때만 쓰고 나머지는 제목으로 판단한다.
@@ -38,6 +40,8 @@ export function moneyType(b: Pick<Benefit, 'kind' | 'title' | 'category' | 'supp
   if (VOUCHER.test(head)) return 'voucher';
   if (PURCHASE.test(head)) return 'purchase';
   if (SERVICE.test(head)) return 'service';
+  // 기술개발·행사·교육 분야 공고는 제목에 돈 얘기가 없으면 실증·인증·네트워킹 같은 서비스다.
+  if (SERVICE_CATEGORY.test(b.category ?? '')) return 'service';
   // 제목만으로 모를 때는 지원내용을 본다.
   if (VOUCHER.test(body)) return 'voucher';
   if (PURCHASE.test(body)) return 'purchase';

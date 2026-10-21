@@ -77,6 +77,12 @@ describe('moneyType: 공고가 주는 돈의 형태', () => {
     expect(moneyType(b('재창업 사업화 지원금', { support: '사업화 자금 지원. 대출과 중복 신청 가능' }))).toBe('cash');
   });
 
+  it('기술·행사 분야 공고는 제목에 돈 얘기가 없으면 서비스', () => {
+    expect(moneyType(b('2026년 3차 동물세포기반 백신 공공 CDMO 전략적 육성', { category: '기술' }))).toBe('service');
+    expect(moneyType(b('2026 혁신신약살롱 마곡 참여 안내', { category: '행사ㆍ네트워크' }))).toBe('service');
+    expect(moneyType(b('청년 기술인력 채용 장려금', { category: '기술' }))).toBe('cash');
+  });
+
   it('통장 입금이 바우처·구입비 보조·교육보다 위', () => {
     expect(MONEY_RANK.cash).toBeLessThan(MONEY_RANK.voucher);
     expect(MONEY_RANK.voucher).toBeLessThan(MONEY_RANK.purchase);
