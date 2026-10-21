@@ -97,6 +97,13 @@ describe('moneyType: 공고가 주는 돈의 형태', () => {
     expect(moneyType(b('청년 기술인력 채용 장려금', { category: '기술' }))).toBe('cash');
   });
 
+  it('창업 사업화 공고: 민간 기관이나 금액이 없으면 서비스', () => {
+    expect(moneyType({ ...b('2025 KINGO Springboard Program 6기 모집', { category: '사업화', support: '초기 스타트업 지원 계획을 공고' }), agency: '(주)킹고스프링' })).toBe('service');
+    expect(moneyType(b('2025 상반기 KDB NextONE 모집 공고', { category: '사업화', support: '스타트업 육성 프로그램 참여기업 모집' }))).toBe('service');
+    expect(moneyType(b('2025년 재도전 사업화 지원사업 공고', { category: '사업화', support: '사업화 자금 최대 1억원 지원' }))).toBe('cash');
+    expect(moneyType(b('2025 성북구 1인창조기업 지원센터 입주기업 모집', { category: '시설ㆍ공간ㆍ보육' }))).toBe('service');
+  });
+
   it('통장 입금이 바우처·구입비 보조·교육보다 위', () => {
     expect(MONEY_RANK.cash).toBeLessThan(MONEY_RANK.voucher);
     expect(MONEY_RANK.voucher).toBeLessThan(MONEY_RANK.purchase);

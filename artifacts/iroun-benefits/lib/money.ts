@@ -29,10 +29,14 @@ const SERVICE = /전시\s*\(?\s*박람\s*\)?\s*회|출전|클리닝|위생\s*컨
 
 /** 지원내용에 구입비·설치비 보조라고 적혀 있어야 구입비 보조로 본다(장비 얘기만 있는 공고는 서비스일 때가 많다). */
 const PURCHASE_COST = /(구입|구매|설치|구축|도입|교체|시공|개선)\s*비|비용\s*(의\s*)?\d+\s*%|\d+\s*%\s*(이내\s*)?(지원|보조)|자부담|보조\s*금|보조\s*비율/;
-const SERVICE_CATEGORY = /^(기술|기술개발\(R&D\)|행사ㆍ네트워크|멘토링ㆍ컨설팅ㆍ교육|창업교육)$/;
+const SERVICE_CATEGORY = /^(기술|기술개발\(R&D\)|행사ㆍ네트워크|멘토링ㆍ컨설팅ㆍ교육|창업교육|시설ㆍ공간ㆍ보육|글로벌|판로ㆍ해외진출)$/;
+/** 민간 액셀러레이터·투자사·재단이 여는 프로그램은 돈을 주는 사업이 아니라 보육·투자 프로그램이다. */
+const PRIVATE_HOST = /\(주\)|㈜|주식회사|액셀러레이터|엑셀러레이터|벤처스|파트너스|캐피탈|인베스트|투자|홀딩스|랩스|컴퍼니/;
+/** 사업화 공고에 돈이 적혀 있는지(사업화 자금·지원금·금액) */
+const MONEY_IN_BODY = /사업화\s*자금|지원금|보조금|장려금|\d[\d,.]*\s*(만|억|천만)\s*원|최대\s*\d/;
 
 /** 공고가 주는 돈의 형태 */
-export function moneyType(b: Pick<Benefit, 'kind' | 'title' | 'category' | 'support' | 'summary'>): MoneyType {
+export function moneyType(b: Pick<Benefit, 'kind' | 'title' | 'category' | 'support' | 'summary'> & { agency?: string | null }): MoneyType {
   // 분야(category)는 '교육'·'마케팅'처럼 넓게 붙어서, 융자를 알아볼 때만 쓰고 나머지는 제목으로 판단한다.
   const head = b.title.replace(NEG, '');
   const body = `${b.support ?? ''} ${b.summary ?? ''}`.replace(NEG, '');
@@ -47,6 +51,8 @@ export function moneyType(b: Pick<Benefit, 'kind' | 'title' | 'category' | 'supp
   if (PURCHASE.test(head)) return 'purchase';
   // 기술개발·행사·교육 분야 공고는 제목에 돈 얘기가 없으면 실증·인증·네트워킹 같은 서비스다.
   if (SERVICE_CATEGORY.test(b.category ?? '')) return 'service';
+  // 창업 사업화 공고: 민간 기관이 열었거나 지원내용에 돈이 적혀 있지 않으면 보육·멘토링 프로그램이다.
+  if (b.category === '사업화' && (PRIVATE_HOST.test(`${b.agency ?? ''} ${(b.title.match(/^\s*\[([^\]]+)\]/) ?? [])[1] ?? ''}`) || !MONEY_IN_BODY.test(body))) return 'service';
   // 제목만으로 모를 때는 지원내용을 본다.
   // '무료로 촬영해 드려요'처럼 무료 제공이라고만 적힌 사업은 서비스다.
   if (/무료|무상/.test(body) && !CASH_WORD.test(head)) return 'service';

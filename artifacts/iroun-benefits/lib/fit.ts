@@ -114,8 +114,24 @@ const EARLY_STAGE = /생애\s*첫|첫\s*창업|예비\s*창업|초기\s*창업|�
 /**
  * 업력 관문. 공고 자격에 업력 규칙이 없어도 제목이 창업 초기 전용이면 개업 3년이 넘은 사업장은 뺀다.
  */
-export function stageGate(b: Pick<Benefit, 'title'> & { summary?: string }, openedYear?: number, now = new Date()): 'ok' | 'out' {
+/** 예비창업자만 받는 공고(창업기업·사업자는 대상이 아님) */
+const PRE_ONLY = /예비\s*(창업자|창업\s*팀|창업가)/;
+const ALSO_BIZ = /창업\s*기업|기\s*창업자|초기\s*창업자|사업자|예비\s*\S*\s*(및|과|와|[·ㆍ‧,/])|(기업|창업자|스타트업|팀)\s*(및|과|와|[·ㆍ‧,/])\s*\(?예비/;
+/** 사업을 운영할 기관(주관·운영·수행기관)을 뽑는 공고 */
+export const OPERATOR_CALL = /(주관|운영|수행|전담|위탁|협력|참여)\s*기관\s*(을\s*)?(모집|선정|공모|신청)|운영\s*(사|기관|단체)\s*(모집|선정|공모)|주관\s*기관/;
+export function stageGate(b: Pick<Benefit, 'title'> & { summary?: string; endsAt?: string | null }, openedYear?: number, now = new Date()): 'ok' | 'out' {
+  if (OPERATOR_CALL.test(b.title)) return 'out';
   if (!openedYear) return 'ok';
+  if (PRE_ONLY.test(b.title) && !ALSO_BIZ.test(b.title)) return 'out';
+  // "업력 3년 미만", "7년 이내 창업기업"처럼 업력 한도가 적혀 있으면 공고 시점의 업력으로 본다.
+  const ref = Math.min(new Date(now.getTime() + 9 * 3600000).getUTCFullYear(), b.endsAt ? new Date(b.endsAt).getUTCFullYear() || 9999 : 9999);
+  const lim = `${b.title} ${b.summary ?? ''}`.match(/업력\s*(\d+)\s*년\s*(미만|이내|이하)|(\d+)\s*년\s*(미만|이내|이하)\s*(의\s*)?(\(?예비\)?\s*)?(일반\s*)?(창업\s*기업|창업자|스타트업|기업)/);
+  if (lim) {
+    const n = parseInt(lim[1] ?? lim[3], 10);
+    const kind = lim[2] ?? lim[4];
+    const age = ref - openedYear;
+    if (kind === '미만' ? age >= n + 1 : age > n) return 'out';
+  }
   // 요약에 "2026.1.1. 이후 개업"처럼 개업 시점이 적혀 있으면 그보다 먼저 개업한 사업장은 뺀다.
   const after = (b.summary ?? '').match(/(20\d{2})\s*[.년]\s*\d{1,2}\s*[.월]\s*\d{1,2}\s*[.일]?\s*(?:이후|부터)\s*(?:개업|창업|사업자\s*등록|처음)/);
   if (after && openedYear < parseInt(after[1], 10)) return 'out';
