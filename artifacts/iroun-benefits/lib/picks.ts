@@ -65,6 +65,8 @@ export function refundLike(b: Benefit) {
 const BIG_AMOUNT = 100_000_000;
 /** 30일 안 마감 목록: 교육·컨설팅과 1억 넘는 대형 사업은 빼고, 통장 입금·바우처 중 고객에게 잘 맞는 5건을 마감 순으로. */
 export function closingOf<T extends Item & { tailored?: boolean }>(items: T[], count = 5): T[] {
+  // 조건을 고른 뒤에는 조건이 확실히 맞는 공고만 보여준다.
+  if (items.some((x) => x.result === '조건 일치')) items = items.filter((x) => x.result === '조건 일치');
   const c = items.filter((x) => moneyType(x.benefit) !== 'service' && (x.benefit.maxAmount ?? 0) <= BIG_AMOUNT)
     .sort((x, y) => (x.result === y.result ? 0 : x.result === '조건 일치' ? -1 : 1) || Number(!!y.tailored) - Number(!!x.tailored) || Number(!!y.benefit.maxAmount) - Number(!!x.benefit.maxAmount) || moneyRank(x.benefit) - moneyRank(y.benefit));
   let top = c.filter((x) => moneyRank(x.benefit) <= 1);
