@@ -172,7 +172,7 @@
 <script>
 (function(){
 var API='https://iroun-api.onrender.com/api/benefits';
-var FREE=3,BIG=1e9;
+var FREE=3,BIG=1e8;
 var box=document.getElementById('chk2'),modal=document.getElementById('c2-modal'),sheet=document.getElementById('c2-sheet-body');
 if(!box)return;
 /* 아임웹 상담신청 폼은 화면에서 숨기고 저장용으로만 쓴다 */
@@ -239,14 +239,15 @@ function difficulty(b){if(b.difficulty>=1&&b.difficulty<=5)return b.difficulty;v
 /* 돈의 형태: 통장 입금(현금·환급) → 바우처·감면 → 구입비 보조 → 교육·컨설팅. 융자는 뺀다 */
 var NEG=/(융자|대출|보증료|이자\s*지원|이차\s*보전)(\s*[·,\/및]\s*(융자|대출|보증료|이자\s*지원|이차\s*보전))*\s*(은|는|을|를)?\s*(제외|미지원|불포함|지원하지\s*않음)/g;
 var LOAN=/융자|대출|이차\s*보전|이자\s*(지원|보전|차액)|특례\s*보증|보증\s*(서|료|수수료|지원)|정책\s*자금|경영\s*안정\s*자금|운전\s*자금|시설\s*자금|육성\s*자금|저금리|대환/;
-var REFUND=/환급|근로\s*장려금|자녀\s*장려금|돌려\s*받|경정\s*청구/;
+var REFUND=/환급|근로\s*장려금|자녀\s*장려금|돌려\s*받|경정\s*청구|사회\s*보험료|고용\s*보험료|두루누리/;
 var VOUCHER=/바우처|크레딧|감면|할인|포인트|상품권|지역\s*화폐|캐시백|페이백|쿠폰|요금\s*(특별\s*)?(지원|경감)/;
 var PURCHASE=/장비|기기|설비|시설\s*(개선|보수|구축)|냉장고|문\s*달기|설치|교체|개보수|도입|구입|(?<!공공\s?)구매|리모델링|인테리어|간판|키오스크|스마트\s*상점|기술\s*보급|환경\s*개선|점포\s*개선|자부담|매칭/;
-var SERVICE=/교육|컨설팅|멘토링|코칭|박람회|전시회|산업\s*대전|참가\s*지원|경진\s*대회|챌린지|개척단|오픈\s*이노베이션|액셀러레이팅|창업\s*패키지|(신규\s*)?지정\s*(계획|모집|신청)|데모\s*데이|Demo\s*Day|IR\b|판로|마케팅|홍보|아카데미|역량|진단|입점|해외\s*진출|상담회|기술\s*개발|R&D|연구\s*개발/;
+var SERVICE=/상담|입주|공간|센터|대피소|법률|세무|노무|투자\s*연계|투자\s*유치|선정\s*(모집|공고|계획)|우수\s*기업|자율\s*개선|교육|컨설팅|멘토링|코칭|박람회|전시회|산업\s*대전|참가\s*지원|경진\s*대회|챌린지|개척단|오픈\s*이노베이션|액셀러레이팅|창업\s*패키지|(신규\s*)?지정\s*(계획|모집|신청)|데모\s*데이|Demo\s*Day|IR\b|판로|마케팅|홍보|아카데미|역량|진단|입점|해외\s*진출|상담회|기술\s*개발|R&D|연구\s*개발/;
 var CASHWORD=/지원금|보조금|장려금|수당/;
+var CASH_WORD=/장려금|보조금|지원금|수당|급여|보상금/;
 var RANK={cash:0,refund:0,voucher:1,purchase:2,service:3,loan:9};
 function moneyType(b){if(b._mt)return b._mt;var head=String(b.title||'').replace(NEG,'');var body=((b.support||'')+' '+(b.summary||'')).replace(NEG,'');var t;
- if(LOAN.test(head+' '+(b.category||''))||LOAN.test(body)&&!CASHWORD.test(head))t='loan';else if(b.kind==='환급금'||REFUND.test(head))t='refund';else if(VOUCHER.test(head))t='voucher';else if(PURCHASE.test(head))t='purchase';else if(SERVICE.test(head))t='service';else if(VOUCHER.test(body))t='voucher';else if(PURCHASE.test(body))t='purchase';else if(SERVICE.test(body)&&!/지원금|보조금|장려금|수당|인건비|임차료/.test(head+' '+body))t='service';else t='cash';
+ if(LOAN.test(head+' '+(b.category||''))||LOAN.test(body)&&!CASHWORD.test(head))t='loan';else if(b.kind==='환급금'||REFUND.test(head))t='refund';else if(CASH_WORD.test(head))t='cash';else if(VOUCHER.test(head))t='voucher';else if(PURCHASE.test(head))t='purchase';else if(SERVICE.test(head))t='service';else if(VOUCHER.test(body))t='voucher';else if(PURCHASE.test(body))t='purchase';else if(SERVICE.test(body)&&!/지원금|보조금|장려금|수당|인건비|임차료/.test(head+' '+body))t='service';else t='cash';
  b._mt=t;return t;}
 function rank(b){return RANK[moneyType(b)];}
 var EASY=/민생|전기\s*요금|가스\s*요금|에너지\s*(바우처|비용)|요금\s*(지원|감면|경감)|캐시백|페이백|환급|바우처|상품권|지역\s*화폐|쿠폰|감면|장려금|수당/;
@@ -257,8 +258,12 @@ function left(b){var d=daysLeft(b.endsAt);return d===null?9999:d;}
 function order(x,y){return (rank(x.benefit)-rank(y.benefit))||(x.result===y.result?0:x.result==='조건 일치'?-1:1)||(tailored(y.benefit)-tailored(x.benefit))||(smallFit(y.benefit)-smallFit(x.benefit))||(difficulty(x.benefit)-difficulty(y.benefit))||(tier(x.benefit)-tier(y.benefit))||((y.benefit.maxAmount||0)-(x.benefit.maxAmount||0))||(left(x.benefit)-left(y.benefit));}
 function sumOf(xs){var t=0;xs.forEach(function(x){var a=x.benefit.maxAmount||0;if(a>0&&a<=BIG)t+=a;});return t;}
 function summarize(items){items.sort(order);var sure=items.filter(function(x){return x.result==='조건 일치';});var big=items.filter(function(x){return (x.benefit.maxAmount||0)>BIG;}).length;return {items:items,sure:sure.length,sureTotal:sumOf(sure),maybe:items.length-sure.length,total:sumOf(items),big:big,tailored:items.filter(function(x){return tailored(x.benefit);}).length};}
-function estimate(list,p){var items=[];list.forEach(function(b){if(isClosed(b)||notStarted(b)||moneyType(b)==='loan')return;var m=matchBenefit(b,p);if(m.result!=='대상 제외')items.push({benefit:b,result:m.result,m:m});});return summarize(items);}
-function missed(list,p,yr){var opened=(p.businesses[0]||{}).openedYear;var items=[];list.forEach(function(b){if(!isClosed(b)||moneyType(b)==='loan')return;var end=endTime(b.endsAt);var ey=end!==null?new Date(end+9*3600000).getUTCFullYear():null;if(yr&&ey!==yr)return;if(opened&&ey!==null&&opened>ey)return;var open=Object.assign({},b,{status:'접수 중',budgetStatus:'해당 없음',startsAt:'',endsAt:''});var m=matchBenefit(open,p,end!==null?new Date(end):undefined);if(m.result!=='대상 제외')items.push({benefit:b,result:m.result,m:m});});return summarize(items);}
+/* 업종 관문: 공고가 다른 업종을 위한 것이면 거른다(out), 매장 업종에 수출·기술개발 공고는 확인 필요(check) */
+var LOCAL_IND=['음식점','숙박','서비스','교육','보건·복지','운수','건설'];var FAR_CAT=/^(수출|판로ㆍ해외진출|기술|기술개발\(R&D\))$/;
+function industryGate(b,ind){if(!ind||ind==='기타')return 'ok';var inds=(b.fit&&b.fit.industries)||[];if(inds.length)return inds.indexOf(ind)>=0?'ok':inds.length<=2?'out':'check';if(b.category==='농림축산어업')return ind==='농림어업'?'ok':'out';if(FAR_CAT.test(b.category)&&LOCAL_IND.indexOf(ind)>=0)return 'check';return 'ok';}
+function gated(b,m,ind){var g=industryGate(b,ind);if(g==='out')return null;if(g==='check'&&m.result==='조건 일치'){m.result='추가 확인 필요';m.unknowns.push('수출·기술개발 사업이 있는 사업장 대상인지 확인이 필요합니다.');}return m;}
+function estimate(list,p){var items=[];list.forEach(function(b){if(isClosed(b)||notStarted(b)||moneyType(b)==='loan')return;var m=gated(b,matchBenefit(b,p),(p.businesses[0]||{}).industry);if(m&&m.result!=='대상 제외')items.push({benefit:b,result:m.result,m:m});});return summarize(items);}
+function missed(list,p,yr){var opened=(p.businesses[0]||{}).openedYear;var items=[];list.forEach(function(b){if(!isClosed(b)||moneyType(b)==='loan')return;var end=endTime(b.endsAt);var ey=end!==null?new Date(end+9*3600000).getUTCFullYear():null;if(yr&&ey!==yr)return;if(opened&&ey!==null&&opened>ey)return;var open=Object.assign({},b,{status:'접수 중',budgetStatus:'해당 없음',startsAt:'',endsAt:''});var m=gated(b,matchBenefit(open,p,end!==null?new Date(end):undefined),(p.businesses[0]||{}).industry);if(m&&m.result!=='대상 제외')items.push({benefit:b,result:m.result,m:m});});return summarize(items);}
 function todayPicks(items){return items.filter(function(x){var t=moneyType(x.benefit);return openToday(x.benefit)&&rank(x.benefit)<=1&&t!=='refund';}).map(function(x){var b=x.benefit;return {x:x,s:(rank(b)===0?50:20)+(x.result==='조건 일치'?40:0)+(5-difficulty(b))*10+(EASY.test(b.title+' '+b.category)?15:0),l:left(b)};}).sort(function(p,q){return q.s-p.s||p.l-q.l;}).slice(0,5).map(function(p){return p.x;});}
 /* ===== 고객 정보 ===== */
 function revBand(){var v=S.ans.revLast;if(!v||v.indexOf('없음')===0)v=S.ans.openedYear>=YEAR?S.ans.revNow:null;if(!v||v.indexOf('없음')===0)return undefined;return /5천만/.test(v)?'1억 원 미만':v==='1억~3억 원'?'1억~3억 원':v==='10억 원 이상'?'10억 원 이상':'3억~10억 원';}

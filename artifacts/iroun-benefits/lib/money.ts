@@ -20,10 +20,12 @@ export const MONEY_LABEL: Record<MoneyType, string> = {
 // "대출·보증료는 제외"처럼 아니라고 적힌 말은 지우고 본다.
 const NEG = /(융자|대출|보증료|이자\s*지원|이차\s*보전)(\s*[·,/및]\s*(융자|대출|보증료|이자\s*지원|이차\s*보전))*\s*(은|는|을|를)?\s*(제외|미지원|불포함|지원하지\s*않음)/g;
 const LOAN = /융자|대출|이차\s*보전|이자\s*(지원|보전|차액)|특례\s*보증|보증\s*(서|료|수수료|지원)|정책\s*자금|경영\s*안정\s*자금|운전\s*자금|시설\s*자금|육성\s*자금|저금리|대환/;
-const REFUND = /환급|근로\s*장려금|자녀\s*장려금|돌려\s*받|경정\s*청구/;
+const REFUND = /환급|근로\s*장려금|자녀\s*장려금|돌려\s*받|경정\s*청구|사회\s*보험료|고용\s*보험료|두루누리/;
+/** 제목에 이 말이 있으면 통장에 들어오는 돈이다(지원내용에 장비·교육 얘기가 섞여 있어도). */
+const CASH_WORD = /장려금|보조금|지원금|수당|급여|보상금/;
 const VOUCHER = /바우처|크레딧|감면|할인|포인트|상품권|지역\s*화폐|캐시백|페이백|쿠폰|요금\s*(특별\s*)?(지원|경감)/;
 const PURCHASE = /장비|기기|설비|시설\s*(개선|보수|구축)|냉장고|문\s*달기|설치|교체|개보수|도입|구입|(?<!공공\s?)구매|리모델링|인테리어|간판|키오스크|스마트\s*상점|기술\s*보급|환경\s*개선|점포\s*개선|자부담|매칭/;
-const SERVICE = /교육|컨설팅|멘토링|코칭|박람회|전시회|산업\s*대전|참가\s*지원|경진\s*대회|챌린지|개척단|오픈\s*이노베이션|액셀러레이팅|창업\s*패키지|(신규\s*)?지정\s*(계획|모집|신청)|데모\s*데이|Demo\s*Day|IR\b|판로|마케팅|홍보|아카데미|역량|진단|입점|해외\s*진출|상담회|기술\s*개발|R&D|연구\s*개발/;
+const SERVICE = /상담|입주|공간|센터|대피소|법률|세무|노무|투자\s*연계|투자\s*유치|선정\s*(모집|공고|계획)|우수\s*기업|자율\s*개선|교육|컨설팅|멘토링|코칭|박람회|전시회|산업\s*대전|참가\s*지원|경진\s*대회|챌린지|개척단|오픈\s*이노베이션|액셀러레이팅|창업\s*패키지|(신규\s*)?지정\s*(계획|모집|신청)|데모\s*데이|Demo\s*Day|IR\b|판로|마케팅|홍보|아카데미|역량|진단|입점|해외\s*진출|상담회|기술\s*개발|R&D|연구\s*개발/;
 
 /** 공고가 주는 돈의 형태 */
 export function moneyType(b: Pick<Benefit, 'kind' | 'title' | 'category' | 'support' | 'summary'>): MoneyType {
@@ -32,6 +34,7 @@ export function moneyType(b: Pick<Benefit, 'kind' | 'title' | 'category' | 'supp
   const body = `${b.support ?? ''} ${b.summary ?? ''}`.replace(NEG, '');
   if (LOAN.test(`${head} ${b.category}`) || LOAN.test(body) && !/지원금|보조금|장려금|수당/.test(head)) return 'loan';
   if (b.kind === '환급금' || REFUND.test(head)) return 'refund';
+  if (CASH_WORD.test(head)) return 'cash';
   if (VOUCHER.test(head)) return 'voucher';
   if (PURCHASE.test(head)) return 'purchase';
   if (SERVICE.test(head)) return 'service';

@@ -5,6 +5,8 @@ import { loadDraft } from '@/lib/draft';
 import { daysLeft, endTime } from '@/lib/util';
 import { difficulty } from '@/lib/difficulty';
 import { isLoan, moneyRank } from '@/lib/money';
+import { industryGate } from '@/lib/fit';
+export { industryGate };
 
 /** 첫 화면 숫자: 사업자가 1년에 놓치는 지원금 평균(만원). 근거 자료 확인 전에는 실제 앱에 노출하지 않는다. */
 export const HEADLINE_STAT = { label: '1년에 놓치는 지원금 평균', manwon: 1273, verified: false };
@@ -14,8 +16,8 @@ export const FREE_COUNT = 3;
 
 export interface EstimateItem { benefit: Benefit; result: '조건 일치' | '추가 확인 필요'; /** 고른 업종에 맞춤인 공고 */ tailored?: boolean }
 export interface Estimate { /** 조건 일치 건수와 금액 합계(10억 이하, 금액 있는 것) */ sure: number; sureTotal: number; /** 추가 확인 필요 건수와 금액 합계 */ maybe: number; maybeTotal: number; items: EstimateItem[]; total: number; counted: number; noAmount: number; /** 합계에서 뺀 10억 초과 대형사업 수 */ big: number; /** 업종 맞춤 건수 */ tailored: number; /** 소상공인 적합(4~5점) 건수 */ small: number; /** 정밀 모드에서 목록에서 뺀 '추가 확인 필요' 공고(담당자가 원문 확인) */ pending: EstimateItem[] }
-/** 이 금액을 넘는 공고(대형 R&D·인프라)는 합계에서 빼고 뒤로 보낸다. 홈페이지와 같다. */
-export const BIG = 1_000_000_000;
+/** 이 금액을 넘는 공고(대형 R&D·투자·인프라)는 동네 사업장이 받을 돈이 아니라 합계에서 빼고 뒤로 보낸다. 홈페이지와 같다. */
+export const BIG = 100_000_000;
 type Fit = { industries: string[]; small: number };
 const fitOf = (b: Benefit) => (b as unknown as { fit?: Fit }).fit;
 /** 업종 맞춤: AI 가 정한 관련 업종 또는 공고 자격 업종에 고른 업종이 들어 있다. 자격 판정이 아니라 정렬·표시용. */
@@ -74,9 +76,11 @@ export function estimate(benefits: Benefit[], profile: Profile, strict = false):
   for (const b of benefits) {
     // 마감·예산 소진·접수 전 공고와 저금리 융자·대출은 고객 목록에 넣지 않는다.
     if (isClosed(b) || notStarted(b) || isLoan(b)) continue;
+    const gate = industryGate(b, industryOf(profile));
+    if (gate === 'out') continue;
     const r = match(b, profile);
-    if (r.includes('조건 일치')) items.push({ benefit: b, result: '조건 일치' });
-    else if (r.includes('추가 확인 필요')) (strict ? pending : items).push({ benefit: b, result: '추가 확인 필요' });
+    if (r.includes('조건 일치') && gate === 'ok') items.push({ benefit: b, result: '조건 일치' });
+    else if (r.includes('추가 확인 필요') || r.includes('조건 일치')) (strict ? pending : items).push({ benefit: b, result: '추가 확인 필요' });
   }
   const est = summarize(items, profile);
   // 정밀 모드(패키지 고객): 목록·금액은 조건이 확실히 맞는 공고만. 나머지는 담당자 확인용으로 따로 둔다.
@@ -109,14 +113,16 @@ export function missed(benefits: Benefit[], profile: Profile, year?: number): Es
   const items: EstimateItem[] = [];
   for (const b of benefits) {
     if (!isClosed(b) || isLoan(b)) continue;
+    const gate = industryGate(b, industryOf(profile));
+    if (gate === 'out') continue;
     const end = endTime(b.endsAt);
     const endYear = end !== null ? new Date(end + 9 * 3600000).getUTCFullYear() : null;
     if (year && endYear !== year) continue;
     if (opened && endYear !== null && opened > endYear) continue;
     const open = { ...b, status: '접수 중', budgetStatus: '해당 없음', startsAt: '', endsAt: '' } as Benefit;
     const r = match(open, profile, end !== null ? new Date(end) : undefined);
-    if (r.includes('조건 일치')) items.push({ benefit: b, result: '조건 일치' });
-    else if (r.includes('추가 확인 필요')) items.push({ benefit: b, result: '추가 확인 필요' });
+    if (r.includes('조건 일치') && gate === 'ok') items.push({ benefit: b, result: '조건 일치' });
+    else if (r.includes('추가 확인 필요') || r.includes('조건 일치')) items.push({ benefit: b, result: '추가 확인 필요' });
   }
   return summarize(items, profile);
 }
