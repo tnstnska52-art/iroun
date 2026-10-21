@@ -54,7 +54,8 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
   const inds = b.fit?.industries ?? [];
   // AI가 정한 관련 업종만 다르면 확인 필요로 두고, 제목·분야도 그 업종을 가리킬 때만 뺀다(예: 보안 솔루션 지원에 '정보통신'이 붙는 경우가 있어서).
   if (inds.length) {
-    if (inds.includes(industry)) return 'ok';
+    // 제목이 우리 업종을 가리키면(예: 기술유출 방지 → 제조·정보통신) AI 관련 업종보다 제목을 따른다.
+    if (inds.includes(industry) || INDUSTRY_HINTS.some(([re, hint]) => re.test(title) && hint.includes(industry))) return 'ok';
     const backed = b.category === '농림축산어업' || INDUSTRY_HINTS.some(([re, hint]) => re.test(title) && hint.some((h) => inds.includes(h)) && !hint.includes(industry));
     return backed && inds.length <= 2 ? 'out' : 'check';
   }
