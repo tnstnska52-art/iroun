@@ -107,3 +107,10 @@ describe('smallBizGate: 소상공인 규모', () => {
   it('중소기업 공고는 거르지 않는다', () => expect(smallBizGate({ title: '중소기업 수출 부대비용 지원', summary: '' }, { employeeBand: '30명 이상' })).toBe('ok'));
   it('자영업자 공고는 법인 제외', () => expect(smallBizGate({ title: '서울특별시 자영업자 고용보험료 지원', summary: '' }, { entity: '법인', employeeBand: '1~4명' })).toBe('out'));
 });
+
+describe('3회차 표본에서 찾은 오류', () => {
+  it('일자리창출 사회보험료는 직원이 있어야', () => expect(needsEmployees({ title: '[제주] 2026년 일자리창출 소상공인 사회보험료 지원사업 참여기업 모집' }, '없음')).toBe(true));
+  it('내일채움공제는 직원이 있어야', () => expect(needsEmployees({ title: '2026년 상생협력형 내일채움공제 도입 및 지원 공고' }, '없음')).toBe(true));
+  it('작업환경측정은 제조·건설만 조건 일치', () => expect(industryGate({ category: '보건·의료', title: '작업환경측정 비용 지원', fit: { industries: [] } }, '음식점')).toBe('check'));
+  it('공동구매·협업체 사업은 확인 필요', () => expect(ownerGate({ title: '외식업체 식재료 공동구매 지원' })).toBe('check'));
+});

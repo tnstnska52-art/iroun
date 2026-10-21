@@ -17,7 +17,7 @@
     '음식점': /음식점|외식|식당|요식/,
     '교육': /학원|교습소/,
   };
-  var STAFF = /고용|채용|인턴|근로자|직원|인력|퇴직\s*연금|정규직|육아\s*휴직|일자리|일\s*경험|대체\s*인력|인재/;
+  var STAFF = /내일\s*채움|가족\s*친화|채용|인턴|근로자|직원|인력|퇴직\s*연금|정규직|육아\s*휴직|일자리|일\s*경험|대체\s*인력|인재/;
   var SELF = /자영업자|1인|대표자|본인|보험료/;
   function sample(arr, i) { return arr[i % arr.length]; }
   function personas(n) {
@@ -65,7 +65,7 @@
       }
     }
     // 3) 직원 없음
-    if (a.employeeBand === '없음' && STAFF.test(t) && !SELF.test(t)) return '직원 없음인데 고용 사업';
+    if (a.employeeBand === '없음' && STAFF.test(t) && (!SELF.test(t) || /일자리\s*창출|채용/.test(t))) return '직원 없음인데 고용 사업';
     // 4) 대표자
     if (a.woman === '아니오' && /여성/.test(t) && !/여성\s*(근로자|고용|인력|경력|인턴)|새일/.test(t)) return '여성 대표 전용';
     if (/청년\s*(창업|대표|사업자|CEO|기업|소상공인)|만\s*39세|중장년\s*창업|시니어\s*창업/.test(t)) return '대표자 나이 조건(출생연도 안 물음)';
@@ -96,7 +96,7 @@
     // 10) 소상공인 규모·자영업자
     var tt = t + ' ' + (b.summary || '');
     if (/소상공인|자영업자/.test(tt) && !/중소\s*기업|중소\s*사업장|중견/.test(tt) && (a.employeeBand === '10~29명' || a.employeeBand === '30명 이상')) return '소상공인 규모 초과';
-    if (/사회\s*연대|사회적\s*(기업|경제)|협동\s*조합|마을\s*기업|비영리/.test(tt)) return '사회적경제·협동조합 대상';
+    if (/사회\s*연대|사회적\s*(기업|경제)|협동\s*조합|마을\s*기업|비영리/.test(t)) return '사회적경제·협동조합 대상';
     // 8) 특정 상황
     if (/산재|폐업|재기|사업\s*정리|휴업|고용\s*유지|실업\s*급여|재해|피해/.test(t)) return '특정 상황 전용';
     return null;
