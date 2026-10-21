@@ -163,3 +163,10 @@ describe('8회차 표본에서 찾은 오류', () => {
   it('요약에 모빌리티 산업이라고 적힌 공고는 확인 필요', () => expect(industryGate({ category: '인력', title: '[대구] 2026년 지역 플러스 고용활력 프로젝트', summary: '대구지역 모빌리티 산업의 신규 고용 지원', fit: { industries: [] } } as never, '교육')).toBe('check'));
   it('제목이 소상공인이면 요약에 중소기업 말이 있어도 소상공인 규모로 본다', () => expect(smallBizGate({ title: '[경북] 2026년 소상공인 사회보험료 지원 사업', summary: '자영업자 고용보험료, 중소기업사업주 산재보험료 지원' }, { employeeBand: '10~29명', industry: '서비스' })).toBe('out'));
 });
+
+describe('10회차 표본에서 찾은 오류', () => {
+  it('생애 첫 창업 지원은 오래된 사업장 제외', () => expect(stageGate({ title: '[경남] 하동군 2026년 소상공인 생애 첫 창업 지원사업' }, 2019, new Date('2026-10-21T00:00:00Z'))).toBe('out'));
+  it('여행사 대상 공고는 확인 필요', () => expect(industryGate({ category: '경영', title: '외국인 관광객 유치 인센티브 지원', summary: '부산 관광객을 모객한 여행사를 대상으로', fit: { industries: [] } } as never, '서비스')).toBe('check'));
+  it('착한가격업소 지원은 지정 업소만이라 확인 필요', () => expect(ownerGate({ title: '착한가격업소 인센티브 지원' })).toBe('check'));
+  it('노동자 휴게시설은 직원이 있어야', () => expect(needsEmployees({ title: '[경남] 양산시 2026년 노동자 휴게시설 지원사업' }, '없음')).toBe(true));
+});
