@@ -7,6 +7,7 @@ import type { Benefit } from '@workspace/api-client-react';
 import { difficulty } from '@/lib/difficulty';
 import { daysLeft } from '@/lib/util';
 import { moneyRank, moneyType } from '@/lib/money';
+import { easeOf } from '@/lib/fit';
 
 type Item = { benefit: Benefit; result: string };
 // 민생지원금, 전기·가스 요금 지원, 캐시백처럼 대부분 조건만 맞으면 받는 유형.
@@ -32,7 +33,9 @@ export function todayPicks(items: Item[], count = 5): Item[] {
     .filter((x) => openToday(x.benefit) && moneyRank(x.benefit) <= 1 && moneyType(x.benefit) !== 'refund')
     .map((x) => {
       const b = x.benefit;
-      const score = (moneyRank(b) === 0 ? 50 : 20) + (x.result === '조건 일치' ? 40 : 0) + (5 - difficulty(b)) * 10 + (EASY_MONEY.test(`${b.title} ${b.category}`) ? 15 : 0);
+      // 조건 일치·신청만 하면 받는 돈을 크게 올리고, 직원을 새로 뽑아야 받는 돈은 내린다.
+      const ease = easeOf(b);
+      const score = (moneyRank(b) === 0 ? 50 : 20) + (x.result === '조건 일치' ? 60 : 0) + (5 - difficulty(b)) * 10 + (ease === 0 ? 40 : ease === 2 ? -25 : 0) + (EASY_MONEY.test(`${b.title} ${b.category}`) ? 15 : 0);
       return { x, score, left: daysLeft(b.endsAt) ?? 9999 };
     })
     .sort((p, q) => q.score - p.score || p.left - q.left)

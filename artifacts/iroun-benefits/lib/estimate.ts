@@ -5,7 +5,7 @@ import { loadDraft } from '@/lib/draft';
 import { daysLeft, endTime } from '@/lib/util';
 import { difficulty } from '@/lib/difficulty';
 import { moneyRank, moneyType } from '@/lib/money';
-import { dedupePrograms, industryGate, needsEmployees, ownerGate, smallBizGate, stageGate } from '@/lib/fit';
+import { dedupePrograms, easeOf, industryGate, needsEmployees, ownerGate, smallBizGate, stageGate } from '@/lib/fit';
 export { industryGate };
 
 /** 첫 화면 숫자: 사업자가 1년에 놓치는 지원금 평균(만원). 근거 자료 확인 전에는 실제 앱에 노출하지 않는다. */
@@ -39,12 +39,15 @@ const left = (b: Benefit) => daysLeft(b.endsAt) ?? 9999;
 export const customerMoney = (b: Benefit) => { const t = moneyType(b); return t !== 'loan' && t !== 'service' && (b.maxAmount ?? 0) <= BIG; };
 /**
  * 고객이 받고 싶은 순서. 조건이 확실히 맞는 것을 먼저, 그 안에서 금액보다 "통장에 돈이 들어오는지"를 본다.
- * 조건 일치 → 통장 입금(현금 지원·환급) → 바우처·감면 → 구입비 보조
+ * 조건 일치 → 신청만 하면 받는 돈(노란우산·보험료·수수료·바우처) → 통장 입금(현금 지원·환급) → 바우처·감면 → 구입비 보조
+ * → 직원을 새로 뽑아야 받는 돈은 같은 종류 안에서 뒤로
  * → 업종 맞춤 → 소상공인 적합 → 신청이 쉬운 것 → 금액 있는 것(1억 이하) → 금액이 큰 것 → 마감이 가까운 것
  */
 export const order = (x: EstimateItem, y: EstimateItem) =>
   (x.result === y.result ? 0 : x.result === '조건 일치' ? -1 : 1)
+  || Number(easeOf(x.benefit) > 0) - Number(easeOf(y.benefit) > 0)
   || moneyRank(x.benefit) - moneyRank(y.benefit)
+  || Number(easeOf(x.benefit) === 2) - Number(easeOf(y.benefit) === 2)
   || Number(!!y.tailored) - Number(!!x.tailored)
   || smallFit(y.benefit) - smallFit(x.benefit)
   || difficulty(x.benefit) - difficulty(y.benefit)

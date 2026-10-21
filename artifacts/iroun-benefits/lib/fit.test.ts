@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { smallBizGate, stageGate, dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
+import { easeOf, smallBizGate, stageGate, dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
 
 const b = (category: string, industries?: string[]) => ({ category, fit: industries ? { industries } : undefined });
 
@@ -113,4 +113,11 @@ describe('3회차 표본에서 찾은 오류', () => {
   it('내일채움공제는 직원이 있어야', () => expect(needsEmployees({ title: '2026년 상생협력형 내일채움공제 도입 및 지원 공고' }, '없음')).toBe(true));
   it('작업환경측정은 제조·건설만 조건 일치', () => expect(industryGate({ category: '보건·의료', title: '작업환경측정 비용 지원', fit: { industries: [] } }, '음식점')).toBe('check'));
   it('공동구매·협업체 사업은 확인 필요', () => expect(ownerGate({ title: '외식업체 식재료 공동구매 지원' })).toBe('check'));
+});
+
+describe('easeOf: 받기 쉬운 정도', () => {
+  it('신청만 하면 받는 돈은 0', () => { for (const t of ['노란우산공제 희망장려금', '소상공인 고용보험료 지원', '[부산] 동백전 카드수수료 지원사업', '[부산] 소상공인 에너지바우처 지급']) expect(easeOf({ title: t })).toBe(0); });
+  it('직원을 뽑아야 받는 돈은 2', () => { for (const t of ['고용안정장려금지원(정규직전환지원)', '2026년 청년일자리 도약장려금', '고령자 계속고용장려금']) expect(easeOf({ title: t })).toBe(2); });
+  it('그 밖에는 1', () => expect(easeOf({ title: '소상공인 스마트상점 기술보급' })).toBe(1));
+  it('식품·농산물 가공 공고는 제조에서 확인 필요', () => expect(industryGate({ category: '경영', title: '꿀 가공산업 육성 지원', fit: { industries: ['제조'] } }, '제조')).toBe('ok'));
 });
