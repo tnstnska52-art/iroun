@@ -230,3 +230,8 @@ describe('industryGate: 기술 창업 공고', () => {
   it('음식점에 탄소중립 사업화는 제외', () => expect(industryGate({ title: '「2025년도 탄소중립 사업화 지원」사업 공고', category: '사업화' } as never, '음식점')).toBe('out'));
   it('정보통신에 초격차 스타트업은 그대로 검토', () => expect(industryGate({ title: '2025년 초격차 스타트업 1000+ 프로젝트(DIPS)', category: '사업화' } as never, '정보통신')).not.toBe('out'));
 });
+
+describe('sameProgramKey: 수정·연장·추가·트랙 공고는 같은 사업', () => {
+  it('트랙·연장 공고는 같은 키', () => expect(sameProgramKey('2025년 강한 소상공인 성장지원사업(트랙I) 참여 소상공인 모집 공고')).toBe(sameProgramKey('2025년 강한 소상공인 성장지원사업 트랙III 참여 소상공인 모집 연장 공고')));
+  it('추가 모집도 같은 키', () => expect(sameProgramKey('2025년 스마트상점 기술보급사업 참여 소상공인 추가 모집 공고(일반ㆍ배리어프리)')).toBe(sameProgramKey('2025년 스마트상점 기술보급사업 참여 소상공인 모집 공고(일반ㆍ배리어프리)')));
+});
