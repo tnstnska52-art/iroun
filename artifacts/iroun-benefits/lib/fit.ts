@@ -8,12 +8,28 @@ const FAR_CATEGORY = /^(수출|판로ㆍ해외진출|기술|기술개발\(R&D\))
  *  - out: 다른 업종 대상(AI가 정한 관련 업종이 1~2개인데 고른 업종이 없음, 농림축산어업 분야인데 농림어업이 아님)
  *  - check: 매장 업종에 수출·기술개발 공고 → '조건 일치'로 세지 않고 확인 필요로 둔다
  */
-export function industryGate(b: Pick<Benefit, 'category'> & { fit?: { industries?: string[] } }, industry?: string): 'ok' | 'check' | 'out' {
+/** 제목에 이런 말이 있으면 그 업종을 위한 공고일 가능성이 높다. 다른 업종이면 확인 필요로 둔다. */
+const INDUSTRY_HINTS: [RegExp, string[]][] = [
+  [/방송|언론|취재|영상\s*제작|콘텐츠|게임|웹툰/, ['정보통신', '서비스']],
+  [/농업|농가|농촌|어업|어가|어촌|축산|임업|산림|수산|양식|귀농/, ['농림어업']],
+  [/제조|공장|소공인|뿌리\s*기업|스마트\s*공장/, ['제조']],
+  [/관광|숙박|호텔|펜션|마이스|MICE/, ['숙박', '서비스']],
+  [/의료|병원|의원|약국|요양/, ['보건·복지']],
+  [/건설|건축|공사용/, ['건설']],
+  [/물류|운송|화물|택시|버스/, ['운수', '도소매']],
+];
+/** 매장 업종에 벤처·스타트업 전용 공고는 확인 필요 */
+const VENTURE = /벤처|스타트업|딥테크|예비\s*창업|창업\s*기업|창업\s*도약|창업\s*패키지/;
+export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fit?: { industries?: string[] } }, industry?: string): 'ok' | 'check' | 'out' {
   if (!industry || industry === '기타') return 'ok';
+  const title = b.title ?? '';
+  if (b.fit?.industries?.includes(industry)) return 'ok';
   const inds = b.fit?.industries ?? [];
   if (inds.length) return inds.includes(industry) ? 'ok' : inds.length <= 2 ? 'out' : 'check';
   if (b.category === '농림축산어업') return industry === '농림어업' ? 'ok' : 'out';
   if (FAR_CATEGORY.test(b.category) && LOCAL_INDUSTRIES.includes(industry)) return 'check';
+  if (INDUSTRY_HINTS.some(([re, inds]) => re.test(title) && !inds.includes(industry))) return 'check';
+  if (VENTURE.test(title) && [...LOCAL_INDUSTRIES, '도소매'].includes(industry)) return 'check';
   return 'ok';
 }
 
@@ -27,7 +43,9 @@ export function needsEmployees(b: Pick<Benefit, 'title'>, employeeBand?: string,
 }
 
 const WOMAN_ONLY = /여성\s*(기업|벤처|창업|대표|CEO|경제인|기업인)/;
-const SPECIAL_OWNER = /북한\s*이탈|새터민|보훈|국가\s*유공|다문화|한부모|장애인\s*(기업|창업|사업자|대표)|장애\s*(기업|창업)|보조\s*공학/;
+const SPECIAL_OWNER = /북한\s*이탈|새터민|보훈|국가\s*유공|다문화|한부모|장애인|장애\s*(기업|창업)|보조\s*공학/;
+/** 특정한 일이 생겼을 때만 받는 사업(산재·휴직·고용조정·폐업·재기). 평소 사업장에는 '조건 일치'로 세지 않는다. */
+const SITUATIONAL = /산재|고용\s*유지|육아\s*휴직|출산|실업\s*급여|사업\s*정리|폐업|재기|휴업|재해|피해\s*(지원|복구)|위기/;
 /**
  * 대표자 자격 관문.
  *  - out: 여성 기업 전용인데 여성 대표가 아니라고 답함
@@ -35,7 +53,7 @@ const SPECIAL_OWNER = /북한\s*이탈|새터민|보훈|국가\s*유공|다문�
  */
 export function ownerGate(b: Pick<Benefit, 'title'>, womanOwned?: string): 'ok' | 'check' | 'out' {
   if (WOMAN_ONLY.test(b.title)) return womanOwned === '아니오' ? 'out' : womanOwned === '예' ? 'ok' : 'check';
-  return SPECIAL_OWNER.test(b.title) ? 'check' : 'ok';
+  return SPECIAL_OWNER.test(b.title) || SITUATIONAL.test(b.title) ? 'check' : 'ok';
 }
 
 /** 같은 사업이 여러 출처(기업마당·보조금24 등)에서 들어온 중복을 알아보는 열쇠 */

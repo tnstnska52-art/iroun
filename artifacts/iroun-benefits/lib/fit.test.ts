@@ -64,3 +64,20 @@ describe('dedupePrograms: 같은 사업 중복 빼기', () => {
     expect(dedupePrograms([it('고용유지지원금 지원'), it('고용유지지원금'), it('청년일자리 도약장려금')]).map((x) => x.benefit.title)).toEqual(['고용유지지원금 지원', '청년일자리 도약장려금']);
   });
 });
+
+describe('업종 힌트·벤처·특정 상황', () => {
+  it('제목이 다른 업종을 가리키면 확인 필요', () => {
+    expect(industryGate({ category: '고용·창업', title: '기획취재 지원(방송, 영상)', fit: { industries: [] } }, '도소매')).toBe('check');
+    expect(industryGate({ category: '경영', title: '소공인 집적지구 공동장비 활용', fit: { industries: [] } }, '음식점')).toBe('check');
+    expect(industryGate({ category: '경영', title: '소공인 집적지구 공동장비 활용', fit: { industries: [] } }, '제조')).toBe('ok');
+  });
+  it('매장 업종에 벤처·스타트업 공고는 확인 필요', () => {
+    expect(industryGate({ category: '사업화', title: '2026년 국가철도공단 창업·벤처기업 지원사업', fit: { industries: [] } }, '음식점')).toBe('check');
+    expect(industryGate({ category: '사업화', title: '2026년 국가철도공단 창업·벤처기업 지원사업', fit: { industries: [] } }, '정보통신')).toBe('ok');
+  });
+  it('산재·폐업·고용유지 같은 특정 상황 사업은 확인 필요', () => {
+    for (const t of ['산재근로자 대체인력지원금', '고용유지지원금 지원', '[경기] 2026년 소상공인 사업정리 지원사업', '자영업자 실업급여', '장애인고용장려금지원'])
+      expect(ownerGate({ title: t })).toBe('check');
+    expect(ownerGate({ title: '고용안정장려금지원(정규직전환지원)' })).toBe('ok');
+  });
+});
