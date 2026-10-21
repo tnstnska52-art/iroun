@@ -33,7 +33,7 @@ const STRONG_HINTS: [RegExp, string[]][] = [
   [/학원|교습소/, ['교육']],
   [/약국|의원|병원/, ['보건·복지']],
 ];
-const SECTOR = /천일염|염전|쏙|축산|축사|한우|양돈|양계|가전|사출|성형기|여행사|여행업|관광\s*사업체|광산|광업|석유\s*화학|철강|어선|양식|원양|어가|채종|종자|퇴비|비료|수산|쌀|꿀|벌꿀|화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
+const SECTOR = /고수온|어업인|감귤|선과장|신발|미래차|전장|황태|명태|천일염|염전|쏙|축산|축사|한우|양돈|양계|가전|사출|성형기|여행사|여행업|관광\s*사업체|광산|광업|석유\s*화학|철강|어선|양식|원양|어가|채종|종자|퇴비|비료|수산|쌀|꿀|벌꿀|화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
 /** 매장 업종에 벤처·스타트업 전용 공고는 확인 필요 */
 const VENTURE = /벤처|스타트업|딥테크|예비\s*창업|창업\s*기업|창업\s*도약|창업\s*패키지/;
 export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fit?: { industries?: string[] } }, industry?: string): 'ok' | 'check' | 'out' {
@@ -46,7 +46,7 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
   if (strong) return strong[1].includes(industry) ? 'ok' : 'out';
   // 화장품·자동차부품·수산처럼 세부 산업 공고는 업종이 맞아도 그 산업인지 확인이 필요하다.
   if (SECTOR.test(title)) return (b.fit?.industries?.length && !b.fit.industries.includes(industry)) ? 'out' : 'check';
-  if (/식육\s*(가공|포장)|양식장|어선|원양|도축|화장품|가전|천일염|축산\s*농가/.test((b as { summary?: string }).summary ?? '')) return 'check';
+  if (/식육\s*(가공|포장)|양식장|어선|원양|도축|화장품|가전|천일염|축산\s*농가|철강|자동차\s*(부품|제조)|기계\s*[·ㆍ]\s*부품|식품\s*제조|신발|폐사어/.test((b as { summary?: string }).summary ?? '')) return 'check';
   if (/여행사|여행업\s*(등록|체)/.test((b as { summary?: string }).summary ?? '') && industry !== '서비스') return 'check';
   if (/여행사를?\s*대상|여행업\s*등록/.test((b as { summary?: string }).summary ?? '')) return 'check';
   if (/(식육|도축|양식장|어가|어선|원양|모빌리티|자동차|뿌리|항만|수리\s*조선|조선|석유\s*화학|철강|바이오|반도체|화장품|의료\s*기기|항공|방산|이차\s*전지|수소)\s*(산업|업종|부품\s*업종|기업)/.test((b as { summary?: string }).summary ?? '')) return 'check';
@@ -82,7 +82,7 @@ export function needsEmployees(b: Pick<Benefit, 'title'>, employeeBand?: string,
 const WOMAN_ONLY = /여성\s*(기업|벤처|창업|대표|CEO|경제인|기업인)/;
 const SPECIAL_OWNER = /북한\s*이탈|새터민|사회적\s*가치|사회\s*연대|사회적\s*(기업|경제)|협동\s*조합|마을\s*기업|비영리|보훈|국가\s*유공|다문화|한부모|장애인|장애\s*(기업|창업)|보조\s*공학/;
 /** 특정한 일이 생겼을 때만 받는 사업(산재·휴직·고용조정·폐업·재기). 평소 사업장에는 '조건 일치'로 세지 않는다. */
-const SITUATIONAL = /적립\s*운영|착한\s*가격|모범\s*업소|지정\s*업소|전입|기업\s*이전|이전\s*기업|공동\s*구매|협업\s*활성화|협업체|산재|고용\s*유지|육아\s*휴직|출산|실업\s*급여|사업\s*정리|폐업|재기|휴업|재해|피해\s*(지원|복구)|위기|부담금/;
+const SITUATIONAL = /제로\s*마켓|리필|주차장|적립\s*운영|착한\s*가격|모범\s*업소|지정\s*업소|전입|기업\s*이전|이전\s*기업|공동\s*구매|협업\s*활성화|협업체|산재|고용\s*유지|육아\s*휴직|출산|실업\s*급여|사업\s*정리|폐업|재기|휴업|재해|피해\s*(지원|복구)|위기|부담금/;
 /**
  * 대표자 자격 관문.
  *  - out: 여성 기업 전용인데 여성 대표가 아니라고 답함
@@ -179,7 +179,7 @@ export function textLimitGate(b: Pick<Benefit, 'summary' | 'rules'>, x: { revenu
 }
 
 /** 공고 요약에 적힌 신청 대상이 조직(농협·영농조합·협동조합·사회적기업 등)이면 개별 사업장은 확인 필요 */
-const ORG_TARGET = /회원사|유료\s*회원|농협|영농\s*조합|농업\s*(회사\s*)?법인|협동\s*조합|생산자\s*단체|유통\s*(법인|조직)|산지\s*유통|사회적\s*기업|예비\s*사회적\s*기업/;
+const ORG_TARGET = /개설자|지방\s*자치\s*단체|지자체를?\s*대상|회원사|유료\s*회원|농협|영농\s*조합|농업\s*(회사\s*)?법인|협동\s*조합|생산자\s*단체|유통\s*(법인|조직)|산지\s*유통|사회적\s*기업|예비\s*사회적\s*기업/;
 export function orgTargetGate(b: Pick<Benefit, 'summary'>): 'ok' | 'check' {
   return ORG_TARGET.test(b.summary ?? '') && !/소상공인|개인\s*사업자|중소\s*기업/.test(b.summary ?? '') ? 'check' : 'ok';
 }
