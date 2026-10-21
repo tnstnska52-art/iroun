@@ -21,9 +21,10 @@ describe('industryGate: 다른 업종 공고 거르기', () => {
     expect(industryGate(b('기술', []), '숙박')).toBe('check');
     expect(industryGate(b('수출', []), '제조')).toBe('ok');
   });
-  it('업종을 안 골랐거나 기타면 거르지 않는다', () => {
-    expect(industryGate(b('경영', ['농림어업']))).toBe('ok');
-    expect(industryGate(b('경영', ['농림어업']), '기타')).toBe('ok');
+  it('업종을 안 골랐으면 거르지 않는다', () => expect(industryGate(b('경영', ['농림어업']))).toBe('ok'));
+  it('업종이 기타면 빼지는 않고 특정 업종 공고만 확인 필요', () => {
+    expect(industryGate(b('경영', ['농림어업']), '기타')).toBe('check');
+    expect(industryGate(b('경영', []), '기타')).toBe('ok');
   });
 });
 
