@@ -416,16 +416,26 @@ function renderR(){stopTimers();if(!S.list){box.innerHTML='<div class="c2-loadin
  var closing=closingOf(pool);
  var h=totalCard('신청 가능 지원금',est,false,null,'data-list="now"');
  if(past.items.length)h+=totalCard((YEAR-1)+'년에 놓친 지원금',past,true,'올해는 놓치지 마세요','data-list="past"');
+ /* 가입 전: 위에서 3건만 보여주고 나머지는 잠근다(받을 수 있는 지원금·놓친 지원금 모두). 이름·번호만 넣으면 전부 열린다 */
+ if(!S.member){
+  if(!est.items.length)h+='<div class="c2-empty"><b>지금 조건에 맞는 공고가 없어요</b><span>새 공고가 올라오면 다시 확인해 보세요. 조건을 바꿔 보셔도 돼요.</span></div>';
+  else h+='<div class="c2-sec"><span class="c2-wig" aria-hidden="true">👉</span>받을 수 있는 지원금</div>'+lockedList(est.items,false);
+  if(past.items.length)h+='<div class="c2-sec"><span class="c2-pulse" aria-hidden="true">⏰</span>'+(YEAR-1)+'년에 놓친 지원금</div>'+lockedList(past.items,true);
+  h+='<div class="c2-small"><span class="c2-wig" aria-hidden="true">✏️</span><button type="button" data-redo>조건 다시 고르기</button></div>';
+  box.innerHTML=h;bindRows();bindCommon();return;}
  h+=pickCard('c2-p1','놓치기 쉬운 지원금','🎯',picks)+pickCard('c2-p2','놓치기 쉬운 환급금','🎁',refunds);
  if(now.length)h+='<button type="button" class="c2-sec" data-list="now"><span class="c2-wig" aria-hidden="true">👉</span>지금 신청 가능한 지원금<span class="x">›</span></button>'+rollList('c2-now',now);
  if(!est.items.length)h+='<div class="c2-empty"><b>지금 조건에 맞는 공고가 없어요</b><span>새 공고가 올라오면 다시 확인해 보세요. 조건을 바꿔 보셔도 돼요.</span></div>';
- if(est.items.length&&!S.member)h+='<button type="button" class="c2-link" data-join>무료로 전체 '+est.items.length+'건 보기</button><button type="button" class="c2-btn" data-join>무료로 전체 보기</button><div class="c2-note">비용 없음 · 카드 등록 없음 · 자동결제 없음</div>';
- else if(est.items.length)h+='<button type="button" class="c2-link" data-list="now">전체 '+est.items.length+'건 보기</button>';
+ if(est.items.length)h+='<button type="button" class="c2-link" data-list="now">전체 '+est.items.length+'건 보기</button>';
  h+='<div class="c2-sec"><span class="c2-pulse" aria-hidden="true">🚨</span>30일 안에 마감되는 지원금</div>'+(closing.length?'<div class="c2-list">'+closing.map(function(x){return row(x,false);}).join('')+'</div>':'<div class="c2-empty">30일 안에 마감되는 지원금이 없어요</div>');
  h+='<div class="c2-small"><span class="c2-wig" aria-hidden="true">✏️</span><button type="button" data-redo>조건 다시 고르기</button></div>';
  if(S.member)h+='<div class="c2-note">'+esc(S.member.name)+'님, 전체 결과가 열려 있어요</div>';
  box.innerHTML=h;
  bindPick('c2-p1',picks,'오늘 신청 가능',0);bindPick('c2-p2',refunds,'신청 가능',2500);bindRoll('c2-now',now.length);bindRows();bindCommon();}
+/* 3건 공개 + 2건 잠금 줄 + 가입 버튼 */
+function lockedList(items,red){var open=items.slice(0,FREE),rest=items.length-open.length;var h='<div class="c2-list">'+open.map(function(x){return row(x,red);}).join('');
+ if(rest>0)h+=items.slice(FREE,FREE+2).map(lockRow).join('')+'<div class="c2-lockbox"><b>'+rest+'건 더 있어요</b><span class="c2-note" style="margin-top:-4px">이름과 번호만 넣으면 전부 볼 수 있어요</span><button type="button" class="c2-btn" data-join>무료로 전체 보기</button><div class="c2-note">비용 없음 · 카드 등록 없음 · 자동결제 없음</div></div>';
+ return h+'</div>';}
 function bindCommon(){[].forEach.call(box.querySelectorAll('[data-join]'),function(b){b.onclick=openJoin;});[].forEach.call(box.querySelectorAll('[data-list]'),function(b){b.onclick=function(){S.tab=b.getAttribute('data-list');renderList();scrollTop();};});var rd=box.querySelector('[data-redo]');if(rd)rd.onclick=function(){S.idx=0;renderQ();scrollTop();};}
 /* ===== 지원금 목록 (3건 공개 + 잠금) ===== */
 function renderList(){stopTimers();S.view='list';if(!S.est)compute();var now=S.est,past=S.pastAll,cur=S.tab==='past'?past:now,red=S.tab==='past';
@@ -487,7 +497,7 @@ async function submitJoin(){var name=sheet.querySelector('#j-name').value.trim()
   var r=await fetch('/ajax/form_add.cm',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},body:fd.toString()});var j=null;try{j=await r.json();}catch(e){}
   if(!j||j.msg!=='SUCCESS')throw new Error((j&&j.msg)||'서버 응답 오류');
   S.member={name:name,tel:phone,at:new Date().toISOString()};save('irw_check_member',S.member);
-  openModal('<div class="c2-ok"><b>등록 완료</b><p style="margin:0;color:#4E5968">'+esc(name)+'님, 전체 결과가 열렸어요.</p><button type="button" class="c2-btn" id="j-done">전체 결과 보기</button></div>');sheet.querySelector('#j-done').onclick=function(){closeModal();if(hasProfile()&&S.ans.done){S.tab='now';renderList();}else renderHome();scrollTop();};
+  openModal('<div class="c2-ok"><b>등록 완료</b><p style="margin:0;color:#4E5968">'+esc(name)+'님, 전체 결과가 열렸어요.</p><button type="button" class="c2-btn" id="j-done">전체 결과 보기</button></div>');sheet.querySelector('#j-done').onclick=function(){closeModal();if(hasProfile()&&S.ans.done){renderR();}else renderHome();scrollTop();};
  }catch(e){go.disabled=false;go.textContent='무료로 전체 결과 보기';err.textContent='등록에 실패했어요. 잠시 후 다시 시도하거나 010-8243-3126으로 연락 주세요.';err.hidden=false;}}
 /* ===== 공고 불러오기 ===== */
 async function fetchList(){var c=load('irw_check_cache');if(c&&Date.now()-c.at<10*60*1000&&Array.isArray(c.list))return c.list;var r=await fetch(window.IRW_CHECK_API||API,{cache:'no-store'});var d=await r.json();var list=Array.isArray(d)?d:(d.items||d.benefits||[]);save('irw_check_cache',{at:Date.now(),list:list});return list;}
