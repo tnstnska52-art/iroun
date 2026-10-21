@@ -38,13 +38,13 @@ const left = (b: Benefit) => daysLeft(b.endsAt) ?? 9999;
 /** 고객 목록에 넣는 공고: 통장 입금·환급·바우처·구입비 보조. 융자, 교육·컨설팅 같은 서비스, 1억 넘는 대형 사업은 뺀다. 홈페이지와 같다. */
 export const customerMoney = (b: Benefit) => { const t = moneyType(b); return t !== 'loan' && t !== 'service' && (b.maxAmount ?? 0) <= BIG; };
 /**
- * 고객이 받고 싶은 순서. 금액보다 "통장에 돈이 들어오는지"를 먼저 본다.
- * 통장 입금(현금 지원·환급) → 바우처·감면 → 구입비 보조 → 교육·컨설팅
- * → 조건 일치 → 업종 맞춤 → 소상공인 적합 → 신청이 쉬운 것 → 금액 있는 것(10억 이하) → 금액이 큰 것 → 마감이 가까운 것
+ * 고객이 받고 싶은 순서. 조건이 확실히 맞는 것을 먼저, 그 안에서 금액보다 "통장에 돈이 들어오는지"를 본다.
+ * 조건 일치 → 통장 입금(현금 지원·환급) → 바우처·감면 → 구입비 보조
+ * → 업종 맞춤 → 소상공인 적합 → 신청이 쉬운 것 → 금액 있는 것(1억 이하) → 금액이 큰 것 → 마감이 가까운 것
  */
 export const order = (x: EstimateItem, y: EstimateItem) =>
-  moneyRank(x.benefit) - moneyRank(y.benefit)
-  || (x.result === y.result ? 0 : x.result === '조건 일치' ? -1 : 1)
+  (x.result === y.result ? 0 : x.result === '조건 일치' ? -1 : 1)
+  || moneyRank(x.benefit) - moneyRank(y.benefit)
   || Number(!!y.tailored) - Number(!!x.tailored)
   || smallFit(y.benefit) - smallFit(x.benefit)
   || difficulty(x.benefit) - difficulty(y.benefit)

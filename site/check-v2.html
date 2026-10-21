@@ -259,7 +259,8 @@ function tailored(b){var ind=S.ans.industry;if(!ind||ind==='기타')return false
 function smallFit(b){return b.fit&&b.fit.small?b.fit.small:3;}
 function tier(b){var a=b.maxAmount||0;return a&&a<=BIG?0:!a?1:2;}
 function left(b){var d=daysLeft(b.endsAt);return d===null?9999:d;}
-function order(x,y){return (rank(x.benefit)-rank(y.benefit))||(x.result===y.result?0:x.result==='조건 일치'?-1:1)||(tailored(y.benefit)-tailored(x.benefit))||(smallFit(y.benefit)-smallFit(x.benefit))||(difficulty(x.benefit)-difficulty(y.benefit))||(tier(x.benefit)-tier(y.benefit))||((y.benefit.maxAmount||0)-(x.benefit.maxAmount||0))||(left(x.benefit)-left(y.benefit));}
+/* 고객이 받고 싶은 순서: 조건이 확실히 맞는 것 → 통장 입금·환급 → 바우처 → 구입비 보조 → 업종 맞춤 → … */
+function order(x,y){return (x.result===y.result?0:x.result==='조건 일치'?-1:1)||(rank(x.benefit)-rank(y.benefit))||(tailored(y.benefit)-tailored(x.benefit))||(smallFit(y.benefit)-smallFit(x.benefit))||(difficulty(x.benefit)-difficulty(y.benefit))||(tier(x.benefit)-tier(y.benefit))||((y.benefit.maxAmount||0)-(x.benefit.maxAmount||0))||(left(x.benefit)-left(y.benefit));}
 /* 합계는 통장에 들어오는 돈(현금·환급·바우처)만, 1억 이하 공고만 더한다 */
 function sumOf(xs){var t=0;xs.forEach(function(x){var a=x.benefit.maxAmount||0;if(a>0&&a<=BIG&&rank(x.benefit)<=1)t+=a;});return t;}
 function summarize(items){items.sort(order);items=dedupe(items);var sure=items.filter(function(x){return x.result==='조건 일치';});var big=items.filter(function(x){return (x.benefit.maxAmount||0)>BIG;}).length;return {items:items,sure:sure.length,sureTotal:sumOf(sure),maybe:items.length-sure.length,total:sumOf(items),big:big,tailored:items.filter(function(x){return tailored(x.benefit);}).length};}
