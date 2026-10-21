@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { districtGate, orgTargetGate, textLimitGate, easeOf, smallBizGate, stageGate, dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
+import { rentGate, districtGate, orgTargetGate, textLimitGate, easeOf, smallBizGate, stageGate, dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
 
 const b = (category: string, industries?: string[]) => ({ category, fit: industries ? { industries } : undefined });
 
@@ -202,4 +202,10 @@ describe('18회차', () => {
 describe('20회차', () => {
   it('1인 소상공인 사업은 직원이 있으면 제외', () => expect(smallBizGate({ title: '1인 소상공인 고용보험료 지원', summary: '근로자가 없는 1인 소상공인' }, { employeeBand: '1~4명', industry: '도소매' })).toBe('out'));
   it('1인 소상공인 사업은 직원 없음이면 그대로', () => expect(smallBizGate({ title: '1인 소상공인 고용보험료 지원', summary: '근로자가 없는 1인 소상공인' }, { employeeBand: '없음', industry: '도소매' })).toBe('ok'));
+});
+
+describe('rentGate: 자가 사업장', () => {
+  it('자가면 임차료 지원 제외', () => expect(rentGate({ title: '청년 사업자 및 창업자 월 임차료 지원' }, '자가')).toBe('out'));
+  it('임차면 그대로', () => expect(rentGate({ title: '청년 사업자 및 창업자 월 임차료 지원' }, '임차')).toBe('ok'));
+  it('기숙사 임차비는 거르지 않는다', () => expect(rentGate({ title: '중소기업 노동자 기숙사 임차비 지원' }, '자가')).toBe('ok'));
 });

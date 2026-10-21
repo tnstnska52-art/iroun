@@ -203,3 +203,8 @@ export function districtGate(b: Pick<Benefit, 'title' | 'summary'>, province?: s
   if (!named.size || named.has(district)) return 'ok';
   return 'out';
 }
+
+/** 사업장 임차료(월세) 지원은 '자가'라고 답한 사업장에는 해당하지 않는다. 기숙사·차량·창고 임차비는 제외 */
+export function rentGate(b: Pick<Benefit, 'title'>, premises?: string): 'ok' | 'out' {
+  return premises === '자가' && /임차료|임대료|월세/.test(b.title) && !/기숙사|차량|창고|감면/.test(b.title) ? 'out' : 'ok';
+}
