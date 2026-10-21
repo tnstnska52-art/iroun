@@ -75,6 +75,7 @@ describe('업종 힌트·벤처·특정 상황', () => {
   it('매장 업종에 벤처·스타트업 공고는 확인 필요', () => {
     expect(industryGate({ category: '사업화', title: '2026년 국가철도공단 창업·벤처기업 지원사업', fit: { industries: [] } }, '음식점')).toBe('check');
     expect(industryGate({ category: '사업화', title: '2026년 국가철도공단 창업·벤처기업 지원사업', fit: { industries: [] } }, '정보통신')).toBe('ok');
+    expect(industryGate({ category: '사업화', title: '2026년 국가철도공단 창업·벤처기업 지원사업', fit: { industries: [] } }, '농림어업')).toBe('check');
   });
   it('산재·폐업·고용유지 같은 특정 상황 사업은 확인 필요', () => {
     for (const t of ['산재근로자 대체인력지원금', '고용유지지원금 지원', '[경기] 2026년 소상공인 사업정리 지원사업', '자영업자 실업급여', '장애인고용장려금지원'])
@@ -156,4 +157,9 @@ describe('7회차 표본에서 찾은 오류', () => {
   it('자동차 부품업종 공고는 제조라도 확인 필요', () => expect(industryGate({ category: '인력', title: '[울산] 2026년 자동차 부품업종 근로자 지역정착 지원사업', fit: { industries: ['제조'] } }, '제조')).toBe('check'));
   it('어선·양식 공고는 농림어업이라도 확인 필요', () => expect(industryGate({ category: '농림축산어업', title: '러시아감독관 승선선박 경비 지원', fit: { industries: [] } }, '농림어업')).toBe('ok'));
   it('작년 매출이 있어야 하는 공고는 올해 개업 제외', () => expect(textLimitGate({ summary: "'25년 연 매출액 0원 초과 1억 400만원 미만 소상공인", rules: [] }, { openedYear: 2026 }, new Date('2026-10-21T00:00:00Z'))).toBe('out'));
+});
+
+describe('8회차 표본에서 찾은 오류', () => {
+  it('요약에 모빌리티 산업이라고 적힌 공고는 확인 필요', () => expect(industryGate({ category: '인력', title: '[대구] 2026년 지역 플러스 고용활력 프로젝트', summary: '대구지역 모빌리티 산업의 신규 고용 지원', fit: { industries: [] } } as never, '교육')).toBe('check'));
+  it('제목이 소상공인이면 요약에 중소기업 말이 있어도 소상공인 규모로 본다', () => expect(smallBizGate({ title: '[경북] 2026년 소상공인 사회보험료 지원 사업', summary: '자영업자 고용보험료, 중소기업사업주 산재보험료 지원' }, { employeeBand: '10~29명', industry: '서비스' })).toBe('out'));
 });

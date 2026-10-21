@@ -45,13 +45,14 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
   if (strong) return strong[1].includes(industry) ? 'ok' : 'out';
   // 화장품·자동차부품·수산처럼 세부 산업 공고는 업종이 맞아도 그 산업인지 확인이 필요하다.
   if (SECTOR.test(title)) return (b.fit?.industries?.length && !b.fit.industries.includes(industry)) ? 'out' : 'check';
+  if (/(모빌리티|자동차|조선|석유\s*화학|철강|바이오|반도체|화장품|의료\s*기기|항공|방산|이차\s*전지|수소)\s*(산업|업종|부품\s*업종|기업)/.test((b as { summary?: string }).summary ?? '')) return 'check';
   if (b.fit?.industries?.includes(industry)) return 'ok';
   const inds = b.fit?.industries ?? [];
   if (inds.length) return inds.includes(industry) ? 'ok' : inds.length <= 2 ? 'out' : 'check';
   if (b.category === '농림축산어업') return industry === '농림어업' ? 'ok' : 'out';
   if (FAR_CATEGORY.test(b.category) && LOCAL_INDUSTRIES.includes(industry)) return 'check';
   if (INDUSTRY_HINTS.some(([re, inds]) => re.test(title) && !inds.includes(industry))) return 'check';
-  if (VENTURE.test(title) && [...LOCAL_INDUSTRIES, '도소매'].includes(industry)) return 'check';
+  if (VENTURE.test(title) && !['정보통신', '제조'].includes(industry)) return 'check';
   // 화장품·바이오·조선처럼 세부 산업 공고는 우리 업종이 맞아도 그 산업인지 확인이 필요하다.
   if (SECTOR.test(title)) return 'check';
   return 'ok';
@@ -109,7 +110,8 @@ export function stageGate(b: Pick<Benefit, 'title'>, openedYear?: number, now = 
  */
 export function smallBizGate(b: Pick<Benefit, 'title' | 'summary'>, x: { employeeBand?: string; industry?: string; entity?: string }): 'ok' | 'out' {
   const text = `${b.title} ${b.summary ?? ''}`;
-  const forSmall = /소상공인|자영업자|영세/.test(text) && !/중소\s*기업|중소\s*사업장|중견/.test(text);
+  // 제목에 소상공인이라고 적혀 있으면 소상공인 사업이다(요약에 '중소기업사업주 산재보험' 같은 말이 섞여 있어도).
+  const forSmall = /소상공인|자영업자|영세/.test(b.title) || (/소상공인|자영업자|영세/.test(text) && !/중소\s*기업|중소\s*사업장|중견/.test(text));
   if (!forSmall) return 'ok';
   if (/자영업자/.test(text) && (!/소상공인/.test(text) || /자영업자\s*고용\s*보험/.test(text) && !/사업주|산재/.test(text)) && x.entity === '법인') return 'out';
   const band = x.employeeBand;
