@@ -93,6 +93,17 @@
     if (a.entity === '개인' && /법인\s*(사업자|기업)?\s*(만|에\s*한함|대상으로\s*함)/.test(body)) return '내용상 법인 전용';
     if (a.openedYear <= 2022 && /예비\s*창업자\s*(만|대상)|창업\s*\d\s*년\s*(이내|미만)\s*(인|의)?\s*(기업|자)/.test(body) && !(b.rules || []).some(function (r) { return r.field === 'openedAt'; })) return '내용상 창업 초기 전용';
     if (/만\s*\d{2}\s*세\s*(이하|미만|이상)/.test(body) && !/고용|취업|일자리|채용|인턴|일\s*경험/.test(t) && !(b.rules || []).some(function (r) { return r.field === 'age'; })) return '내용상 나이 조건(규칙 없음)';
+    // 11) 요약에 적힌 매출·직원 수 한도(규칙이 없을 때)
+    var REVR = { '5천만 원 미만': [0, 5e7 - 1], '5천만~1억 원': [5e7, 1e8 - 1], '1억~3억 원': [1e8, 3e8 - 1], '3억~5억 원': [3e8, 5e8 - 1], '5억~10억 원': [5e8, 1e9 - 1], '10억 원 이상': [1e9, Infinity] };
+    var EMPR = { '없음': [0, 0], '1~4명': [1, 4], '5~9명': [5, 9], '10~29명': [10, 29], '30명 이상': [30, 1e9] };
+    var mr = body.match(/(연\s*)?매출(액)?\s*(이|은|가)?\s*(\d+(\.\d+)?)\s*억\s*(원)?\s*(이하|미만)/);
+    var rv = REVR[a.revLast];
+    if (mr && rv && !(b.rules || []).some(function (r) { return r.field === 'revenue'; }) && rv[0] > parseFloat(mr[4]) * 1e8) return '요약상 매출 ' + mr[4] + '억 ' + mr[7] + ' 초과';
+    var me = body.match(/(상시\s*)?(근로자|노동자|직원)\s*(수\s*)?(가\s*)?(\d+)\s*(인|명)\s*(이상)/);
+    var ev = EMPR[a.employeeBand];
+    if (me && ev && !(b.rules || []).some(function (r) { return r.field === 'employees'; }) && ev[1] < parseInt(me[5], 10)) return '요약상 직원 ' + me[5] + '명 이상 필요';
+    var me2 = body.match(/(상시\s*)?(근로자|노동자|직원)\s*(수\s*)?(가\s*)?(\d+)\s*(인|명)\s*(미만|이하)/);
+    if (me2 && ev && !(b.rules || []).some(function (r) { return r.field === 'employees'; }) && ev[0] > parseInt(me2[5], 10) - (me2[7] === '미만' ? 1 : 0)) return '요약상 직원 ' + me2[5] + '명 ' + me2[7] + ' 초과';
     // 10) 소상공인 규모·자영업자
     var tt = t + ' ' + (b.summary || '');
     if (/소상공인|자영업자/.test(tt) && !/중소\s*기업|중소\s*사업장|중견/.test(tt) && (a.employeeBand === '10~29명' || a.employeeBand === '30명 이상')) return '소상공인 규모 초과';
