@@ -5,9 +5,10 @@ const b = (category: string, industries?: string[]) => ({ category, fit: industr
 
 describe('industryGate: 다른 업종 공고 거르기', () => {
   it('관련 업종이 정해진 공고는 그 업종만', () => {
-    expect(industryGate(b('경영', ['농림어업']), '음식점')).toBe('out');
+    expect(industryGate({ category: '경영', title: '2026년 산림신품종 육성지원 사업', fit: { industries: ['농림어업'] } }, '음식점')).toBe('out');
+    expect(industryGate(b('경영', ['농림어업']), '음식점')).toBe('check');
     expect(industryGate(b('경영', ['음식점']), '음식점')).toBe('ok');
-    expect(industryGate(b('행정·안전', ['정보통신']), '음식점')).toBe('out');
+    expect(industryGate(b('행정·안전', ['정보통신']), '음식점')).toBe('check');
   });
   it('관련 업종이 여러 개면 빼지 않고 확인 필요', () => {
     expect(industryGate(b('경영', ['제조', '정보통신', '도소매']), '음식점')).toBe('check');
@@ -175,4 +176,9 @@ describe('11회차 표본에서 찾은 오류', () => {
   it('업종 기타에 벤처 공고는 확인 필요', () => expect(industryGate({ category: '사업화', title: '2026년 벤처나라 벤처창업기업제품 등록 지원', fit: { industries: [] } }, '기타')).toBe('check'));
   it('요약에 폐업 후 재창업이 조건이면 확인 필요', () => expect(ownerGate({ title: '소상공인 임차료 지원', summary: '서구에서 60일 이상 사업 후 폐업하고 재창업한 임차 소상공인' })).toBe('check'));
   it('요약상 양식장 대상은 확인 필요', () => expect(industryGate({ category: '농림축산어업', title: '육상수조 EHP 지원', summary: '양식장 어가가 교체할 때', fit: { industries: [] } } as never, '농림어업')).toBe('check'));
+});
+
+describe('12회차: 지나치게 빼던 공고', () => {
+  it('AI 관련 업종만 다르고 제목이 그 업종을 가리키지 않으면 확인 필요로 남긴다', () => expect(industryGate({ category: '고용·창업', title: '중소기업 기술유출 방지 시스템 구축 지원', fit: { industries: ['정보통신'] } }, '제조')).toBe('ok'));
+  it('소상공인 고용보험 가입 지원은 직원 없어도 남긴다', () => expect(needsEmployees({ title: '소상공인 고용보험 가입 지원' }, '없음')).toBe(false));
 });

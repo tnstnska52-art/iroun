@@ -52,7 +52,12 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
   if (/(식육|도축|양식장|어가|어선|원양|모빌리티|자동차|뿌리|항만|수리\s*조선|조선|석유\s*화학|철강|바이오|반도체|화장품|의료\s*기기|항공|방산|이차\s*전지|수소)\s*(산업|업종|부품\s*업종|기업)/.test((b as { summary?: string }).summary ?? '')) return 'check';
   if (b.fit?.industries?.includes(industry)) return 'ok';
   const inds = b.fit?.industries ?? [];
-  if (inds.length) return inds.includes(industry) ? 'ok' : inds.length <= 2 ? 'out' : 'check';
+  // AI가 정한 관련 업종만 다르면 확인 필요로 두고, 제목·분야도 그 업종을 가리킬 때만 뺀다(예: 보안 솔루션 지원에 '정보통신'이 붙는 경우가 있어서).
+  if (inds.length) {
+    if (inds.includes(industry)) return 'ok';
+    const backed = b.category === '농림축산어업' || INDUSTRY_HINTS.some(([re, hint]) => re.test(title) && hint.some((h) => inds.includes(h)) && !hint.includes(industry));
+    return backed && inds.length <= 2 ? 'out' : 'check';
+  }
   if (b.category === '농림축산어업') return industry === '농림어업' ? 'ok' : 'out';
   if (FAR_CATEGORY.test(b.category) && LOCAL_INDUSTRIES.includes(industry)) return 'check';
   if (INDUSTRY_HINTS.some(([re, inds]) => re.test(title) && !inds.includes(industry))) return 'check';
@@ -64,7 +69,7 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
 
 /** 직원을 두고 있어야 받는 사업(채용·고용유지·근로자 복지). 자영업자 본인 보험료 지원은 뺀다. */
 const EMPLOYER = /노동자|휴게\s*시설|산재\s*예방|클린\s*사업장|안전\s*보건|내일\s*채움|가족\s*친화|재택\s*근무|어린이집|일\s*생활|워라밸|인재|대체\s*인력|일\s*경험|계절\s*학기|고용|취업|사업주|근로\s*복지|채용|인턴|근로자|직원|인력|퇴직\s*연금|정규직|육아\s*휴직|출산|작업\s*환경|산재|일자리/;
-const SELF = /자영업자|1인|대표자|본인|보험료/;
+const SELF = /고용\s*보험\s*(가입|료)|자영업자|1인|대표자|본인|보험료/;
 /** 4대보험 직원이 없다고 답한 사업장에 직원 고용 사업을 빼는지 */
 export function needsEmployees(b: Pick<Benefit, 'title'>, employeeBand?: string, employees?: number): boolean {
   const none = employeeBand === '없음' || employees === 0;
