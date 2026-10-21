@@ -66,8 +66,8 @@ function summarize(items: EstimateItem[], profile: Profile): Estimate {
   const unique = dedupePrograms(items);
   items.length = 0;
   items.push(...unique);
-  // 합계는 통장에 들어오는 돈(현금·환급·바우처)만, 1억 이하 공고만 더한다. 홈페이지와 같다.
-  const withAmount = items.filter((x) => (x.benefit.maxAmount ?? 0) > 0 && (x.benefit.maxAmount ?? 0) <= BIG && moneyRank(x.benefit) <= 1);
+  // 합계는 돈으로 받는 공고(현금·환급·바우처·구입비 보조)만, 1억 이하 공고만 더한다. 홈페이지와 같다.
+  const withAmount = items.filter((x) => (x.benefit.maxAmount ?? 0) > 0 && (x.benefit.maxAmount ?? 0) <= BIG && moneyRank(x.benefit) <= 2);
   const sum = (xs: EstimateItem[]) => xs.reduce((n, x) => n + (x.benefit.maxAmount ?? 0), 0);
   // 화면 맨 위 건수·금액은 조건이 확실히 맞는 공고만 센다. 확인이 필요한 공고는 따로 알려 준다.
   const sureItems = items.filter((x) => x.result === '조건 일치');
