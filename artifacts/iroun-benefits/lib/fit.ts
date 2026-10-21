@@ -66,3 +66,14 @@ export function dedupePrograms<T extends { benefit: Pick<Benefit, 'title'> }>(it
   const seen = new Set<string>();
   return items.filter((x) => { const k = sameProgramKey(x.benefit.title); if (!k || seen.has(k)) return !k; seen.add(k); return true; });
 }
+
+/** 창업 초기 전용 공고(예비·초기·신규 창업) */
+const EARLY_STAGE = /예비\s*창업|초기\s*창업|창업\s*초기|신규\s*창업|창업자\s*초기|청년\s*창업|창업\s*\d\s*년\s*(이내|미만)/;
+/**
+ * 업력 관문. 공고 자격에 업력 규칙이 없어도 제목이 창업 초기 전용이면 개업 3년이 넘은 사업장은 뺀다.
+ */
+export function stageGate(b: Pick<Benefit, 'title'>, openedYear?: number, now = new Date()): 'ok' | 'out' {
+  if (!openedYear) return 'ok';
+  const year = new Date(now.getTime() + 9 * 3600000).getUTCFullYear();
+  return EARLY_STAGE.test(b.title) && openedYear <= year - 3 ? 'out' : 'ok';
+}

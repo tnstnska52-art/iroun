@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
+import { stageGate, dedupePrograms, industryGate, needsEmployees, ownerGate, sameProgramKey } from './fit';
 
 const b = (category: string, industries?: string[]) => ({ category, fit: industries ? { industries } : undefined });
 
@@ -80,4 +80,11 @@ describe('업종 힌트·벤처·특정 상황', () => {
       expect(ownerGate({ title: t })).toBe('check');
     expect(ownerGate({ title: '고용안정장려금지원(정규직전환지원)' })).toBe('ok');
   });
+});
+
+describe('stageGate: 창업 초기 전용 공고', () => {
+  const now = new Date('2026-10-21T00:00:00Z');
+  it('개업 3년 넘은 사업장은 뺀다', () => expect(stageGate({ title: '[경남] 함양군 2026년 3차 소규모 창업자 초기 창업자금 지원 사업' }, 2015, now)).toBe('out'));
+  it('올해·작년 개업은 그대로', () => expect(stageGate({ title: '초기 창업기업 지원' }, 2025, now)).toBe('ok'));
+  it('창업 초기 공고가 아니면 그대로', () => expect(stageGate({ title: '소상공인 고용보험료 지원' }, 2010, now)).toBe('ok'));
 });
