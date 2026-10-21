@@ -120,7 +120,7 @@ describe('easeOf: 받기 쉬운 정도', () => {
   it('신청만 하면 받는 돈은 0', () => { for (const t of ['노란우산공제 희망장려금', '소상공인 고용보험료 지원', '[부산] 동백전 카드수수료 지원사업', '[부산] 소상공인 에너지바우처 지급']) expect(easeOf({ title: t })).toBe(0); });
   it('직원을 뽑아야 받는 돈은 2', () => { for (const t of ['고용안정장려금지원(정규직전환지원)', '2026년 청년일자리 도약장려금', '고령자 계속고용장려금']) expect(easeOf({ title: t })).toBe(2); });
   it('그 밖에는 1', () => expect(easeOf({ title: '소상공인 스마트상점 기술보급' })).toBe(1));
-  it('식품·농산물 가공 공고는 제조에서 확인 필요', () => expect(industryGate({ category: '경영', title: '꿀 가공산업 육성 지원', fit: { industries: ['제조'] } }, '제조')).toBe('ok'));
+  it('식품·농산물 가공 공고는 제조에서 확인 필요', () => expect(industryGate({ category: '경영', title: '꿀 가공산업 육성 지원', fit: { industries: ['제조'] } }, '제조')).toBe('check'));
 });
 
 describe('textLimitGate: 요약에 적힌 한도', () => {
@@ -150,4 +150,10 @@ describe('districtGate: 요약에 적힌 시·군·구', () => {
 describe('orgTargetGate: 조직 대상 공고', () => {
   it('농협·영농조합 대상은 확인 필요', () => expect(orgTargetGate({ summary: '농협조직, 농업법인, 협동조합 등이 대상' })).toBe('check'));
   it('소상공인도 대상이면 그대로', () => expect(orgTargetGate({ summary: '협동조합 및 소상공인 대상' })).toBe('ok'));
+});
+
+describe('7회차 표본에서 찾은 오류', () => {
+  it('자동차 부품업종 공고는 제조라도 확인 필요', () => expect(industryGate({ category: '인력', title: '[울산] 2026년 자동차 부품업종 근로자 지역정착 지원사업', fit: { industries: ['제조'] } }, '제조')).toBe('check'));
+  it('어선·양식 공고는 농림어업이라도 확인 필요', () => expect(industryGate({ category: '농림축산어업', title: '러시아감독관 승선선박 경비 지원', fit: { industries: [] } }, '농림어업')).toBe('ok'));
+  it('작년 매출이 있어야 하는 공고는 올해 개업 제외', () => expect(textLimitGate({ summary: "'25년 연 매출액 0원 초과 1억 400만원 미만 소상공인", rules: [] }, { openedYear: 2026 }, new Date('2026-10-21T00:00:00Z'))).toBe('out'));
 });

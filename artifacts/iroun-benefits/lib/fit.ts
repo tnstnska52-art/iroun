@@ -32,7 +32,7 @@ const STRONG_HINTS: [RegExp, string[]][] = [
   [/학원|교습소/, ['교육']],
   [/약국|의원|병원/, ['보건·복지']],
 ];
-const SECTOR = /쌀|꿀|벌꿀|화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
+const SECTOR = /광산|광업|석유\s*화학|철강|어선|양식|원양|어가|채종|종자|퇴비|비료|수산|쌀|꿀|벌꿀|화장품|뷰티|바이오|의료\s*기기|반도체|조선|해양|항공|방산|원자력|수소|이차\s*전지|배터리|자동차|로봇|드론|섬유|패션|가구|기계|금형|도정|양곡/;
 /** 매장 업종에 벤처·스타트업 전용 공고는 확인 필요 */
 const VENTURE = /벤처|스타트업|딥테크|예비\s*창업|창업\s*기업|창업\s*도약|창업\s*패키지/;
 export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fit?: { industries?: string[] } }, industry?: string): 'ok' | 'check' | 'out' {
@@ -43,6 +43,8 @@ export function industryGate(b: Pick<Benefit, 'category'> & { title?: string; fi
   // 제목에 업종이 분명히 적힌 공고(예: 축산물판매업소)는 AI가 정한 관련 업종보다 제목을 따른다.
   const strong = STRONG_HINTS.find(([re]) => re.test(title));
   if (strong) return strong[1].includes(industry) ? 'ok' : 'out';
+  // 화장품·자동차부품·수산처럼 세부 산업 공고는 업종이 맞아도 그 산업인지 확인이 필요하다.
+  if (SECTOR.test(title)) return (b.fit?.industries?.length && !b.fit.industries.includes(industry)) ? 'out' : 'check';
   if (b.fit?.industries?.includes(industry)) return 'ok';
   const inds = b.fit?.industries ?? [];
   if (inds.length) return inds.includes(industry) ? 'ok' : inds.length <= 2 ? 'out' : 'check';
@@ -133,8 +135,12 @@ const EMP_RANGE: Record<string, [number, number]> = { '없음': [0, 0], '1~4명'
  * 공고 요약에 적힌 매출·직원 수 한도. 자격 규칙으로 뽑히지 않았을 때만 쓴다.
  * 예) "연매출 3억원 이하 소상공인", "고용보험 피보험자 5인 이상 기업"
  */
-export function textLimitGate(b: Pick<Benefit, 'summary' | 'rules'>, x: { revenue?: string; employeeBand?: string }): 'ok' | 'check' | 'out' {
+export function textLimitGate(b: Pick<Benefit, 'summary' | 'rules'>, x: { revenue?: string; employeeBand?: string; openedYear?: number }, now = new Date()): 'ok' | 'check' | 'out' {
   const text = b.summary ?? '';
+  // "'25년 매출액 0원 초과"처럼 작년 매출이 있어야 하는데 올해 개업했으면 제외
+  const year = new Date(now.getTime() + 9 * 3600000).getUTCFullYear();
+  const last = String(year - 1);
+  if (x.openedYear && x.openedYear >= year && new RegExp(`('|‘|’)?${last.slice(2)}년\\s*(연\\s*)?매출|${last}년\\s*(연\\s*)?매출`).test(text)) return 'out';
   const has = (field: string) => (b.rules ?? []).some((r) => r.field === field);
   let res: 'ok' | 'check' | 'out' = 'ok';
   const rv = x.revenue ? REV_RANGE[x.revenue] : undefined;
