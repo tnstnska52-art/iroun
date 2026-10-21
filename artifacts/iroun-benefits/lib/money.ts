@@ -32,6 +32,9 @@ const PURCHASE_COST = /(구입|구매|설치|구축|도입|교체|시공|개선)
 const SERVICE_CATEGORY = /^(기술|기술개발\(R&D\)|행사ㆍ네트워크|멘토링ㆍ컨설팅ㆍ교육|창업교육|시설ㆍ공간ㆍ보육|글로벌|판로ㆍ해외진출)$/;
 /** 민간 액셀러레이터·투자사·재단이 여는 프로그램은 돈을 주는 사업이 아니라 보육·투자 프로그램이다. */
 const PRIVATE_HOST = /\(주\)|㈜|주식회사|액셀러레이터|엑셀러레이터|벤처스|파트너스|캐피탈|인베스트|투자|홀딩스|랩스|컴퍼니/;
+/** 공공기관 창업 사업화 공고: 선정되면 사업화 자금을 받는다(교육·행사·입주·기관 모집은 제외). */
+const STARTUP_GRANT = /사업화\s*(자금|지원)|창업\s*자금|사업\s*성장과\s*도약/;
+const NOT_GRANT = /설명회|경진\s*대회|공모전|챌린지|동아리|입주|액셀러레이터|엑셀러레이터|보육\s*기관|협약사|수행\s*기관|시제품|홍보|IR\b|데모|밋업|교육|아카데미|캠프|스쿨|네트워킹|멘토링|컨설팅|해외|글로벌|투자\s*연계|협업/;
 /** 사업화 공고에 돈이 적혀 있는지(사업화 자금·지원금·금액) */
 const MONEY_IN_BODY = /사업화\s*자금|지원금|보조금|장려금|\d[\d,.]*\s*(만|억|천만)\s*원|최대\s*\d/;
 
@@ -44,6 +47,7 @@ export function moneyType(b: Pick<Benefit, 'kind' | 'title' | 'category' | 'supp
   if (b.kind === '환급금' || REFUND.test(head)) return 'refund';
   if (CASH_WORD.test(head)) return 'cash';
   // '상품권 가맹점 등록'처럼 가맹점으로 등록하는 사업은 돈을 받는 게 아니다.
+  if (b.category === '사업화' && !PRIVATE_HOST.test(`${b.agency ?? ''} ${(b.title.match(/^\s*\[([^\]]+)\]/) ?? [])[1] ?? ''}`) && STARTUP_GRANT.test(body) && !NOT_GRANT.test(head)) return 'cash';
   if (/가맹점\s*(등록|모집|가입)/.test(head)) return 'service';
   if (VOUCHER.test(head)) return 'voucher';
   // 제목에 센터·상담·활용 같은 말이 있으면 장비 얘기가 있어도 서비스다(예: '센터 보유 시험장비 활용 지원').
