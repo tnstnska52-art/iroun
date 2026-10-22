@@ -18,6 +18,13 @@ describe("홈페이지 조회 고객 → 전산", () => {
     expect(checkLeadInput.safeParse({ ...input, password: "x" }).success).toBe(false);
     expect(checkLeadInput.safeParse({ ...input, phone: "02-123-4567" }).success).toBe(false);
   });
+  it("직원 전용 링크 식별자는 64자리 16진수만 받아 전산에 그대로 넘기고, 없으면 넣지 않는다", () => {
+    const token = "ab".repeat(32);
+    expect(toCrmLead(checkLeadInput.parse({ ...input, referralToken: token })).referralToken).toBe(token);
+    expect("referralToken" in toCrmLead(input)).toBe(false);
+    expect(checkLeadInput.safeParse({ ...input, referralToken: "x".repeat(64) }).success).toBe(false);
+    expect(checkLeadInput.safeParse({ ...input, referralToken: "ab" }).success).toBe(false);
+  });
   it("전산 규격대로 서명한다(키 문자열 그대로, 경로·본문 포함)", async () => {
     const secret = "a".repeat(64);
     process.env.CRM_BASE_URL = "https://crm.example.com"; process.env.CRM_APP_PROFILE_SECRET = secret;
