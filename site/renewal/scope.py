@@ -2,17 +2,17 @@
 import re, tinycss2
 
 BASE = """#iru{font-family:var(--font);font-size:16px;line-height:1.6;color:var(--ink);font-weight:400;letter-spacing:normal;word-break:keep-all;text-align:left}
-#iru :where(*:not(#chk2 *,#c2-modal *)):where(*){font-family:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;text-transform:none}
-#iru :where(*:not(#chk2 *,#c2-modal *)):where(p,span,li,dt,dd,a,label,em,i,u,section,article,ul,ol,dl,summary,details,nav,figure,blockquote,output,td,th,input,button,select,textarea){font-weight:inherit;font-size:inherit}
-#iru :where(*:not(#chk2 *,#c2-modal *)):where(b,strong){font-weight:bolder}
-#iru :where(*:not(#chk2 *,#c2-modal *)):where(h1,h2,h3,h4,h5,h6){font-weight:bold}
-#iru :where(*:not(#chk2 *,#c2-modal *)):where(h1){font-size:2em}#iru :where(*:not(#chk2 *,#c2-modal *)):where(h2){font-size:1.5em}#iru :where(*:not(#chk2 *,#c2-modal *)):where(h3){font-size:1.17em}#iru :where(*:not(#chk2 *,#c2-modal *)):where(h4,h5,h6){font-size:1em}
-#iru :where(*:not(#chk2 *,#c2-modal *)):where(small){font-size:smaller}
-#iru :where(*:not(#chk2 *,#c2-modal *)):where(label,output,figure){margin:0;padding:0}
-#iru :where(*:not(#chk2 *,#c2-modal *)):where(a,img,span,input,button,svg){vertical-align:baseline}
-#iru :where(*:not(#chk2 *,#c2-modal *)):where(img){max-width:none}
-#iru :where(*:not(#chk2 *,#c2-modal *)):where(*){border-color:currentColor}#iru *:not(#chk2 *,#c2-modal *)::before,#iru *:not(#chk2 *,#c2-modal *)::after{border-color:currentColor}
-#iru :where(*:not(#chk2 *,#c2-modal *)):where(section){position:static}#iru :where(*:not(#chk2 *,#c2-modal *)):where(i){display:inline}
+#iru :where(*:not(.c2x *)):where(*){font-family:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;text-transform:none}
+#iru :where(*:not(.c2x *)):where(p,span,li,dt,dd,a,label,em,i,u,section,article,ul,ol,dl,summary,details,nav,figure,blockquote,output,td,th,input,button,select,textarea){font-weight:inherit;font-size:inherit}
+#iru :where(*:not(.c2x *)):where(b,strong){font-weight:bolder}
+#iru :where(*:not(.c2x *)):where(h1,h2,h3,h4,h5,h6){font-weight:bold}
+#iru :where(*:not(.c2x *)):where(h1){font-size:2em}#iru :where(*:not(.c2x *)):where(h2){font-size:1.5em}#iru :where(*:not(.c2x *)):where(h3){font-size:1.17em}#iru :where(*:not(.c2x *)):where(h4,h5,h6){font-size:1em}
+#iru :where(*:not(.c2x *)):where(small){font-size:smaller}
+#iru :where(*:not(.c2x *)):where(label,output,figure){margin:0;padding:0}
+#iru :where(*:not(.c2x *)):where(a,img,span,input,button,svg){vertical-align:baseline}
+#iru :where(*:not(.c2x *)):where(img){max-width:none}
+#iru :where(*:not(.c2x *)):where(*){border-color:currentColor}#iru *:not(.c2x *)::before,#iru *:not(.c2x *)::after{border-color:currentColor}
+#iru :where(*:not(.c2x *)):where(section){position:static}#iru :where(*:not(.c2x *)):where(i){display:inline}
 """
 
 
@@ -29,7 +29,7 @@ def split_sel(prelude):
     return [s.strip() for s in out if s.strip()]
 
 
-NOTW = ':not(#chk2,#chk2 *,#c2-modal,#c2-modal *)'
+NOTW = ':not(.c2x,.c2x *)'
 PE = re.compile(r'((?:::?(?:before|after|placeholder|selection|marker|first-line|first-letter|-webkit-[\w-]+))+)$')
 
 

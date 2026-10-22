@@ -81,8 +81,10 @@ def convert(name):
     if name == 'check':
         w = open('/home/claude/iroun/site/check-v2.html').read()
         a = w.index('<div id="chk2"'); b = w.index('</div></section>')
-        widget = w[a:b]
-        rest = w[w.index('<div class="c2-modal"'):]
+        widget = w[a:b].replace('<div id="chk2" class="c2">', '<div id="chk2" class="c2 c2x">', 1)
+        assert 'c2x' in widget
+        rest = w[w.index('<div class="c2-modal"'):].replace('<div class="c2-modal" id="c2-modal"', '<div class="c2-modal c2x" id="c2-modal"', 1)
+        assert 'c2x' in rest
         s = re.sub(r'<div class="w" aria-label="지원금 확인 창 미리보기">.*?\n      </div>\n    </div>',
                    widget + '\n    </div>', s, flags=re.S)
         assert 'w-cta' not in s.split('<style')[0] or True
