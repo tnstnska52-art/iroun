@@ -12,7 +12,7 @@ BASE = """#iru{font-family:var(--font);font-size:16px;line-height:1.6;color:var(
 #iru :where(a,img,span,input,button,svg){vertical-align:baseline}
 #iru :where(img){max-width:none}
 #iru :where(*){border-color:currentColor}#iru *::before,#iru *::after{border-color:currentColor}
-#iru :where(section){position:static}
+#iru :where(section){position:static}#iru :where(i){display:inline}
 """
 
 
