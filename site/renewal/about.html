@@ -1,0 +1,384 @@
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+/* 레이아웃: 큰 선언형 문장 + 전면 팀 사진 → 이야기 → 실제 공고 흐름 띠 → 세 가지 방식 → 숫자(검증된 것만) → 네 가지 원칙 → 회사 정보 */
+:root{
+  --bg:#FFFFFF; --soft:#F5F7FB; --ink:#191F28; --mute:#6B7684; --line:#E5E8EB;
+  --blue:#2B5CE6; --blue2:#1E45B8; --sky:#E8EFFE; --gold:#FFB800; --red:#E5372B;
+  --font:'Pretendard Variable',Pretendard,'Noto Sans KR',-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.65;word-break:keep-all}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+a{color:inherit;text-decoration:none}
+h1,h2,h3,p{margin:0}
+h1,h2{letter-spacing:-.035em;line-height:1.28;text-wrap:balance}
+.wrap{max-width:1120px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.sec{padding-block:clamp(72px,10vw,140px)}
+.eyebrow{display:inline-block;font-size:14px;font-weight:700;color:var(--blue);letter-spacing:.04em}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;background:var(--blue);color:#fff;font-weight:700;font-size:17px;border:0;border-radius:14px;padding:16px 26px;min-height:54px;font-family:inherit;transition:background .2s,transform .2s}
+.btn:hover{background:var(--blue2);transform:translateY(-1px)}
+.btn.line{background:#fff;color:var(--ink);border:1.5px solid var(--line)}
+.btn.line:hover{border-color:var(--ink)}
+a:focus-visible,.btn:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.hd{height:68px;display:flex;align-items:center;gap:32px}
+.logo-img{display:block;height:34px;width:auto}
+nav{display:flex;gap:28px;flex:1;justify-content:flex-end}
+nav a{font-size:15px;font-weight:500;color:var(--mute);white-space:nowrap}
+nav a:hover{color:var(--ink)}
+nav a.on{color:var(--ink);font-weight:700}
+.hd .btn{padding:10px 18px;min-height:42px;font-size:15px;border-radius:10px}
+@media(max-width:900px){nav,.hd .btn{display:none}.logo-img{height:28px}}
+
+/* 히어로 */
+.hero{padding-top:clamp(56px,8vw,110px);text-align:center;background:linear-gradient(180deg,#fff 0%,var(--soft) 100%)}
+.hero .kick{font-size:clamp(15px,1.4vw,18px);font-weight:700;color:var(--mute)}
+.hero h1{font-size:clamp(32px,5.2vw,68px);font-weight:900;margin-top:16px}
+.hero h1 em{font-style:normal;color:var(--blue)}
+.hero .sub{font-size:clamp(16px,1.6vw,20px);color:var(--mute);margin-top:20px}
+.photo{position:relative;margin-top:clamp(36px,5vw,64px);max-width:1440px;margin-inline:auto}
+.photo img{display:block;width:100%;height:auto;aspect-ratio:3/1}
+.photo figcaption{position:absolute;left:max(20px,env(safe-area-inset-left,0px));bottom:16px;font-size:13px;color:rgba(25,31,40,.55);font-weight:500}
+@media(max-width:600px){.photo img{height:240px;aspect-ratio:auto;object-fit:cover;object-position:50% 20%}}
+
+/* 이야기 */
+.story{text-align:center}
+.story p.big{font-size:clamp(22px,2.6vw,34px);font-weight:700;line-height:1.6;letter-spacing:-.025em;max-width:30ch;margin-inline:auto}
+.story p.big b{color:var(--blue)}
+.story p.big s{color:#B0B8C1;text-decoration-thickness:2px}
+.story .body{font-size:18px;color:var(--mute);max-width:46ch;margin:28px auto 0;line-height:1.85}
+
+/* 공고 흐름 띠 */
+.ticker{background:var(--ink);color:#fff;padding-block:28px;overflow:hidden}
+.ticker .lab{font-size:13px;color:#B0B8C1;font-weight:700;letter-spacing:.06em;margin-bottom:14px}
+.ticker .lab b{color:#FF6B5E}
+.belt{display:flex;gap:12px;width:max-content;animation:belt 48s linear infinite}
+.belt span{flex:none;background:#262D38;border-radius:999px;padding:10px 18px;font-size:15px;font-weight:500;white-space:nowrap}
+.belt span i{font-style:normal;color:#8FB2FF;font-weight:700;margin-left:6px}
+@keyframes belt{to{transform:translateX(-50%)}}
+.ticker:hover .belt{animation-play-state:paused}
+
+/* 선언 + 세 가지 방식 */
+.declare h2{font-size:clamp(28px,4vw,52px);font-weight:900}
+.declare h2 em{font-style:normal;color:var(--blue)}
+.ways{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin-top:56px}
+@media(max-width:860px){.ways{grid-template-columns:1fr}}
+.way{border-top:3px solid var(--ink);padding-top:22px;display:flex;flex-direction:column;gap:10px}
+.way .n{font-size:14px;font-weight:900;color:var(--blue);letter-spacing:.06em}
+.way strong{font-size:24px;font-weight:900;letter-spacing:-.03em}
+.way p{color:var(--mute);font-size:16px}
+
+/* 숫자 */
+.nums{background:var(--soft)}
+.ngrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;margin-top:48px;border-top:1px solid var(--line)}
+@media(max-width:860px){.ngrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.nb{padding:28px 20px 6px 0}
+.nb strong{display:flex;align-items:baseline;gap:4px;font-size:clamp(40px,5vw,64px);font-weight:900;letter-spacing:-.045em;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.1}
+.nb strong i{font-style:normal;font-size:.36em;font-weight:800;color:var(--mute)}
+.nb.blue strong{color:var(--blue)}
+.nb > span{display:block;color:var(--mute);font-size:15px;margin-top:8px}
+.fn{font-size:13px;color:var(--mute);margin-top:28px}
+
+/* 원칙 */
+.pgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:48px}
+@media(max-width:760px){.pgrid{grid-template-columns:1fr}}
+.pc{border-radius:24px;padding:32px 30px;background:var(--soft);display:flex;flex-direction:column;gap:12px;min-height:220px}
+.pc .k{font-size:13px;font-weight:900;letter-spacing:.08em;color:var(--blue)}
+.pc strong{font-size:clamp(22px,2.2vw,28px);font-weight:900;letter-spacing:-.03em;line-height:1.35}
+.pc p{color:var(--mute)}
+.pc.dark{background:var(--ink);color:#fff}
+.pc.dark p{color:#B0B8C1}
+.pc.dark .k{color:#8FB2FF}
+.pc.blue{background:var(--blue);color:#fff}
+.pc.blue p{color:#DCE6FF}
+.pc.blue .k{color:var(--gold)}
+
+/* 사람 */
+.people{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+@media(max-width:900px){.people{grid-template-columns:1fr;gap:28px}}
+.people h2{font-size:clamp(28px,3.6vw,44px);font-weight:900}
+.people p{color:var(--mute);font-size:17px;margin-top:18px}
+.plist{list-style:none;margin:28px 0 0;padding:0;display:flex;flex-direction:column;gap:14px}
+.plist li{display:flex;gap:14px;align-items:flex-start;font-size:17px}
+.plist li b{flex:none;width:30px;height:30px;border-radius:50%;background:var(--sky);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:14px}
+.pimg{border-radius:28px;overflow:hidden;box-shadow:0 30px 60px -30px rgba(25,31,40,.4)}
+.pimg img{display:block;width:100%;height:auto;aspect-ratio:3/1;object-fit:cover}
+@media(min-width:901px){.pimg img{aspect-ratio:4/3;object-position:50% 25%}}
+
+/* 담당자 대화 예시 */
+.chat{background:#fff;border-radius:28px;box-shadow:0 30px 60px -30px rgba(25,31,40,.4);border:1px solid #E6EBF3;overflow:hidden;max-width:520px;width:100%;justify-self:center}
+.chat-hd{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #EEF1F5;background:#FAFBFD}
+.chat-hd b{display:block;font-size:16px;font-weight:900}
+.chat-hd span{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--mute)}
+.chat-hd i.on{width:8px;height:8px;border-radius:50%;background:#12B76A;box-shadow:0 0 0 0 rgba(18,183,106,.5);animation:pingG 1.6s ease-out infinite}
+@keyframes pingG{0%{box-shadow:0 0 0 0 rgba(18,183,106,.45)}100%{box-shadow:0 0 0 8px rgba(18,183,106,0)}}
+.chat-body{padding:18px 18px 8px;display:flex;flex-direction:column;gap:10px;background:#F5F7FB}
+.msg{max-width:84%;border-radius:18px;padding:11px 14px;font-size:14.5px;line-height:1.55}
+.msg small{display:block;font-size:11.5px;font-weight:700;opacity:.7;margin-bottom:2px}
+.msg.sys{align-self:center;max-width:none;background:transparent;color:var(--mute);font-size:12.5px;padding:2px}
+.msg.me{align-self:flex-end;background:#FEE500;color:#191919;border-bottom-right-radius:6px}
+.msg.us{align-self:flex-start;background:#fff;border:1px solid #E6EBF3;border-bottom-left-radius:6px}
+.msg.card2{display:flex;flex-direction:column;gap:6px;border-color:#CFDCFB}
+.msg.card2 b{font-size:13px;color:var(--blue)}
+.msg.card2 span{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+.msg.card2 em{font-style:normal;font-weight:900;color:var(--blue);white-space:nowrap}
+.typing{align-self:flex-start;display:flex;gap:4px;background:#fff;border:1px solid #E6EBF3;border-radius:14px;padding:10px 12px}
+.typing i{width:6px;height:6px;border-radius:50%;background:#B0B8C1;animation:dotb 1.2s ease-in-out infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes dotb{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+.people .chat .chat-note{font-size:12px;color:var(--mute);padding:10px 20px 14px;background:#F5F7FB;margin:0}
+.chat.go .msg{animation:pop2 .5s cubic-bezier(.2,.8,.2,1) both}
+.chat.go .msg:nth-child(2){animation-delay:.35s}.chat.go .msg:nth-child(3){animation-delay:.8s}.chat.go .msg:nth-child(4){animation-delay:1.25s}.chat.go .msg:nth-child(5){animation-delay:1.7s}
+@keyframes pop2{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+.msg .hl3{color:var(--blue);font-weight:900}
+.mail{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:22px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;max-width:460px}
+.mi{width:40px;height:40px;border-radius:12px;background:var(--sky);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+.ma{font-size:18px;font-weight:700;user-select:all;flex:1;min-width:0;overflow-wrap:anywhere}
+.copy{border:0;background:var(--ink);color:#fff;font-family:inherit;font-weight:700;font-size:14px;border-radius:10px;padding:10px 14px;cursor:pointer}
+.copy:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+/* 회사 정보 */
+.info{background:var(--soft)}
+.igrid{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+@media(max-width:860px){.igrid{grid-template-columns:1fr;gap:28px}}
+.igrid h2{font-size:clamp(28px,3.4vw,40px);font-weight:900}
+.igrid .cta{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}
+.card{background:#fff;border-radius:24px;padding:26px 28px;box-shadow:0 20px 44px -28px rgba(30,69,184,.3)}
+.card .logo-img{height:30px;margin-bottom:10px}
+.card dl{margin:0}
+.card dl div{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:13px 0;border-bottom:1px solid #F0F2F5;font-size:15px}
+.card dl div:last-child{border-bottom:0}
+.card dt{color:var(--mute)}
+.card dd{margin:0;font-weight:500;min-width:0}
+footer{border-top:1px solid var(--line);font-size:13px;color:var(--mute)}
+footer .wrap{padding-block:36px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;line-height:1.9}
+footer strong{color:var(--ink)}
+
+/* 생동감 */
+.sh{background-size:260% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;animation:shine 3.2s linear infinite}
+.sh-blue{background-image:linear-gradient(100deg,#2B5CE6 0%,#2B5CE6 40%,#8FB2FF 50%,#2B5CE6 60%,#2B5CE6 100%)}
+@keyframes shine{0%{background-position:100% 0}100%{background-position:-150% 0}}
+.reveal{transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1)}
+.js .reveal.wait{opacity:0;transform:translateY(24px)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.sh{background:none;color:var(--blue)!important}.js .reveal.wait{opacity:1;transform:none}}
+
+/* 상단 '내 지원금 확인' 버튼 생동감 */
+.hd-live{position:relative;overflow:hidden;animation:hdBeat 2.2s ease-in-out infinite}
+.hd-live::before{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:0 0 0 0 rgba(43,92,230,.55);animation:hdRing 2.2s ease-out infinite;pointer-events:none}
+.hd-live::after{content:"";position:absolute;top:0;bottom:0;left:-50%;width:35%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0));transform:skewX(-18deg);animation:hdSweep 2.8s ease-in-out infinite;pointer-events:none}
+.hd-live .hd-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#FFD25C;margin-right:7px;vertical-align:middle;box-shadow:0 0 0 0 rgba(255,210,92,.7);animation:hdDot 1.4s ease-out infinite}
+@keyframes hdBeat{0%,60%,100%{transform:scale(1)}30%{transform:scale(1.06)}}
+@keyframes hdRing{0%{box-shadow:0 0 0 0 rgba(43,92,230,.5)}70%,100%{box-shadow:0 0 0 12px rgba(43,92,230,0)}}
+@keyframes hdSweep{0%{left:-50%}45%,100%{left:130%}}
+@keyframes hdDot{0%{box-shadow:0 0 0 0 rgba(255,210,92,.7)}100%{box-shadow:0 0 0 7px rgba(255,210,92,0)}}
+@media(prefers-reduced-motion:reduce){.hd-live,.hd-live::before,.hd-live::after,.hd-live .hd-dot{animation:none}}
+
+/* 모바일 메뉴 */
+.mm-btn{display:none;margin-left:auto;width:44px;height:44px;border:0;background:none;border-radius:12px;cursor:pointer;align-items:center;justify-content:center;color:var(--ink)}
+.mm-btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.mm{display:none;border-top:1px solid var(--line);background:#fff;padding:6px max(20px,env(safe-area-inset-right,0px)) 14px max(20px,env(safe-area-inset-left,0px))}
+.mm a{display:flex;justify-content:space-between;align-items:center;padding:15px 4px;font-size:17px;font-weight:700;border-bottom:1px solid #F0F2F5;color:var(--ink)}
+.mm a::after{content:"›";color:#B0B8C1;font-size:20px}
+.mm a.on{color:var(--blue)}
+.mm .mm-cta{margin-top:12px;justify-content:center;background:var(--blue);color:#fff;border-radius:14px;border:0}
+.mm .mm-cta::after{content:""}
+@media(max-width:900px){.mm-btn{display:inline-flex}.mm.open{display:block}}
+
+@media(max-width:600px){.photo img{height:auto!important;aspect-ratio:1170/960!important;object-fit:cover!important;object-position:50% 0!important}}
+
+.mbar{display:none;position:fixed;left:0;right:0;bottom:0;z-index:9;background:#fff;border-top:1px solid var(--line);padding:8px max(10px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(10px,env(safe-area-inset-left,0px))}
+.mbar a.main{display:flex;align-items:center;justify-content:center;gap:8px;height:56px;border-radius:14px;background:var(--blue);color:#fff;font-size:17px;font-weight:700;animation:hdBeat 2.2s ease-in-out infinite}
+.mbar a.main i{font-style:normal}
+@media(max-width:900px){.mbar{display:block}body{padding-bottom:76px}}
+</style>
+
+<header>
+  <div class="wrap hd">
+    <a href="https://www.irowoon.com/" aria-label="(주)이로운사람들 처음으로"><img class="logo-img" src="https://cdn.jsdelivr.net/gh/tnstnska52-art/iroun@76ef38de7601bbca3bef9d4a58ef3ca543bf41c0/site/img/logo.png" alt="(주)이로운사람들" width="638" height="106"></a>
+    <nav aria-label="주 메뉴">
+      <a class="on" href="https://www.irowoon.com/about" aria-current="page">회사소개</a>
+      <a href="https://www.irowoon.com/">서비스소개</a>
+      <a href="https://www.irowoon.com/check">지원금 찾기</a>
+      <a href="https://www.irowoon.com/20">융자지원금</a>
+      <a href="https://www.irowoon.com/review">사례</a>
+      <a href="https://www.irowoon.com/faq">자주 묻는 질문</a>
+    </nav>
+    <a class="btn hd-live" href="https://www.irowoon.com/check#start"><span class="hd-dot" aria-hidden="true"></span>내 지원금 확인</a>
+    <button type="button" class="mm-btn" id="mmBtn" aria-label="전체 메뉴" aria-expanded="false" aria-controls="mm"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </div>
+  <div class="mm" id="mm">
+  <a class="on" href="https://www.irowoon.com/about" aria-current="page">회사소개</a>
+  <a href="https://www.irowoon.com/">서비스소개</a>
+  <a href="https://www.irowoon.com/check">지원금 찾기</a>
+  <a href="https://www.irowoon.com/20">융자지원금</a>
+  <a href="https://www.irowoon.com/review">사례</a>
+  <a href="https://www.irowoon.com/faq">자주 묻는 질문</a>
+  <a class="mm-cta" href="https://www.irowoon.com/check#start">내 지원금 확인하기</a>
+</div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="wrap">
+    <p class="kick">회사소개 · 주식회사 이로운사람들</p>
+    <h1>대한민국 사장님이 받을 돈을,<br><em class="sh sh-blue">끝까지 찾아 손에 쥐여드립니다</em></h1>
+    <p class="sub">놓치는 지원금이 없는 가게를 만드는 일. 이로운사람들이 매일 하는 일입니다.</p>
+  </div>
+  <figure class="photo" style="margin-bottom:0">
+    <picture><source media="(max-width:600px)" srcset="https://cdn.jsdelivr.net/gh/tnstnska52-art/iroun@76ef38de7601bbca3bef9d4a58ef3ca543bf41c0/site/img/team-mo.jpg" width="1170" height="1560"><img src="https://cdn.jsdelivr.net/gh/tnstnska52-art/iroun@76ef38de7601bbca3bef9d4a58ef3ca543bf41c0/site/img/team-pc.jpg" alt="이로운사람들 상담팀 단체 사진" width="2172" height="724"></picture>
+    <figcaption>주식회사 이로운사람들 일동</figcaption>
+  </figure>
+</section>
+
+<section class="sec story">
+  <div class="wrap">
+    <p class="big reveal">지원금은 해마다 늘어나는데,<br>정작 받아야 할 사장님은 <s>몰라서</s> 지나칩니다.<br>저희는 그 <b>빈칸</b>을 채우려고 시작했습니다.</p>
+    <p class="body reveal">공고는 정부, 시·도, 시·군·구, 공공기관에 흩어져 있고 자격 조건은 어렵고 마감은 짧습니다. 장사하느라 바쁜 사장님이 혼자 다 챙기기는 어렵습니다. 그래서 찾는 일은 저희가 하고, 사장님은 받을 준비만 하시도록 돕습니다.</p>
+  </div>
+</section>
+
+<section class="ticker" aria-label="이로운사람들이 확인한 공고 예시">
+  <div class="wrap"><p class="lab"><b>●</b> 오늘도 저희가 확인한 공고</p></div>
+  <div class="belt">
+    <span>소상공인 경영안정 바우처<i>25만 원</i></span><span>소상공인 에너지바우처<i>20만 원</i></span><span>외식업체 식재료 공동구매 지원<i>2,000만 원</i></span><span>원부자재 공동구매 지원<i>2,000만 원</i></span><span>클린사업장 조성 지원<i>3,000만 원</i></span><span>기술유출 방지 시스템 구축 지원<i>4,000만 원</i></span><span>상생협력형 내일채움공제<i>지원</i></span><span>소상공인 스마트상점 기술보급<i>지원</i></span><span>카드수수료 지원사업<i>지원</i></span><span>일생활 균형 인프라 구축비 지원<i>1,000만 원</i></span>
+    <span aria-hidden="true">소상공인 경영안정 바우처<i>25만 원</i></span><span aria-hidden="true">소상공인 에너지바우처<i>20만 원</i></span><span aria-hidden="true">외식업체 식재료 공동구매 지원<i>2,000만 원</i></span><span aria-hidden="true">원부자재 공동구매 지원<i>2,000만 원</i></span><span aria-hidden="true">클린사업장 조성 지원<i>3,000만 원</i></span><span aria-hidden="true">기술유출 방지 시스템 구축 지원<i>4,000만 원</i></span><span aria-hidden="true">상생협력형 내일채움공제<i>지원</i></span><span aria-hidden="true">소상공인 스마트상점 기술보급<i>지원</i></span><span aria-hidden="true">카드수수료 지원사업<i>지원</i></span><span aria-hidden="true">일생활 균형 인프라 구축비 지원<i>1,000만 원</i></span>
+  </div>
+</section>
+
+<section class="sec declare" id="ways">
+  <div class="wrap">
+    <span class="eyebrow">WHAT WE DO</span>
+    <h2 style="margin-top:14px" class="reveal">이로운사람들은<br><em>찾는 일</em>과 <em>받는 일</em> 사이를 잇습니다</h2>
+    <div class="ways">
+      <div class="way reveal"><span class="n">01 · 데이터</span><strong>매일 모으고, 자동으로 가립니다</strong><p>전국의 지원 공고를 매일 모아 업종·지역·업력·매출·직원 수와 하나씩 맞춥니다. 사장님 가게에 해당되는 것만 금액과 함께 남깁니다.</p></div>
+      <div class="way reveal"><span class="n">02 · 사람</span><strong>담당자가 이름을 걸고 확인합니다</strong><p>시스템이 고른 결과를 전담 담당자가 전화로 한 번 더 점검합니다. 처음 통화한 담당자가 마지막까지 함께합니다.</p></div>
+      <div class="way reveal"><span class="n">03 · 연결</span><strong>필요한 만큼만, 자격 있는 전문가와</strong><p>서류와 마감을 정리해 드리고, 신청 대리가 필요한 건은 자격을 확인한 노무사·지도사와 연결합니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec nums">
+  <div class="wrap">
+    <span class="eyebrow">BY THE NUMBERS</span>
+    <h2 style="margin-top:14px;font-size:clamp(28px,3.6vw,44px);font-weight:900" class="reveal">숫자로 보는 이로운사람들</h2>
+    <div class="ngrid">
+      <div class="nb blue reveal"><strong><span class="cnt" data-to="6076">6,076</span><i>건</i></strong><span>매일 확인하는 지원 공고</span></div>
+      <div class="nb reveal"><strong><span class="cnt" data-to="17">17</span><i>개 시·도</i></strong><span>시·군·구 단위까지 지역 공고 대조</span></div>
+      <div class="nb reveal"><strong><span class="cnt" data-to="12">12</span><i>개 업종</i></strong><span>업종별 맞춤 판정</span></div>
+      <div class="nb reveal"><strong><span>0</span><i>원</i></strong><span>지원금 확인·결과 안내 비용</span></div>
+    </div>
+    <p class="fn">* 2026년 10월 22일 기준, 이로운사람들 지원금 확인 창이 불러온 공고 수입니다.</p>
+  </div>
+</section>
+
+<section class="sec" id="principles">
+  <div class="wrap">
+    <span class="eyebrow">OUR PRINCIPLES</span>
+    <h2 style="margin-top:14px;font-size:clamp(28px,4vw,52px);font-weight:900" class="reveal">사장님 돈 앞에서<br>저희가 지키는 네 가지</h2>
+    <div class="pgrid">
+      <div class="pc dark reveal"><span class="k">진정성</span><strong>과장하지 않습니다</strong><p>"무조건 받는다", "승인률 90%" 같은 말은 하지 않습니다. 받을 만한 것만 더해서 보여드립니다.</p></div>
+      <div class="pc reveal"><span class="k">신뢰</span><strong>이름을 걸고 일합니다</strong><p>전화를 드릴 때 소속과 이름을 먼저 밝히고, 같은 담당자가 끝까지 연락드립니다. 남겨주신 정보는 안내에만 씁니다.</p></div>
+      <div class="pc reveal"><span class="k">전문성</span><strong>자격 있는 사람에게만 맡깁니다</strong><p>신청 대리는 법이 정한 자격이 있는 전문가만 합니다. 연결할 때 담당 전문가의 이름과 자격을 먼저 알려드립니다.</p></div>
+      <div class="pc blue reveal"><span class="k">책임</span><strong>받은 뒤까지 챙깁니다</strong><p>근속·사용처처럼 받은 뒤 지켜야 할 조건을 알려드려 환수 걱정을 덜어드립니다. 부정수급은 권하지 않습니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" style="padding-top:0">
+  <div class="wrap people">
+    <div class="reveal">
+      <span class="eyebrow">OUR PEOPLE</span>
+      <h2 style="margin-top:14px">사장님 한 분에게<br>담당자 한 명</h2>
+      <p>화면 속 숫자로 끝내지 않습니다. 금액을 확인하신 뒤에는 이름이 있는 담당자가 직접 전화를 드립니다.</p>
+      <ul class="plist">
+        <li><b>1</b><span>확인 결과를 보고 매출·직원·대출을 다시 여쭤봅니다</span></li>
+        <li><b>2</b><span>될 만한 지원사업만 추려 서류와 마감을 정리해 드립니다</span></li>
+        <li><b>3</b><span>새 공고가 나오면 가장 먼저 알려드립니다</span></li>
+      </ul>
+    </div>
+    <div class="chat reveal" aria-label="담당자 연결 화면 예시">
+      <div class="chat-hd"><span class="av" aria-hidden="true"><svg viewBox="0 0 40 40" width="40" height="40"><circle cx="20" cy="20" r="20" fill="#E8EFFE"/><circle cx="20" cy="16" r="7" fill="#2B5CE6"/><path d="M7 34c2-7 7-10 13-10s11 3 13 10" fill="#2B5CE6"/></svg></span><div><b>이로운 전담 담당자</b><span><i class="on" aria-hidden="true"></i>배정 완료 · 평일 09:00~18:00</span></div></div>
+      <div class="chat-body">
+        <div class="msg sys">전담 담당자가 연결됐어요</div>
+        <div class="msg me"><small>대표님</small>부산에서 도소매를 혼자 하고 있어요. 저도 받을 수 있는 지원금이 있을까요?</div>
+        <div class="msg us"><small>이로운 전담 담당자</small>그럼요, 대표님! 지금 대표님께 <b class="hl3">가장 적합하고 빠르게 신청 가능한 지원금</b>부터 찾아드릴게요.</div>
+        <div class="msg us card2"><b>⚡ 바로 신청 가능한 지원금</b><span>원부자재 공동구매 지원 <em>2,000만 원</em></span><span>소상공인 경영안정 바우처 <em>25만 원</em></span><span>소상공인 에너지바우처 <em>20만 원</em></span></div>
+        <div class="msg us"><small>이로운 전담 담당자</small>준비 서류와 마감일은 카톡으로 정리해 드릴게요. 새 공고가 나오면 제가 먼저 연락드릴게요.</div>
+        <div class="typing" aria-hidden="true"><i></i><i></i><i></i></div>
+      </div>
+      <p class="chat-note">상담 흐름을 보여드리는 예시 화면입니다.</p>
+    </div>
+  </div>
+</section>
+
+<section class="sec info" id="info">
+  <div class="wrap igrid">
+    <div class="reveal">
+      <span class="eyebrow">CONTACT</span>
+      <h2 style="margin-top:14px">언제든 편하게<br>물어보세요</h2>
+      <p style="color:var(--mute);font-size:17px;margin-top:16px">궁금한 점은 이메일로 보내주세요. 평일 09:00 ~ 18:00에 담당자가 확인하고 답장드립니다.</p>
+      <div class="mail"><span class="mi" aria-hidden="true">✉</span><span class="ma" id="mailTxt">tnstnska52@naver.com</span><button type="button" class="copy" id="copyMail">주소 복사</button></div>
+      <div class="cta"><a class="btn" href="https://www.irowoon.com/check#start">내 지원금 확인하기 →</a><a class="btn line" href="https://www.irowoon.com/">서비스소개 보기</a></div>
+    </div>
+    <div class="card reveal">
+      <img class="logo-img" src="https://cdn.jsdelivr.net/gh/tnstnska52-art/iroun@76ef38de7601bbca3bef9d4a58ef3ca543bf41c0/site/img/logo.png" alt="(주)이로운사람들" width="638" height="106">
+      <dl>
+        <div><dt>회사명</dt><dd>주식회사 이로운사람들</dd></div>
+        <div><dt>대표</dt><dd>김진영</dd></div>
+        <div><dt>사업자등록번호</dt><dd>659-81-03910</dd></div>
+        <div><dt>주소</dt><dd>경기도 시흥시 배곧동 서울대학로 59-69, 830호</dd></div>
+        <div><dt>이메일</dt><dd>tnstnska52@naver.com</dd></div>
+        <div><dt>상담 시간</dt><dd>평일 09:00 ~ 18:00</dd></div>
+        <div><dt>하는 일</dt><dd>정부·지자체 지원금 정보 제공, 전문가 연결, 저금리 융자지원금 상담</dd></div>
+      </dl>
+    </div>
+  </div>
+</section>
+</main>
+
+<div class="mbar">
+  <a class="main" href="https://www.irowoon.com/check#start">내 지원금 확인하기 <i aria-hidden="true">→</i></a>
+</div>
+<footer>
+  <div class="wrap">
+    <div><strong>주식회사 이로운사람들</strong><br>대표 김진영 · 사업자등록번호 659-81-03910<br>경기도 시흥시 배곧동 서울대학로 59-69, 830호 · tnstnska52@naver.com</div>
+    <div>이로운사람들은 민간 회사이며 정부기관이 아닙니다.<br>신청 대리는 자격 있는 전문가가 수행합니다.</div>
+  </div>
+</footer>
+
+<script>
+(function(){var b=document.getElementById('copyMail');if(!b)return;b.addEventListener('click',function(){var t='tnstnska52@naver.com';
+ function done(){b.textContent='복사됨';setTimeout(function(){b.textContent='주소 복사'},1600)}
+ function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('mailTxt'));var s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='선택됨';}
+ try{navigator.clipboard.writeText(t).then(done,sel)}catch(e){sel()}});})();
+</script>
+<script>
+(function(){
+  var red=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(red||!('IntersectionObserver' in window))return;
+  document.documentElement.classList.add('js');
+  var els=document.querySelectorAll('.reveal');
+  var io=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){x.target.classList.remove('wait');io.unobserve(x.target)}})},{threshold:.15});
+  els.forEach(function(e){var r=e.getBoundingClientRect();if(r.top>innerHeight){e.classList.add('wait');io.observe(e)}});
+  var nums=document.querySelectorAll('.cnt');
+  var io2=new IntersectionObserver(function(es){es.forEach(function(x){if(!x.isIntersecting)return;io2.unobserve(x.target);var el=x.target,to=+el.dataset.to,t0=null;
+    function f(t){if(!t0)t0=t;var p=Math.min(1,(t-t0)/1600),e=1-Math.pow(1-p,4);el.textContent=Math.round(to*e).toLocaleString('ko-KR');if(p<1)requestAnimationFrame(f)}requestAnimationFrame(f)})},{threshold:.5});
+  nums.forEach(function(n){io2.observe(n)});
+  var ch=document.querySelector('.chat');if(ch){var io3=new IntersectionObserver(function(es){es.forEach(function(x){if(x.isIntersecting){ch.classList.add('go');io3.disconnect()}})},{threshold:.3});io3.observe(ch);}
+})();
+</script>
+<script>
+(function(){var b=document.getElementById('mmBtn'),m=document.getElementById('mm');if(!b||!m)return;b.addEventListener('click',function(){var o=m.classList.toggle('open');b.setAttribute('aria-expanded',o);b.innerHTML=o?'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>':'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'});m.addEventListener('click',function(e){if(e.target.closest('a'))m.classList.remove('open')});})();
+</script>
+
+<script>
+(function(){
+  function start(){var box=document.getElementById('chk2');if(!box)return false;
+    var r=box.getBoundingClientRect();window.scrollTo({top:Math.max(0,r.top+scrollY-80),behavior:'smooth'});
+    var n=0,t=setInterval(function(){var b=box.querySelector('[data-start]');if(b||++n>60){clearInterval(t);if(b)b.click();}},150);return true;}
+  document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;
+    var h=a.getAttribute('href');if(/\/check#start$/.test(h)&&document.getElementById('chk2')){e.preventDefault();start();}});
+  if(location.hash==='#start'){var go=function(){setTimeout(start,300)};if(document.readyState==='complete')go();else addEventListener('load',go);}
+})();
+</script>
