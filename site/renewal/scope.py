@@ -13,6 +13,7 @@ BASE = """#iru{font-family:var(--font);font-size:16px;line-height:1.6;color:var(
 #iru :where(*:not(.c2x *)):where(img){max-width:none}
 #iru :where(*:not(.c2x *)):where(*){border-color:currentColor}#iru *:not(.c2x *)::before,#iru *:not(.c2x *)::after{border-color:currentColor}
 #iru :where(*:not(.c2x *)):where(section){position:static}#iru :where(*:not(.c2x *)):where(i){display:inline}
+#iru .num:not(.c2x *){width:auto;min-width:0;max-width:none;height:auto;padding:0;border:0;border-radius:0}
 """
 
 
