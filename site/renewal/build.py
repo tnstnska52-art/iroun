@@ -25,6 +25,10 @@ SRC = {  # 출력 이름: (시안 파일, 이 페이지 주소)
     'faq': ('faq/faq.html', W + '/faq'),
 }
 
+# 아임웹 기본 머리말·꼬리말과 아래 섹션 숨김 (기존 위젯과 같은 방식)
+HIDE = ('<style>#header,#footer,.header_wrap,.footer_wrap,#doz_header,#doz_footer,#doz_header_wrap,.menu_wrap{display:none!important}'
+        'body{padding-top:0!important}.section_wrap:has(#iru)~.section_wrap{display:none!important}</style><i id="iru" hidden></i>')
+
 # 확인 창으로 가서 자동으로 '시작'을 누르는 공통 스크립트 (/check 에서만 실제로 동작)
 GO_START = r'''<script>
 (function(){
@@ -76,7 +80,7 @@ def convert(name):
         s = re.sub(r"\(function\(\)\{\n  var el=document\.getElementById\('cnt'\).*?\n\}\)\(\);\n", '', s, flags=re.S)
     s = s.replace('</body>', '').replace('</html>', '')
     s = re.sub(r'<!doctype html>|<html[^>]*>|<head>|</head>|<body[^>]*>', '', s, flags=re.I)
-    s += '\n' + GO_START + '\n'
+    s = HIDE + '\n' + s + '\n' + GO_START + '\n'
     open(os.path.join(OUT, name + '.html'), 'w').write(s.strip() + '\n')
     return len(s.encode())
 
