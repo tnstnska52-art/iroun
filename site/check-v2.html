@@ -299,7 +299,23 @@ var FIT_SECTOR=/글로벌|바이오|Biotech|치과|의료\s*기기|인구\s*감�
  FIT_TARGET=/소셜\s*임팩트|사회\s*적\s*(기업|가치|경제)|장애|보조\s*공학|북한|이탈\s*주민|산재|재기|재도약|폐업|휴업|고령자|연계\s*고용|희망\s*리턴|국가\s*유공|보훈|고용\s*유지/,
  FIT_INFO=/조회\s*안내|제도\s*안내/,FIT_START=/팁스|TIPS|창업\s*[·ㆍ]?\s*벤처|벤처\s*기업|스타트업|예비\s*창업|초기\s*창업/,
  FIT_OWN={'농림어업':/수산|어촌|양식|어선|축산|천일염/,'제조':/인버터|압축기|변압기|방지\s*시설|온실가스|배출권|수출|물류|특허|기술\s*보호|위조\s*방지|기능성\s*평가|디지털\s*포렌식|산업\s*집적/,'정보통신':/특허|기술\s*보호|디지털\s*포렌식|영상|방송/,'숙박':/관광객\s*유치/,'도소매':/물류|수출/,'운수':/물류/,'보건·복지':/치과|의료\s*기기/};
-function fitWhy(b){var t=String(b.title||''),a=S.ans,own=FIT_OWN[a.industry];if(FIT_INFO.test(t))return '조회 안내';if(FIT_TARGET.test(t))return '특정 대상 전용';if(FIT_SECTOR.test(t)&&!(own&&own.test(t)))return '다른 업종 전용';if(FIT_START.test(t)&&a.openedYear&&a.openedYear<=YEAR-7)return '창업 초기 전용';return '';}
+/* 직원이 있어야 받는 공고, 위험 업종 안전 공고, 여성 대표 전용, 기술·벤처 창업 전용 */
+var FIT_EMP=/직장\s*어린이집|유연\s*근무|일\s*[·ㆍ]?\s*생활\s*균형|육아\s*휴직|출산\s*휴가|고용\s*보조금|내일\s*채움|근로자|채용|일자리\s*안정|고용\s*친화|고용\s*환경|클린\s*사업장|작업\s*환경\s*측정|안전\s*보호구/,
+ FIT_HAZARD=/고위험\s*산업|작업\s*환경\s*측정|안전\s*보호구|클린\s*사업장|화학\s*물질|기술\s*유출/,
+ FIT_WOMAN=/여성/,FIT_PRE=/예비\s*창업/,FIT_EARLY=/초기\s*창업/,FIT_JUMP=/창업\s*도약/,FIT_TECH=/팁스|TIPS|창업\s*[·ㆍ]?\s*벤처|벤처\s*기업|스타트업|기술\s*창업|딥\s*테크/,
+ HAZARD_OK={'제조':1,'건설':1,'운수':1,'농림어업':1},LOCAL={'음식점':1,'도소매':1,'서비스':1,'숙박':1,'교육':1,'운수':1,'보건·복지':1,'건설':1,'농림어업':1};
+function fitWhy(b){var t=String(b.title||''),a=S.ans,own=FIT_OWN[a.industry],age=a.openedYear?YEAR-a.openedYear:null;
+ if(FIT_INFO.test(t))return '조회 안내';if(FIT_TARGET.test(t))return '특정 대상 전용';
+ if(FIT_WOMAN.test(t)&&a.woman!=='예')return '여성 대표 전용';
+ if(FIT_SECTOR.test(t)&&!(own&&own.test(t)))return '다른 업종 전용';
+ if(FIT_HAZARD.test(t)&&a.industry&&!HAZARD_OK[a.industry])return '다른 업종 전용';
+ if(FIT_EMP.test(t)&&a.employeeBand==='없음')return '직원 있는 사업장 전용';
+ if(FIT_PRE.test(t)&&a.openedYear)return '창업 전 전용';
+ if(FIT_TECH.test(t)&&LOCAL[a.industry])return '기술·벤처 창업 전용';
+ if(FIT_EARLY.test(t)&&age!==null&&age>3)return '창업 초기 전용';
+ if(FIT_JUMP.test(t)&&age!==null&&(age<3||age>7))return '창업 3~7년 전용';
+ if(FIT_START.test(t)&&age!==null&&age>=7)return '창업 초기 전용';
+ return '';}
 function summarize(items){var r=__sum(items);r.recTotal=sumOf(r.recItems);var rs=r.recItems.filter(function(x){return x.result==='조건 일치';});r.recSure=rs.length;r.recSureTotal=sumOf(rs);return r;}
 function __sum(items){items.sort(order);items=dedupe(items);var sure=items.filter(function(x){return x.result==='조건 일치';});var big=items.filter(function(x){return (x.benefit.maxAmount||0)>BIG;}).length;return {items:items,sure:sure.length,sureTotal:sumOf(sure),sureCounted:sure.filter(function(x){var a=amtOf(x.benefit)||0;return a>0&&a<=BIG&&rank(x.benefit)<=2;}).length,maybe:items.length-sure.length,likelyTotal:sumOf(items.filter(likely)),total:sumOf(items),recItems:items.filter(function(x){return !fitWhy(x.benefit);}),big:big,tailored:items.filter(function(x){return tailored(x.benefit);}).length};}
 /* 업종 관문: 공고가 다른 업종을 위한 것이면 거른다(out), 매장 업종에 수출·기술개발 공고는 확인 필요(check) */
