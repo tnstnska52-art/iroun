@@ -13,6 +13,8 @@ BASE = """#iru{font-family:var(--font);font-size:16px;line-height:1.6;color:var(
 #iru :where(*:not(.c2x *)):where(img){max-width:none}
 #iru :where(*:not(.c2x *)):where(*){border-color:currentColor}#iru *:not(.c2x *)::before,#iru *:not(.c2x *)::after{border-color:currentColor}
 #iru :where(*:not(.c2x *)):where(section){position:static}#iru :where(*:not(.c2x *)):where(i){display:inline}
+#iru .wrap:not(.c2x *)::before,#iru .wrap:not(.c2x *)::after{content:none!important;display:none!important}
+@media(max-width:900px){#iru header .hd{padding-left:max(16px,env(safe-area-inset-left,0px))!important;padding-right:max(16px,env(safe-area-inset-right,0px))!important}#iru header .mm-btn{margin-left:auto!important;margin-right:-10px!important}}
 #iru .num:not(.c2x *){width:auto;min-width:0;max-width:none;height:auto;padding:0;border:0;border-radius:0}
 """
 
