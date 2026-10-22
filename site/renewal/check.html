@@ -1223,6 +1223,8 @@ function openDetail(id){var x=findItem(id);if(!x)return;var b=x.benefit,dd=dday(
  openModal(h);[].forEach.call(sheet.querySelectorAll('[data-join]'),function(b){b.onclick=openJoin;});}
 /* ===== 무료 회원 등록 → 아임웹 상담신청 게시판 저장 ===== */
 var INDMAP={'음식점':'요식업','도소매':'도소매업','제조':'제조업','건설':'건설업','서비스':'기타','운수':'기타','숙박':'기타','교육':'기타','보건·복지':'기타','정보통신':'온라인판매업','농림어업':'기타','기타':'기타'};
+/* 문의 양식의 '매출규모'는 필수 항목. 매출이 없거나 작년 매출이 없으면 올해 매출, 그것도 없으면 '1억미만'으로 보낸다 */
+function revForm(){var b=revBand();if(b&&REVMAP[b])return REVMAP[b];var n=S.ans.revNow;if(n&&REVMAP[n])return REVMAP[n];return '1억미만';}
 var REVMAP={'5천만 원 미만':'1억미만','5천만~1억 원':'1억미만','1억~3억 원':'1~3억','3억~5억 원':'3~5억','5억~10억 원':'5~10억','10억 원 이상':'10억 이상'};
 function openJoin(){var pre=load('irw_check_member_draft')||{};
  var h='<div class="c2-join"><h3>30초면 끝나요<br>나머지 지원금까지 전부 열려요</h3><div class="c2-chips"><span>비용 없음</span><span>카드 등록 없음</span><span>자동결제 없음</span></div>';
@@ -1247,13 +1249,13 @@ async function submitJoin(){var name=sheet.querySelector('#j-name').value.trim()
  save('irw_check_member_draft',{name:name,tel:tel});go.disabled=true;go.textContent='등록 중…';
  try{if(!S.est&&hasProfile())compute();var f=document.querySelector('.form-widget form[id^=addForm]');if(!f)throw new Error('form');var fd=new URLSearchParams();[].forEach.call(f.querySelectorAll('input[type=hidden]'),function(i){fd.append(i.name,i.value);});
   var phone=digits.replace(/^(\d{3})(\d{3,4})(\d{4})$/,'$1-$2-$3');var a=S.ans;var hi=a.credit==='900점 이상'||a.credit==='800~899점'||a.credit==='750~799점';
-  fd.append('input_82140128aa91a',name);fd.append('input_d80bc05bd0e00',((a.province||'')+' '+(a.district||'')).trim()||'-');fd.append('input_6a69ca6d51aa1',phone);fd.append('select_BkUsP4zJwu',hi?'750점 이상':'750점 미만');fd.append('select_x6Wm3k1l88',INDMAP[a.industry]||'기타');fd.append('select_2ET23k2z10',REVMAP[revBand()]||'');fd.append('textarea_20To0555d2',joinText(mkt));
+  fd.append('input_82140128aa91a',name);fd.append('input_d80bc05bd0e00',((a.province||'')+' '+(a.district||'')).trim()||'-');fd.append('input_6a69ca6d51aa1',phone);fd.append('select_BkUsP4zJwu',hi?'750점 이상':'750점 미만');fd.append('select_x6Wm3k1l88',INDMAP[a.industry]||'기타');fd.append('select_2ET23k2z10',revForm());fd.append('textarea_20To0555d2',joinText(mkt));
   var r=await fetch('/ajax/form_add.cm',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},body:fd.toString()});var j=null;try{j=await r.json();}catch(e){}
   if(!j||j.msg!=='SUCCESS')throw new Error((j&&j.msg)||'서버 응답 오류');
   S.member={name:name,tel:phone,at:new Date().toISOString()};save('irw_check_member',S.member);
   sendLead(name,phone,mkt);
   openModal('<div class="c2-ok"><b>등록 완료</b><p style="margin:0;color:#4E5968">'+esc(name)+'님, 전체 결과가 열렸어요.</p><button type="button" class="c2-btn" id="j-done">전체 결과 보기</button></div>');sheet.querySelector('#j-done').onclick=function(){closeModal();if(hasProfile()&&S.ans.done){renderR();}else renderHome();scrollTop();};
- }catch(e){go.disabled=false;go.textContent='무료로 전체 결과 보기';err.textContent='등록에 실패했어요. 잠시 후 다시 시도하거나 010-8243-3126으로 연락 주세요.';err.hidden=false;}}
+ }catch(e){go.disabled=false;go.textContent='무료로 전체 결과 보기';err.textContent='등록에 실패했어요. 잠시 후 다시 시도하거나 tnstnska52@naver.com으로 연락 주세요.';err.hidden=false;}}
 /* ===== 공고 불러오기 ===== */
 async function fetchList(){var c=load('irw_check_cache');if(c&&Date.now()-c.at<10*60*1000&&Array.isArray(c.list))return c.list;var r=await fetch(window.IRW_CHECK_API||API,{cache:'no-store'});var d=await r.json();var list=Array.isArray(d)?d:(d.items||d.benefits||[]);save('irw_check_cache',{at:Date.now(),list:list});return list;}
 (async function init(){renderHome();try{S.list=await fetchList();}catch(e){S.list=[];box.innerHTML='<div class="c2-empty"><b>공고를 불러오지 못했어요</b><span>잠시 후 새로고침해 주세요.</span></div>';return;}
