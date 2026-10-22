@@ -2,17 +2,17 @@
 import re, tinycss2
 
 BASE = """#iru{font-family:var(--font);font-size:16px;line-height:1.6;color:var(--ink);font-weight:400;letter-spacing:normal;word-break:keep-all;text-align:left}
-#iru :where(*){font-family:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;text-transform:none}
-#iru :where(p,span,li,dt,dd,a,label,em,i,u,section,article,ul,ol,dl,summary,details,nav,figure,blockquote,output,td,th,input,button,select,textarea){font-weight:inherit;font-size:inherit}
-#iru :where(b,strong){font-weight:bolder}
-#iru :where(h1,h2,h3,h4,h5,h6){font-weight:bold}
-#iru :where(h1){font-size:2em}#iru :where(h2){font-size:1.5em}#iru :where(h3){font-size:1.17em}#iru :where(h4,h5,h6){font-size:1em}
-#iru :where(small){font-size:smaller}
-#iru :where(label,output,figure){margin:0;padding:0}
-#iru :where(a,img,span,input,button,svg){vertical-align:baseline}
-#iru :where(img){max-width:none}
-#iru :where(*){border-color:currentColor}#iru *::before,#iru *::after{border-color:currentColor}
-#iru :where(section){position:static}#iru :where(i){display:inline}
+#iru :where(*:not(#chk2 *,#c2-modal *)):where(*){font-family:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;text-transform:none}
+#iru :where(*:not(#chk2 *,#c2-modal *)):where(p,span,li,dt,dd,a,label,em,i,u,section,article,ul,ol,dl,summary,details,nav,figure,blockquote,output,td,th,input,button,select,textarea){font-weight:inherit;font-size:inherit}
+#iru :where(*:not(#chk2 *,#c2-modal *)):where(b,strong){font-weight:bolder}
+#iru :where(*:not(#chk2 *,#c2-modal *)):where(h1,h2,h3,h4,h5,h6){font-weight:bold}
+#iru :where(*:not(#chk2 *,#c2-modal *)):where(h1){font-size:2em}#iru :where(*:not(#chk2 *,#c2-modal *)):where(h2){font-size:1.5em}#iru :where(*:not(#chk2 *,#c2-modal *)):where(h3){font-size:1.17em}#iru :where(*:not(#chk2 *,#c2-modal *)):where(h4,h5,h6){font-size:1em}
+#iru :where(*:not(#chk2 *,#c2-modal *)):where(small){font-size:smaller}
+#iru :where(*:not(#chk2 *,#c2-modal *)):where(label,output,figure){margin:0;padding:0}
+#iru :where(*:not(#chk2 *,#c2-modal *)):where(a,img,span,input,button,svg){vertical-align:baseline}
+#iru :where(*:not(#chk2 *,#c2-modal *)):where(img){max-width:none}
+#iru :where(*:not(#chk2 *,#c2-modal *)):where(*){border-color:currentColor}#iru *:not(#chk2 *,#c2-modal *)::before,#iru *:not(#chk2 *,#c2-modal *)::after{border-color:currentColor}
+#iru :where(*:not(#chk2 *,#c2-modal *)):where(section){position:static}#iru :where(*:not(#chk2 *,#c2-modal *)):where(i){display:inline}
 """
 
 
@@ -29,12 +29,24 @@ def split_sel(prelude):
     return [s.strip() for s in out if s.strip()]
 
 
+NOTW = ':not(#chk2,#chk2 *,#c2-modal,#c2-modal *)'
+PE = re.compile(r'((?:::?(?:before|after|placeholder|selection|marker|first-line|first-letter|-webkit-[\w-]+))+)$')
+
+
+def guard(sel):
+    """지원금 확인 창(#chk2, #c2-modal) 안쪽에는 시안 CSS가 닿지 않게 한다."""
+    m = PE.search(sel)
+    if m:
+        return sel[:m.start()] + NOTW + m.group(1)
+    return sel + NOTW
+
+
 def pre(sel):
     if re.match(r'(:root|html)\b', sel) or sel.startswith('body'):
         return [sel]
     if sel.startswith('*'):
-        return ['#iru' + sel[1:], '#iru ' + sel]
-    return ['#iru ' + sel]
+        return ['#iru' + sel[1:], guard('#iru ' + sel)]
+    return [guard('#iru ' + sel)]
 
 
 def walk(rules):
