@@ -25,6 +25,8 @@ export const checkLeadInput = z.object({
   loans: z.array(z.object({ kind: short(30), amountBand: short(40).optional(), rateBand: short(40).optional() })).max(10).default([]),
   supportThisYear: z.number().min(0).max(1e11).optional(), supportLastYear: z.number().min(0).max(1e11).optional(), sureCount: z.number().int().min(0).max(10000).optional(),
   consent: z.literal(true), marketing: z.boolean().optional(),
+  // 직원 전용 링크로 들어온 고객: 전산이 발급한 추천 식별자(로그인 권한·비밀키 아님). 전산이 담당 직원을 정하는 근거로만 쓴다.
+  referralToken: z.string().regex(/^[a-f0-9]{64}$/).optional(),
 }).strict();
 export type CheckLeadInput = z.infer<typeof checkLeadInput>;
 
@@ -37,6 +39,7 @@ export function toCrmLead(x: CheckLeadInput, now = new Date()) {
     openedYear: x.openedYear ?? null, employeeBand: x.employeeBand ?? "", entity: x.entity ?? "", revNow: x.revNow ?? "", revLast: x.revLast ?? "",
     loans: x.loans.filter((l) => l.kind !== "없음").map((l) => ({ kind: l.kind, amount: AMOUNT_MID[l.amountBand ?? ""] ?? 0, rate: RATE_MID[l.rateBand ?? ""] ?? 0, amountBand: l.amountBand ?? "", rateBand: l.rateBand ?? "" })),
     supportThisYear: man(x.supportThisYear), supportLastYear: man(x.supportLastYear), sureCount: x.sureCount ?? null,
+    ...(x.referralToken ? { referralToken: x.referralToken } : {}),
   };
 }
 
