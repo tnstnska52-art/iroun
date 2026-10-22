@@ -620,7 +620,7 @@ body{padding-bottom:72px}}
   <div class="team-hero">
     <div class="team-photo"><picture><source media="(max-width:600px)" srcset="https://cdn.jsdelivr.net/gh/tnstnska52-art/iroun@76ef38de7601bbca3bef9d4a58ef3ca543bf41c0/site/img/team-mo.jpg" width="1170" height="1560"><img src="https://cdn.jsdelivr.net/gh/tnstnska52-art/iroun@76ef38de7601bbca3bef9d4a58ef3ca543bf41c0/site/img/team-pc.jpg" alt="이로운사람들 상담팀 단체 사진" width="2172" height="724"></picture><span class="sign">주식회사 이로운사람들 일동</span><div class="team-over"><div class="over-in"><h2><span class="kick">대한민국 사업자가</span>놓치는 <em>지원금</em>이 없도록<br><em>이로운사람들</em>이<br class="mbr"> 끝까지 챙깁니다</h2>
 <div class="live" id="live" aria-live="polite">
-  <div class="live-top"><span class="dot" aria-hidden="true"></span><b>실시간</b><span id="lvAt">공고를 불러오는 중</span><span class="lv-ex" id="lvEx" hidden>예시 숫자</span></div>
+  <div class="live-top"><span class="dot" aria-hidden="true"></span><b>예시</b><span id="lvAt">사업장 한 곳 기준</span><span class="lv-ex" id="lvEx" hidden>예시 숫자</span></div>
   <div class="live-row">
     <div class="lv c-blue"><small><span class="lf">지금 신청할 수 있는 지원금</span><span class="ls">신청 가능</span></small><strong><span class="num" id="lvN">0</span><i>건</i><em class="new" aria-hidden="true">NEW</em></strong></div>
     <div class="lv main"><small><span class="lf">공고에 적힌 지원 금액 합계</span><span class="ls">지원금 합계</span></small><strong><span class="num" id="lvA">0</span><i id="lvU">억 원</i><em class="up" aria-hidden="true">▲</em></strong></div>
@@ -943,11 +943,12 @@ body{padding-bottom:72px}}
     function f(t){if(!t0)t0=t;var p=Math.min(1,(t-t0)/ms),e=1-Math.pow(1-p,4);el.textContent=fmt(to*e);if(p<1)requestAnimationFrame(f)}requestAnimationFrame(f)}
   var int=function(v){return Math.round(v).toLocaleString('ko-KR')},one=function(v){return (Math.round(v*10)/10).toLocaleString('ko-KR',{minimumFractionDigits:0,maximumFractionDigits:1})};
   function show(n,a,c,ex){
-    $('lvEx').hidden=true;var now=new Date();$('lvAt').textContent=now.getHours()+'시 '+String(now.getMinutes()).padStart(2,'0')+'분 기준';
+    $('lvEx').hidden=true;
     roll($('lvN'),n,int,1600);roll($('lvC'),c,int,1600);
     if(a>=1){$('lvU').textContent='억 원';roll($('lvA'),a,int,2200)}else{$('lvU').textContent='만 원';roll($('lvA'),a*1e4,int,2200)}
   }
   function fallback(){show(EX.n,EX.a,EX.c,true)}
+  fallback();return;
   var done=false,timer=setTimeout(function(){if(!done){done=true;fallback()}},4000);
   try{
     fetch(API,{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){

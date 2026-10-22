@@ -67,6 +67,16 @@ def convert(name):
     s = s.replace(f'href="{W}/check" target="_blank" rel="noopener"', f'href="{START}"')
     s = re.sub(r' target="_blank" rel="noopener"(?=[^>]*>)', lambda m: m.group(0), s)
     if name == 'service':
+        # 카운터: 사용자가 정한 고정 숫자(37건·5,230만 원·31건). '실시간·시각' 대신 '예시' 표기
+        old = '<b>실시간</b><span id="lvAt">공고를 불러오는 중</span>'
+        assert old in s
+        s = s.replace(old, '<b>예시</b><span id="lvAt">사업장 한 곳 기준</span>')
+        old = "$('lvEx').hidden=true;var now=new Date();$('lvAt').textContent=now.getHours()+'시 '+String(now.getMinutes()).padStart(2,'0')+'분 기준';"
+        assert old in s
+        s = s.replace(old, "$('lvEx').hidden=true;")
+        old = '  function fallback(){show(EX.n,EX.a,EX.c,true)}\n'
+        assert old in s
+        s = s.replace(old, old + '  fallback();return;\n')
         s = s.replace('href="#top"', f'href="{START}"')
     if name == 'check':
         w = open('/home/claude/iroun/site/check-v2.html').read()
