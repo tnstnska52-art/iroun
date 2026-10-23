@@ -13,6 +13,14 @@ describe("홈페이지 조회 고객 → 전산", () => {
     expect(x.supportThisYear).toBe(2973);
     expect(x.supportLastYear).toBeNull();
   });
+  it("간소화된 질문의 선택값을 그대로 전달하며 제거된 질문의 답을 만들지 않는다", () => {
+    const simple = checkLeadInput.parse({ name: "가상대표", phone: "01055550099", consent: true, questionnaireVersion: 2, revenueYear: 2026, openedYear: 2022, revNow: "1000~5000만원", revLast: "2억 이상", creditBand: "700~750점", currentArrears: "O", premises: "임차" });
+    const out = toCrmLead(simple);
+    expect(out).toMatchObject({ questionnaireVersion: 2, revenueYear: 2026, openedYear: 2022, revNow: "1000~5000만원", revLast: "2억 이상", creditBand: "700~750점", currentArrears: "O", premises: "임차", loans: [], employeeBand: "" });
+    expect(out).not.toHaveProperty("creditNice"); expect(out).not.toHaveProperty("taxArrears");
+    expect(toCrmLead(input)).not.toHaveProperty("questionnaireVersion");
+    for (const bad of [{ currentArrears: "예" }, { creditBand: "900점 이상" }, { questionnaireVersion: 3 }]) expect(checkLeadInput.safeParse({ ...simple, ...bad }).success).toBe(false);
+  });
   it("동의 없거나 모르는 항목이 있으면 거절", () => {
     expect(checkLeadInput.safeParse({ ...input, consent: false }).success).toBe(false);
     expect(checkLeadInput.safeParse({ ...input, password: "x" }).success).toBe(false);

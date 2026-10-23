@@ -22,6 +22,9 @@ export const checkLeadInput = z.object({
   bizName: short(60).optional(), industry: short(30).optional(), province: short(20).optional(), district: short(20).optional(),
   openedYear: z.number().int().min(1950).max(2100).optional(), employeeBand: short(20).optional(), entity: short(10).optional(),
   revNow: short(30).optional(), revLast: short(30).optional(),
+  questionnaireVersion: z.literal(2).optional(), revenueYear: z.number().int().min(2020).max(2100).optional(),
+  creditBand: z.enum(["750~990점", "700~750점", "600~700점", "600점 미만"]).optional(),
+  currentArrears: z.enum(["O", "X"]).optional(), premises: z.enum(["임차", "자가"]).optional(),
   loans: z.array(z.object({ kind: short(30), amountBand: short(40).optional(), rateBand: short(40).optional() })).max(10).default([]),
   supportThisYear: z.number().min(0).max(1e11).optional(), supportLastYear: z.number().min(0).max(1e11).optional(), sureCount: z.number().int().min(0).max(10000).optional(),
   consent: z.literal(true), marketing: z.boolean().optional(),
@@ -39,6 +42,11 @@ export function toCrmLead(x: CheckLeadInput, now = new Date()) {
     openedYear: x.openedYear ?? null, employeeBand: x.employeeBand ?? "", entity: x.entity ?? "", revNow: x.revNow ?? "", revLast: x.revLast ?? "",
     loans: x.loans.filter((l) => l.kind !== "없음").map((l) => ({ kind: l.kind, amount: AMOUNT_MID[l.amountBand ?? ""] ?? 0, rate: RATE_MID[l.rateBand ?? ""] ?? 0, amountBand: l.amountBand ?? "", rateBand: l.rateBand ?? "" })),
     supportThisYear: man(x.supportThisYear), supportLastYear: man(x.supportLastYear), sureCount: x.sureCount ?? null,
+    ...(x.questionnaireVersion ? { questionnaireVersion: x.questionnaireVersion } : {}),
+    ...(x.revenueYear !== undefined ? { revenueYear: x.revenueYear } : {}),
+    ...(x.creditBand ? { creditBand: x.creditBand } : {}),
+    ...(x.currentArrears ? { currentArrears: x.currentArrears } : {}),
+    ...(x.premises ? { premises: x.premises } : {}),
     ...(x.referralToken ? { referralToken: x.referralToken } : {}),
   };
 }
