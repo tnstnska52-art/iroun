@@ -104,7 +104,7 @@ export function ownerGate(b: Pick<Benefit, 'title'> & { summary?: string }, woma
 
 /** 같은 사업이 여러 출처(기업마당·보조금24 등)에서 들어온 중복을 알아보는 열쇠 */
 export function sameProgramKey(title: string): string {
-  return title.replace(/\[[^\]]*\]|\([^)]*\)|\d{4}\s*년|제?\s*\d+\s*(차|회|기|분기)|하반기|상반기|공고|사업|모집|참여\s*기업|신청|안내|지원|금|[\s·ㆍ,./-]/g, '');
+  return title.replace(/\[[^\]]*\]|\([^)]*\)|트랙\s*[IVXⅠ-Ⅻ\d]+|수정|연장|추가|정정|재\s*공고|\d{4}\s*년|제?\s*\d+\s*(차|회|기|분기)|하반기|상반기|공고|사업|모집|참여\s*기업|신청|안내|지원|금|[\s·ㆍ,./-]/g, '');
 }
 /** 앞에 있는 것(우선순위가 높은 것)만 남기고 같은 사업의 중복을 뺀다 */
 export function dedupePrograms<T extends { benefit: Pick<Benefit, 'title'> }>(items: T[]): T[] {

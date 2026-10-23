@@ -170,7 +170,30 @@
 .doz_sys .c2-err{color:var(--red);font-size:14px;margin:0}
 .doz_sys .c2-ok{background:#fff;border-radius:18px;padding:30px 20px;text-align:center;display:flex;flex-direction:column;gap:10px}
 .doz_sys .c2-ok b{font-size:22px}
+.doz_sys #chk2,.doz_sys #c2-modal{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+.doz_sys #chk2 h2{letter-spacing:-.03em}
+.doz_sys #chk2 .c2-opt{background:#fff;border:1.5px solid var(--line);font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.05);transition:border-color .15s,background-color .15s,box-shadow .15s,transform .1s}
+@media (hover:hover){.doz_sys #chk2 .c2-opt:hover{border-color:#9DB4F4;box-shadow:0 6px 16px -8px rgba(43,92,230,.45)}}
+.doz_sys #chk2 .c2-opt:active{transform:scale(.98)}
+.doz_sys #chk2 .c2-opt.on{border-color:var(--blue);background:var(--soft);color:var(--blue);font-weight:700;box-shadow:0 0 0 3px rgba(43,92,230,.12)}
+.doz_sys #chk2 .c2-opt:focus-visible{outline:3px solid rgba(43,92,230,.35);outline-offset:2px}
+.doz_sys .c2-row .ic{width:44px;height:44px;border-radius:14px;font-size:0}
+.doz_sys .c2-row .ic svg{display:block}
+.doz_sys .c2-row .ic-cash{background:#E8EFFE;color:#2B5CE6}
+.doz_sys .c2-row .ic-refund{background:#E3F6EC;color:#0F8A55}
+.doz_sys .c2-row .ic-voucher{background:#F1EAFE;color:#7A3FE0}
+.doz_sys .c2-row .ic-purchase{background:#FFF0E5;color:#E0620D}
+.doz_sys .c2-row .ic-service{background:#E2F5F7;color:#0B7F8F}
+.doz_sys .c2-row .ic-loan{background:#EEF1F5;color:#4E5968}
+.doz_sys .c2-row .ic-lock{background:#F2F4F7;color:#B0B8C1}
+.doz_sys .c2-row.red .ic{background:#FDECEA;color:#D92D20}
+.doz_sys .c2-chev{flex:none;display:flex;align-items:center;color:#B0B8C1;margin-left:-4px;transition:transform .15s,color .15s}
+.doz_sys button.c2-row{cursor:pointer;transition:background-color .15s}
+@media (hover:hover){.doz_sys button.c2-row:hover .t b{color:var(--blue)}.doz_sys button.c2-row:hover .c2-chev{color:var(--blue);transform:translateX(3px)}.doz_sys button.c2-row.red:hover .t b,.doz_sys button.c2-row.red:hover .c2-chev{color:#D92D20}}
+.doz_sys button.c2-row:active{opacity:.75}
+@media (max-width:480px){.doz_sys .c2-list .c2-row .t b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.35}.doz_sys .c2-list .c2-row .c2-amt{font-size:14px}}
 @media (prefers-reduced-motion:reduce){.doz_sys #chk2 *{animation:none!important;transition:none!important}}
+.c2-fit{margin-bottom:6px}.c2-fit button.on{font-weight:800}
 </style>
 <script>
 (function(){
@@ -293,7 +316,31 @@ var FAR_TITLE=/수출|중동|해외|글로벌|장애|보조\s*공학|북한|이�
 function likely(x){var b=x.benefit;if(x.result==='조건 일치'||!x.m)return false;if(!x.m.unknowns.every(function(u){return /세부 자격은 공식 신청처/.test(u);}))return false;if(FAR_TITLE.test(b.title)||industryGate(b,S.ans.industry)!=='ok'||ownerGate(b)!=='ok')return false;var a=amtOf(b);return a>0&&a<=5e7;}
 function amtOf(b){return b.maxAmount||estOf(b);}
 function sumOf(xs){var t=0;xs.forEach(function(x){var a=amtOf(x.benefit)||0;if(a>0&&a<=BIG&&rank(x.benefit)<=2)t+=a;});return t;}
-function summarize(items){items.sort(order);items=dedupe(items);var sure=items.filter(function(x){return x.result==='조건 일치';});var big=items.filter(function(x){return (x.benefit.maxAmount||0)>BIG;}).length;return {items:items,sure:sure.length,sureTotal:sumOf(sure),sureCounted:sure.filter(function(x){var a=amtOf(x.benefit)||0;return a>0&&a<=BIG&&rank(x.benefit)<=2;}).length,maybe:items.length-sure.length,likelyTotal:sumOf(items.filter(likely)),total:sumOf(items),big:big,tailored:items.filter(function(x){return tailored(x.benefit);}).length};}
+/* 대표님들이 신청할 일이 없는 공고: 다른 업종 전용, 특정 대상 전용, 오래된 사업장의 창업 초기 전용, 조회 안내. 빈 문자열이면 '신청해볼 만한' */
+var FIT_SECTOR=/글로벌|바이오|Biotech|치과|의료\s*기기|인구\s*감소|천일염|광산|광업|탐광|굴진|굴뚝|어촌|수산|양식|어선|축산|방송|기획\s*취재|영상|연구\s*(시설|장비|인력)|나눔\s*장비|공공연|특허|직무\s*발명|위조\s*방지|온실가스|배출권|방지\s*시설|에너지\s*효율\s*시장|산업\s*집적|인버터|압축기|변압기|물류|수출|중동|국내\s*복귀|기술\s*보호|디지털\s*포렌식|산업\s*현장\s*교수|전통\s*시장|상인회|상인\s*동아리|방송\s*광고|TV\s*수신료|스포츠|관광객\s*유치|기능성\s*평가|수질|대기\s*오염|측정\s*기기|납품\s*대금|소공인|사물\s*인터넷|IoT|에너지\s*기술|공유\s*대학|브랜드\s*분쟁|상표|지식\s*재산|쌀|꿀|양봉|식물\s*백신|농산물|축산물|유해\s*물질|사출|HACCP|뿌리\s*기업|정보\s*보호|블록\s*체인|로케이션|촬영|노선|항공|해외|조달|국제\s*특송|식품\s*기능성/,
+ FIT_TARGET=/사업\s*정리|산업\s*[‧·ㆍ]?\s*일자리\s*전환|베이비\s*부머|라이트\s*잡|구직자|매치업|소셜\s*임팩트|사회\s*적\s*(기업|가치|경제)|장애|보조\s*공학|북한|이탈\s*주민|산재|재기|재도약|폐업|휴업|고령자|연계\s*고용|희망\s*리턴|국가\s*유공|보훈|고용\s*유지/,
+ FIT_INFO=/조회\s*안내|제도\s*안내/,FIT_START=/팁스|TIPS|창업\s*[·ㆍ]?\s*벤처|벤처\s*기업|스타트업|예비\s*창업|초기\s*창업/,
+ FIT_OWN={'농림어업':/수산|어촌|양식|어선|축산|천일염|쌀|꿀|양봉|식물\s*백신|농산물|축산물/,'제조':/뿌리\s*기업|정보\s*보호|해외|조달|국제\s*특송|식품\s*기능성|인버터|압축기|변압기|방지\s*시설|온실가스|배출권|수출|물류|특허|기술\s*보호|위조\s*방지|기능성\s*평가|디지털\s*포렌식|산업\s*집적|수질|대기\s*오염|측정\s*기기|납품\s*대금|소공인|사물\s*인터넷|IoT|에너지\s*기술|공유\s*대학|브랜드\s*분쟁|상표|지식\s*재산|유해\s*물질|사출|HACCP|쌀|꿀|농산물|축산물/,'음식점':/HACCP/,'정보통신':/정보\s*보호|블록\s*체인|해외|조달|특허|기술\s*보호|디지털\s*포렌식|영상|방송/,'숙박':/관광객\s*유치|노선|항공/,'도소매':/상표|지식\s*재산|브랜드\s*분쟁/,'운수':/물류/,'보건·복지':/치과|의료\s*기기/};
+/* 직원이 있어야 받는 공고, 위험 업종 안전 공고, 여성 대표 전용, 기술·벤처 창업 전용 */
+var FIT_EMP=/직장\s*어린이집|유연\s*근무|일\s*[·ㆍ]?\s*생활\s*균형|육아\s*휴직|출산\s*휴가|고용\s*보조금|내일\s*채움|근로자|채용|일자리\s*안정|고용\s*친화|고용\s*환경|클린\s*사업장|작업\s*환경\s*측정|안전\s*보호구/,
+ FIT_HAZARD=/고위험\s*산업|작업\s*환경\s*측정|안전\s*보호구|클린\s*사업장|화학\s*물질|기술\s*유출/,
+ FIT_BIG=/직장\s*어린이집|기숙사|공동\s*채용/,SMALL={'없음':1,'1~4명':1,'5~9명':1},FIT_WOMAN=/여성/,FIT_PRE=/예비\s*창업/,FIT_EARLY=/초기\s*창업/,FIT_JUMP=/창업\s*도약/,FIT_TECH=/창업\s*도약|팁스|TIPS|창업\s*[·ㆍ]?\s*벤처|벤처\s*기업|스타트업|기술\s*창업|딥\s*테크/,
+ HAZARD_OK={'제조':1,'건설':1,'운수':1,'농림어업':1},LOCAL={'음식점':1,'도소매':1,'서비스':1,'숙박':1,'교육':1,'운수':1,'보건·복지':1,'건설':1,'농림어업':1};
+function fitWhy(b){var t=String(b.title||''),a=S.ans,own=FIT_OWN[a.industry],age=a.openedYear?YEAR-a.openedYear:null;
+ if(FIT_INFO.test(t))return '조회 안내';if(FIT_TARGET.test(t))return '특정 대상 전용';
+ if(FIT_WOMAN.test(t)&&a.woman!=='예')return '여성 대표 전용';
+ if(FIT_SECTOR.test(t)&&!(own&&own.test(t)))return '다른 업종 전용';
+ if(FIT_HAZARD.test(t)&&a.industry&&!HAZARD_OK[a.industry])return '다른 업종 전용';
+ if(FIT_EMP.test(t)&&a.employeeBand==='없음')return '직원 있는 사업장 전용';
+ if(FIT_BIG.test(t)&&SMALL[a.employeeBand])return '규모 큰 사업장 전용';
+ if(FIT_PRE.test(t)&&a.openedYear)return '창업 전 전용';
+ if(FIT_TECH.test(t)&&LOCAL[a.industry])return '기술·벤처 창업 전용';
+ if(FIT_EARLY.test(t)&&age!==null&&age>3)return '창업 초기 전용';
+ if(FIT_JUMP.test(t)&&age!==null&&(age<3||age>7))return '창업 3~7년 전용';
+ if(FIT_START.test(t)&&age!==null&&age>=7)return '창업 초기 전용';
+ return '';}
+function summarize(items){var r=__sum(items);r.recTotal=sumOf(r.recItems);var rs=r.recItems.filter(function(x){return x.result==='조건 일치';});r.recSure=rs.length;r.recSureTotal=sumOf(rs);return r;}
+function __sum(items){items.sort(order);items=dedupe(items);var sure=items.filter(function(x){return x.result==='조건 일치';});var big=items.filter(function(x){return (x.benefit.maxAmount||0)>BIG;}).length;return {items:items,sure:sure.length,sureTotal:sumOf(sure),sureCounted:sure.filter(function(x){var a=amtOf(x.benefit)||0;return a>0&&a<=BIG&&rank(x.benefit)<=2;}).length,maybe:items.length-sure.length,likelyTotal:sumOf(items.filter(likely)),total:sumOf(items),recItems:items.filter(function(x){return !fitWhy(x.benefit);}),big:big,tailored:items.filter(function(x){return tailored(x.benefit);}).length};}
 /* 업종 관문: 공고가 다른 업종을 위한 것이면 거른다(out), 매장 업종에 수출·기술개발 공고는 확인 필요(check) */
 var LOCAL_IND=['음식점','숙박','서비스','교육','보건·복지','운수','건설'];var FAR_CAT=/^(수출|판로ㆍ해외진출|기술|기술개발\(R&D\))$/;
 var IND_HINTS=[[/방송|언론|취재|영상\s*제작|콘텐츠|게임|웹툰/,['정보통신','서비스']],[/농업|농가|농촌|어업|어가|어촌|축산|임업|산림|수산|양식|귀농/,['농림어업']],[/제조|공장|소공인|뿌리\s*기업|스마트\s*공장|인버터|압축기|변압기|사출|공정|모빌리티|자동차\s*부품/,['제조']],[/작업\s*환경\s*측정/,['제조','건설']],[/추락|끼임|산업\s*재해|노후\s*안전\s*시설/,['제조','건설']],[/유해\s*물질|화학\s*물질|시험\s*분석/,['제조']],[/기술\s*보호|기술\s*유출/,['제조','정보통신']],[/쌀|꿀|양봉|발효|축산물|수산물|수산\s*식품|농산물|농식품|식품\s*(소재|가공|기능성)|가공\s*산업/,['농림어업']],[/신문|잡지|출판/,['정보통신','서비스']],[/관광|숙박|호텔|펜션|마이스|MICE/,['숙박','서비스']],[/의료|병원|의원|약국|요양/,['보건·복지']],[/건설|건축|공사용/,['건설']],[/수출|해외\s*(진출|마케팅|시장|인증|물류)|글로벌|물류\s*바우처|중동/,['제조','도소매','정보통신','농림어업']],[/물류|운송|화물|택시|버스/,['운수','도소매']]];
@@ -329,7 +376,7 @@ function districtOut(b){var a=S.ans,list=DISTRICTS[a.province]||[];if(!a.distric
 function rentOut(b){return S.ans.premises==='자가'&&/임차료|임대료|월세/.test(b.title)&&!/기숙사|차량|창고|감면/.test(b.title);}
 function gated(b,m,ind){var g=industryGate(b,ind),o=ownerGate(b),tl=textLimit(b);if(g==='out'||o==='out'||tl==='out'||rentOut(b)||needsEmployees(b)||stageOut(b)||smallOut(b)||districtOut(b))return null;if(orgTarget(b)&&m.result==='조건 일치'){m.result='추가 확인 필요';m.unknowns.push('농협·협동조합·사회적기업 같은 단체가 대상인지 확인이 필요합니다.');}if(tl==='check'&&m.result==='조건 일치'){m.result='추가 확인 필요';m.unknowns.push('공고에 적힌 매출·직원 수 기준에 걸리는지 확인이 필요합니다.');}if(m.result==='조건 일치'&&(g==='check'||o==='check')){m.result='추가 확인 필요';m.unknowns.push(g==='check'?'우리 업종·사업 형태가 공고 대상인지 확인이 필요합니다.':'특정 상황(산재·휴직·폐업 등)이나 대상자(장애인·보훈 등)에게만 해당하는지 확인이 필요합니다.');}return m;}
 /* 같은 사업이 여러 출처에서 들어온 중복은 순서가 높은 것 하나만 남긴다 */
-function sameKey(t){return String(t).replace(/\[[^\]]*\]|\([^)]*\)|\d{4}\s*년|제?\s*\d+\s*(차|회|기|분기)|하반기|상반기|공고|사업|모집|참여\s*기업|신청|안내|지원|금|[\s·ㆍ,.\/-]/g,'');}
+function sameKey(t){return String(t).replace(/\[[^\]]*\]|\([^)]*\)|트랙\s*[IVXⅠ-Ⅻ\d]+|수정|연장|추가|정정|재\s*공고|\d{4}\s*년|제?\s*\d+\s*(차|회|기|분기)|하반기|상반기|공고|사업|모집|참여\s*기업|신청|안내|지원|금|[\s·ㆍ,.\/-]/g,'');}
 function dedupe(items){var seen={};return items.filter(function(x){var k=sameKey(x.benefit.title);if(!k)return true;if(seen[k])return false;seen[k]=1;return true;});}
 /* 고객 목록: 통장 입금·환급·바우처·구입비 보조만. 융자, 교육·컨설팅 같은 서비스, 1억 넘는 대형 사업은 뺀다 */
 function customerMoney(b){var t=moneyType(b);return t!=='loan'&&t!=='service'&&(b.maxAmount||0)<=BIG;}
@@ -348,14 +395,23 @@ function hasProfile(){return !!(S.ans.industry&&S.ans.province);}
 function won(n){if(n>=1e8){var e=Math.floor(n/1e8),m=Math.floor((n%1e8)/1e4);return m?e+'억 '+m.toLocaleString('ko-KR')+'만원':e+'억원';}if(n>=1e4)return Math.floor(n/1e4).toLocaleString('ko-KR')+'만원';return n.toLocaleString('ko-KR')+'원';}
 function dday(b){var d=daysLeft(b.endsAt);if(b.status==='마감'||(d!==null&&d<0))return {label:'마감',urgent:false};if(d!==null)return {label:d===0?'D-DAY':'D-'+d,days:d,urgent:d<=14};return {label:b.status==='상시 조회'?'상시':b.status==='접수 중'?'접수 중':'기간 확인',urgent:false};}
 function fmtDate(s){var t=endTime(s);if(t===null)return '';var d=new Date(t+9*3600000);return d.getUTCFullYear()+'.'+String(d.getUTCMonth()+1).padStart(2,'0')+'.'+String(d.getUTCDate()).padStart(2,'0');}
-var ICON={경영:'💼',고용:'👥',생활:'🏠',세금:'％',교육:'📘',수출:'🌐',보험:'🛡️',마케팅:'📈',육아:'❤️'};
+var SVG=function(d){return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+d+'</svg>';};
+var ICO={cash:SVG('<circle cx="12" cy="12" r="8.5"/><path d="M7.6 9.2l1.7 5.6 2.7-5.6 2.7 5.6 1.7-5.6M7.2 11.8h9.6"/>'),
+ refund:SVG('<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3"/><path d="M4.5 4.5v3.8h3.8"/><path d="M10 10.2h4M10 13.6h4M12 10.2v5"/>'),
+ voucher:SVG('<path d="M3.5 8.5V7a1.5 1.5 0 0 1 1.5-1.5h14A1.5 1.5 0 0 1 20.5 7v1.5a2.5 2.5 0 0 0 0 5V17a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 17v-3.5a2.5 2.5 0 0 0 0-5z"/><path d="M14.5 6v2M14.5 11v2M14.5 16v2"/>'),
+ purchase:SVG('<path d="M3.5 4.5h2l2.2 10a1.2 1.2 0 0 0 1.2.9h8.4a1.2 1.2 0 0 0 1.2-.9l1.7-6.6H6.4"/><circle cx="9.5" cy="19" r="1.3"/><circle cx="17" cy="19" r="1.3"/>'),
+ service:SVG('<path d="M12 3.5l1.9 5 5.1 1.9-5.1 1.9-1.9 5-1.9-5-5.1-1.9 5.1-1.9z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>'),
+ loan:SVG('<path d="M4 9.5L12 5l8 4.5M5.5 10v7M10 10v7M14 10v7M18.5 10v7M4 19h16"/>'),
+ lock:SVG('<rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>')};
+var CHEV='<span class="c2-chev" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>';
 function amountOf(b){if(b.maxAmount)return won(b.maxAmount);var e=estOf(b);return e?'예상 '+won(e):'금액 확인';}
 var MLABEL={cash:'통장 입금',refund:'환급',voucher:'바우처·감면',purchase:'구입비 보조'};
-function subOf(x,red){var b=x.benefit,dd=dday(b);if(red)return (b.endsAt?fmtDate(b.endsAt)+' 마감':'마감')+' · '+b.agency;return (MLABEL[moneyType(b)]?MLABEL[moneyType(b)]+' · ':'')+(x.result==='조건 일치'?'조건 일치 · ':x.m?'확인 필요 · ':'')+(dd.days!==undefined?dd.days+'일 남음':dd.label);}
-function row(x,red){var b=x.benefit,dd=dday(b);return '<button type="button" class="c2-row'+(red?' red':'')+'" data-id="'+esc(b.id)+'"><span class="ic">'+(ICON[b.category]||'📄')+'</span><span class="t"><b>'+(!red&&tailored(b)?'<span class="c2-tag">맞춤</span>':'')+esc(b.title)+'</b><small class="'+(!red&&dd.urgent?'u':'')+'">'+esc(subOf(x,red))+'</small></span><span class="c2-amt">'+esc(amountOf(b))+'</span></button>';}
-function lockRow(){return '<div class="c2-row"><span class="ic">🔒</span><span class="t"><span class="c2-sk" style="display:block;width:72%"></span><span class="c2-sk" style="display:block;width:44%;height:12px;margin-top:6px"></span></span><span class="c2-sk" style="width:64px"></span></div>';}
-function totalCard(label,est,red,note,act){var tot=est.sureTotal+(red?0:(est.likelyTotal||0));var m=tot>0?'<div class="m">'+(tot>=1e8?Math.floor(tot/1e8)+'<small>억</small> '+(Math.floor(tot%1e8/1e4)?Math.floor(tot%1e8/1e4).toLocaleString('ko-KR')+'<small>만원</small>':''):Math.floor(tot/1e4).toLocaleString('ko-KR')+'<small>만원</small>')+'</div>':'';
- return '<button type="button" class="c2-total'+(red?' red':'')+'" '+(act||'')+'><div class="l">'+esc(label)+'<span>'+est.sure+'건</span></div>'+m+'<div class="n">'+esc(note||(!red&&est.likelyTotal?'조건 일치 '+won(est.sureTotal||0).replace(/^0원$/,'0원')+' + 세부 자격만 확인하면 '+won(est.likelyTotal):est.sureTotal>0?'조건에 신청만 하면 받을 수 있는 자금만 선별한 금액':'금액은 공고에서 확인'))+'</div>'+(!red?mix(est):'')+(est.maybe?'<div class="x">+ 조건을 확인하면 더 받을 수 있는 '+est.maybe+'건</div>':'')+'</button>';}
+function subOf(x,red){var b=x.benefit,dd=dday(b),why=fitWhy(b);if(why)return why+' · '+(red?(b.endsAt?fmtDate(b.endsAt)+' 마감':'마감'):(dd.days!==undefined?dd.days+'일 남음':dd.label));if(red)return (b.endsAt?fmtDate(b.endsAt)+' 마감':'마감')+' · '+b.agency;return (MLABEL[moneyType(b)]?MLABEL[moneyType(b)]+' · ':'')+(x.result==='조건 일치'?'조건 일치 · ':x.m?'확인 필요 · ':'')+(dd.days!==undefined?dd.days+'일 남음':dd.label);}
+function row(x,red){var b=x.benefit,dd=dday(b);return '<button type="button" class="c2-row'+(red?' red':'')+'" data-id="'+esc(b.id)+'"><span class="ic ic-'+moneyType(b)+'">'+(ICO[moneyType(b)]||ICO.cash)+'</span><span class="t"><b>'+(!red&&tailored(b)?'<span class="c2-tag">맞춤</span>':'')+esc(b.title)+'</b><small class="'+(!red&&dd.urgent?'u':'')+'">'+esc(subOf(x,red))+'</small></span><span class="c2-amt">'+esc(amountOf(b))+'</span>'+CHEV+'</button>';}
+function lockRow(){return '<div class="c2-row"><span class="ic ic-lock">'+ICO.lock+'</span><span class="t"><span class="c2-sk" style="display:block;width:72%"></span><span class="c2-sk" style="display:block;width:44%;height:12px;margin-top:6px"></span></span><span class="c2-sk" style="width:64px"></span></div>';}
+/* 맨 위 금액: '신청해볼 만한' 공고 합계(조건 일치 + 조건 확인 필요). 융자·교육·1억 초과는 빼고, 아래에 나눠서 적는다. 전체 합계는 작게 함께 적는다 */
+function totalCard(label,est,red,note,act){var rec=est.recItems||est.items,tot=est.recTotal!=null?est.recTotal:(est.total||0),sureT=est.recSureTotal!=null?est.recSureTotal:(est.sureTotal||0),rest=Math.max(0,tot-sureT),hidden=est.items.length-rec.length;var m=tot>0?'<div class="m">'+(tot>=1e8?Math.floor(tot/1e8)+'<small>억</small> '+(Math.floor(tot%1e8/1e4)?Math.floor(tot%1e8/1e4).toLocaleString('ko-KR')+'<small>만원</small>':''):Math.floor(tot/1e4).toLocaleString('ko-KR')+'<small>만원</small>')+'</div>':'';
+ return '<button type="button" class="c2-total'+(red?' red':'')+'" '+(act||'')+'><div class="l">'+esc(label)+'<span>'+rec.length+'건</span></div>'+m+'<div class="n">'+esc((note?note+' · ':'')+(tot>0?'조건 일치 '+won(sureT)+(rest?' + 조건 확인 필요 '+won(rest):'')+' · 신청해볼 만한 '+rec.length+'건 합계':'금액은 공고에서 확인'))+'</div>'+(!red?mix(est):'')+(hidden>0?'<div class="x">전체 보면 '+(est.total?won(est.total)+' · ':'')+est.items.length+'건 (가능성 낮은 공고 '+hidden+'건 포함)</div>':'')+'</button>';}
 /* 조건 일치 공고를 돈의 형태별로: 통장 입금 3 · 환급 1 · 바우처 2 */
 function mix(est){var c={};est.items.forEach(function(x){if(x.result!=='조건 일치')return;var t=moneyType(x.benefit);c[t]=(c[t]||0)+1;});var parts=[['cash','통장 입금'],['refund','환급'],['voucher','바우처·감면'],['purchase','구입비 보조']].filter(function(p){return c[p[0]];}).map(function(p){return p[1]+' '+c[p[0]]+'건';});return parts.length?'<div class="n" style="margin-top:6px;color:#4E5968;font-weight:600">'+parts.join(' · ')+'</div>':'';}
 function stopTimers(){S.timers.forEach(function(t){clearInterval(t);clearTimeout(t);});S.timers=[];}
@@ -438,15 +494,15 @@ function analyzing(){stopTimers();S.ans.done=true;save('irw_c2_ans',S.ans);var n
 /* ===== 결과 (조건 입력 후) ===== */
 function compute(){var p=profile();S.est=estimate(S.list||[],p);S.past=missed(S.list||[],p,YEAR-1);S.pastAll=missed(S.list||[],p);}
 function renderR(){stopTimers();S.view='r';if(!S.list){box.innerHTML='<div class="c2-loading">공고를 불러오는 중이에요…</div>';return;}compute();var est=S.est,past=S.past;
- var pool=est.items.filter(function(x){return openToday(x.benefit);});var refunds=pool.filter(function(x){return moneyType(x.benefit)==='refund';}).slice(0,5);var picks=todayPicks(pool);var used={};refunds.concat(picks).forEach(function(x){used[x.benefit.id]=1;});var rest=pool.filter(function(x){return !used[x.benefit.id];});var sureRest=rest.filter(function(x){return x.result==='조건 일치';});var now=(sureRest.length>=3?sureRest:sureRest.concat(rest.filter(function(x){return x.result!=='조건 일치'&&!gateNoted(x);}).slice(0,3-sureRest.length))).slice(0,10);
+ var pool=est.items.filter(function(x){return openToday(x.benefit)&&!fitWhy(x.benefit);});var refunds=pool.filter(function(x){return moneyType(x.benefit)==='refund';}).slice(0,5);var picks=todayPicks(pool);var used={};refunds.concat(picks).forEach(function(x){used[x.benefit.id]=1;});var rest=pool.filter(function(x){return !used[x.benefit.id];});var sureRest=rest.filter(function(x){return x.result==='조건 일치';});var now=(sureRest.length>=3?sureRest:sureRest.concat(rest.filter(function(x){return x.result!=='조건 일치'&&!gateNoted(x);}).slice(0,3-sureRest.length))).slice(0,10);
  var closing=closingOf(pool);
  var h=totalCard('신청 가능 지원금',est,false,null,'data-list="now"');
  if(past.items.length)h+=totalCard((YEAR-1)+'년에 놓친 지원금',past,true,'올해는 놓치지 마세요','data-list="past"');
  /* 가입 전: 위에서 3건만 보여주고 나머지는 잠근다(받을 수 있는 지원금·놓친 지원금 모두). 이름·번호만 넣으면 전부 열린다 */
  if(!S.member){
   if(!est.items.length)h+='<div class="c2-empty"><b>지금 조건에 맞는 공고가 없어요</b><span>새 공고가 올라오면 다시 확인해 보세요. 조건을 바꿔 보셔도 돼요.</span></div>';
-  else h+='<div class="c2-sec"><span class="c2-wig" aria-hidden="true">👉</span>받을 수 있는 지원금</div>'+sortBar()+lockedList(est.items,false);
-  if(past.items.length)h+='<div class="c2-sec"><span class="c2-pulse" aria-hidden="true">⏰</span>'+(YEAR-1)+'년에 놓친 지원금</div>'+lockedList(past.items,true);
+  else h+='<div class="c2-sec"><span class="c2-wig" aria-hidden="true">👉</span>받을 수 있는 지원금</div>'+sortBar(est)+lockedList(est.items,false);
+  if(past.items.length)h+='<div class="c2-sec"><span class="c2-pulse" aria-hidden="true">⏰</span>'+(YEAR-1)+'년에 놓친 지원금</div>'+fitBar(past)+lockedList(past.items,true);
   h+='<div class="c2-small"><span class="c2-wig" aria-hidden="true">✏️</span><button type="button" data-redo>조건 다시 고르기</button></div>';
   box.innerHTML=h;bindRows();bindCommon();return;}
  h+=pickCard('c2-p1','놓치기 쉬운 지원금','🎯',picks)+pickCard('c2-p2','놓치기 쉬운 환급금','🎁',refunds);
@@ -461,20 +517,21 @@ function renderR(){stopTimers();S.view='r';if(!S.list){box.innerHTML='<div class
 /* 정렬: 추천순(기본) / 금액 큰 순 / 최신순. 조건 일치 공고를 먼저 두고 그 안에서 정렬한다 */
 S.sort=S.sort||'rec';
 function dateOf(b){var t=Date.parse(b.startsAt||'');return isFinite(t)?t:0;}
-function sorted(items){if(S.sort==='rec')return items;var g=function(x){return x.result==='조건 일치'?0:1;};return items.slice().sort(function(x,y){return (g(x)-g(y))||(S.sort==='amt'?((y.benefit.maxAmount||0)-(x.benefit.maxAmount||0)):(dateOf(y.benefit)-dateOf(x.benefit)))||order(x,y);});}
-function sortBar(){return '<div class="c2-sort" role="group" aria-label="정렬">'+[['rec','추천순'],['amt','금액 큰 순'],['new','최신순']].map(function(o){return '<button type="button" data-sort="'+o[0]+'" class="'+(S.sort===o[0]?'on':'')+'">'+o[1]+'</button>';}).join('')+'</div>';}
+function sorted(items){if(S.fit!=='all')items=items.filter(function(x){return !fitWhy(x.benefit);});if(S.sort==='rec')return items;var g=function(x){return x.result==='조건 일치'?0:1;};return items.slice().sort(function(x,y){return (g(x)-g(y))||(S.sort==='amt'?((y.benefit.maxAmount||0)-(x.benefit.maxAmount||0)):(dateOf(y.benefit)-dateOf(x.benefit)))||order(x,y);});}
+function fitBar(est){if(!est)return '';var r=(est.recItems||est.items).length;return '<div class="c2-sort c2-fit" role="group" aria-label="보기"><button type="button" data-fit="rec" class="'+(S.fit!=='all'?'on':'')+'">신청해볼 만한 '+r+'</button><button type="button" data-fit="all" class="'+(S.fit==='all'?'on':'')+'">전체 '+est.items.length+'</button></div>';}
+function sortBar(est){return fitBar(est)+'<div class="c2-sort" role="group" aria-label="정렬">'+[['rec','추천순'],['amt','금액 큰 순'],['new','최신순']].map(function(o){return '<button type="button" data-sort="'+o[0]+'" class="'+(S.sort===o[0]?'on':'')+'">'+o[1]+'</button>';}).join('')+'</div>';}
 /* 3건 공개 + 2건 잠금 줄 + 가입 버튼 */
 function lockedList(items,red){items=sorted(items);var open=items.slice(0,FREE),rest=items.length-open.length;var h='<div class="c2-list">'+open.map(function(x){return row(x,red);}).join('');
  if(rest>0)h+=items.slice(FREE,FREE+2).map(lockRow).join('')+'<div class="c2-lockbox"><b>'+rest+'건 더 있어요</b><span class="c2-note" style="margin-top:-4px">이름과 번호만 넣으면 전부 볼 수 있어요</span><button type="button" class="c2-btn" data-join>무료로 전체 보기</button><div class="c2-note">비용 없음 · 카드 등록 없음 · 자동결제 없음</div></div>';
  return h+'</div>';}
-function bindCommon(){[].forEach.call(box.querySelectorAll('[data-sort]'),function(b){b.onclick=function(){S.sort=b.getAttribute('data-sort');if(S.view==='list')renderList();else renderR();};});[].forEach.call(box.querySelectorAll('[data-join]'),function(b){b.onclick=openJoin;});[].forEach.call(box.querySelectorAll('[data-list]'),function(b){b.onclick=function(){S.tab=b.getAttribute('data-list');renderList();scrollTop();};});var rd=box.querySelector('[data-redo]');if(rd)rd.onclick=function(){S.idx=0;renderQ();scrollTop();};}
+function bindCommon(){[].forEach.call(box.querySelectorAll('[data-fit]'),function(b){b.onclick=function(){S.fit=b.getAttribute('data-fit');if(S.view==='list')renderList();else renderR();};});[].forEach.call(box.querySelectorAll('[data-sort]'),function(b){b.onclick=function(){S.sort=b.getAttribute('data-sort');if(S.view==='list')renderList();else renderR();};});[].forEach.call(box.querySelectorAll('[data-join]'),function(b){b.onclick=openJoin;});[].forEach.call(box.querySelectorAll('[data-list]'),function(b){b.onclick=function(){S.tab=b.getAttribute('data-list');renderList();scrollTop();};});var rd=box.querySelector('[data-redo]');if(rd)rd.onclick=function(){S.idx=0;renderQ();scrollTop();};}
 /* ===== 지원금 목록 (3건 공개 + 잠금) ===== */
 function renderList(){stopTimers();S.view='list';if(!S.est)compute();var now=S.est,past=S.past,cur=S.tab==='past'?past:now,red=S.tab==='past';
  var h='<div class="c2-top" style="padding:0 4px"><button type="button" class="bk" data-back aria-label="뒤로">‹</button><b style="font-size:20px;font-weight:800">지원금</b></div>';
- h+='<div class="c2-tabs" role="tablist"><button type="button" role="tab" class="'+(red?'':'on')+'" data-tab="now">받을 수 있는 '+now.items.length+'</button><button type="button" role="tab" class="'+(red?'on':'')+'" data-tab="past">놓친 '+past.items.length+'</button></div>';
+ h+='<div class="c2-tabs" role="tablist"><button type="button" role="tab" class="'+(red?'':'on')+'" data-tab="now">받을 수 있는 '+(now.recItems||now.items).length+'</button><button type="button" role="tab" class="'+(red?'on':'')+'" data-tab="past">놓친 '+(past.recItems||past.items).length+'</button></div>';
  h+=totalCard(red?'놓친 지원금':'신청 가능 지원금',cur,red,red?'올해는 놓치지 마세요':null);
  if(!cur.items.length)h+='<div class="c2-empty"><b>'+(red?'놓친 지원금이 없어요':'지금 조건에 맞는 공고가 없어요')+'</b><span>'+(red?'확인된 자료가 없어요':'새 공고가 뜨면 다시 확인해 보세요')+'</span></div>';
- else{h+=sortBar();var list=sorted(cur.items);var open=S.member?list:list.slice(0,FREE),rest=list.length-open.length;h+='<div class="c2-list">'+open.map(function(x){return row(x,red);}).join('');
+ else{h+=sortBar(cur);var list=sorted(cur.items);var open=S.member?list:list.slice(0,FREE),rest=list.length-open.length;h+='<div class="c2-list">'+open.map(function(x){return row(x,red);}).join('');
   if(rest>0){h+=list.slice(FREE,FREE+2).map(lockRow).join('')+'<div class="c2-lockbox"><b>'+rest+'건 더 있어요</b><button type="button" class="c2-btn" data-join>무료로 전체 보기</button><div class="c2-note">비용 없음 · 카드 등록 없음 · 자동결제 없음</div></div>';}
   h+='</div>';}
  h+='<div class="c2-small"><button type="button" data-redo>조건 다시 고르기</button></div>';
@@ -487,24 +544,26 @@ document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!modal.hidd
 function freeIds(){var s={};if(!S.est)return s;sorted(S.est.items).slice(0,FREE).concat(sorted((S.past||{items:[]}).items).slice(0,FREE)).forEach(function(x){s[x.benefit.id]=1;});return s;}
 function findItem(id){var all=[];if(S.est)all=all.concat(S.est.items,S.pastAll.items);if(S.cache)all=all.concat(S.cache.items);for(var i=0;i<all.length;i++)if(all[i].benefit.id===id)return all[i];var b=(S.list||[]).filter(function(b){return b.id===id;})[0];return b?{benefit:b,result:'추가 확인 필요',m:null}:null;}
 function boxSec(title,inner){return '<div class="c2-box"><div>'+inner+'</div><h4>'+esc(title)+'</h4></div>';}
-function openDetail(id){var x=findItem(id);if(!x)return;var b=x.benefit,dd=dday(b),closed=dd.label==='마감';var unlocked=!!S.member||!!freeIds()[b.id];
+function openDetail(id){var x=findItem(id);if(!x)return;var b=x.benefit,dd=dday(b),closed=dd.label==='마감';/* 가입 전에는 위 3건도 요약·금액까지만. 진행 순서·서류·맞는 조건·공식 신청 페이지는 이름·번호를 넣어야 열린다 */var unlocked=!!S.member,free=unlocked||!!freeIds()[b.id];
  var period=(b.startsAt||b.endsAt)?(b.startsAt?fmtDate(b.startsAt):'시작일 확인 필요')+' ~ '+(b.endsAt?fmtDate(b.endsAt):(b.status==='상시 조회'?'상시':'마감일 공고 없음')):(b.status==='상시 조회'?'상시 조회':'공식 공고에서 확인');
  var conds=(b.rules||[]).map(function(r){return r.label;}).concat(b.checks||[]);
  var steps=closed?[['마감됐어요','지금은 신청할 수 없어요'],['다른 지원금 보기','지원금 목록에서 확인하세요']]:[['대상 확인',conds.length?conds.slice(0,2).join('\n')+(conds.length>2?'\n외 '+(conds.length-2)+'가지':''):'공식 페이지에서 확인'],['서류 준비',(b.documents||[]).length?b.documents.join('\n'):'공식 페이지에서 확인'],[b.endsAt?fmtDate(b.endsAt)+'까지 신청':'신청하기',"아래 '공식 신청 페이지' 버튼"+(b.budgetStatus==='확인 필요'?'\n예산이 먼저 끝날 수 있어요':'')],['결과 확인',(b.agency||'기관')+'에서 알려줘요']];
  var h='<div class="c2-d"><span class="c2-badge">'+esc(b.category||'지원')+'</span><h3>'+esc(b.title)+'</h3><div class="dd'+(dd.urgent?' u':'')+'">'+esc(dd.label)+'</div>';
  h+='<div class="c2-info"><div><small>지원형태</small><b>'+esc(b.kind)+'</b></div><div><small>지원기관</small><b>'+esc(b.agency)+'</b></div><div><small>지역</small><b>'+esc(b.region)+'</b></div><div><small>접수상태</small><b>'+esc(closed?'마감':b.status)+'</b></div></div>';
- h+='<div class="c2-key"><div><small>지원금액</small><div class="a">'+(unlocked?(b.maxAmount?'최대 '+won(b.maxAmount):estOf(b)?'예상 '+won(estOf(b))+' (1년, 입력한 조건으로 계산)':'공고에서 확인'):'가입 후 확인')+'</div></div><hr><div><small>신청기간</small><div class="p">'+esc(period)+'</div></div></div>';
+ h+='<div class="c2-key"><div><small>지원금액</small><div class="a">'+(free?(b.maxAmount?'최대 '+won(b.maxAmount):estOf(b)?'예상 '+won(estOf(b))+' (1년, 입력한 조건으로 계산)':'공고에서 확인'):'가입 후 확인')+'</div></div><hr><div><small>신청기간</small><div class="p">'+esc(period)+'</div></div></div>';
  if(b.summary)h+=boxSec('어떤 지원인가요?',esc(b.summary));
  h+=boxSec('지원내용',esc(b.support||'공식 페이지에서 확인')+'<small style="font-size:14px;color:#6B7684">금액은 기관이 정해요</small>');
  if(unlocked){h+=boxSec('이렇게 진행하세요',steps.map(function(s,i){return '<div class="c2-step"><i>'+(i+1)+'</i><span><b>'+esc(s[0])+'</b><small>'+esc(s[1])+'</small></span></div>';}).join(''));
   if((b.documents||[]).length)h+=boxSec('필요 서류','<ul>'+b.documents.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ul>');
   if(x.m){if(x.m.reasons.length)h+=boxSec('맞는 조건','<ul>'+x.m.reasons.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ul>');if(x.m.unknowns.length)h+=boxSec('확인할 사항','<ul>'+x.m.unknowns.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ul>');}}
- else if(!closed){h+=boxSec('이렇게 진행하세요',steps.map(function(s,i){return i===0?'<div class="c2-step"><i>1</i><span><b>'+esc(s[0])+'</b></span></div>':'<div class="c2-step off"><i>'+(i+1)+'</i><span class="sk" style="max-width:'+(120+(i*37)%90)+'px"></span><span style="font-size:13px">🔒</span></div>';}).join('')+'<div class="c2-lockin"><b>서류와 신청 순서는<br>가입하면 볼 수 있어요</b><button type="button" class="c2-btn" data-join>무료로 전체 보기</button></div>');}
+ else if(!closed){h+=boxSec('이렇게 진행하세요',steps.map(function(s,i){return i===0?'<div class="c2-step"><i>1</i><span><b>'+esc(s[0])+'</b></span></div>':'<div class="c2-step off"><i>'+(i+1)+'</i><span class="sk" style="max-width:'+(120+(i*37)%90)+'px"></span><span style="font-size:13px">🔒</span></div>';}).join('')+'<div class="c2-lockin"><b>필요 서류와 신청 방법은<br>이름·번호만 넣으면 바로 볼 수 있어요</b><button type="button" class="c2-btn" data-join>무료로 전체 보기</button></div>');}
  h+=boxSec('공식 출처',esc(b.agency)+' 공고예요<br>신청과 선정은 기관이 합니다'+(b.checkedAt?'<small style="font-size:14px;color:#6B7684">확인일 '+esc(fmtDate(b.checkedAt))+'</small>':''));
- h+='<div class="c2-acts">'+(!unlocked&&!closed?'<button type="button" class="c2-btn ghost" data-join>무료로 전체 보기</button>':'')+'<a class="c2-btn" href="'+esc(b.sourceUrl)+'" target="_blank" rel="noopener">공식 신청 페이지 ↗</a><a class="c2-btn ghost" href="https://www.irowoon.com/contact">이 지원금, 신청 도움 받기</a></div></div>';
+ h+='<div class="c2-acts">'+(!unlocked?'<button type="button" class="c2-btn" data-join>이름·번호 넣고 신청 방법 보기</button>':'<a class="c2-btn" href="'+esc(b.sourceUrl)+'" target="_blank" rel="noopener">공식 신청 페이지 ↗</a>')+'<a class="c2-btn ghost" href="https://www.irowoon.com/contact">이 지원금, 신청 도움 받기</a></div></div>';
  openModal(h);[].forEach.call(sheet.querySelectorAll('[data-join]'),function(b){b.onclick=openJoin;});}
 /* ===== 무료 회원 등록 → 아임웹 상담신청 게시판 저장 ===== */
 var INDMAP={'음식점':'요식업','도소매':'도소매업','제조':'제조업','건설':'건설업','서비스':'기타','운수':'기타','숙박':'기타','교육':'기타','보건·복지':'기타','정보통신':'온라인판매업','농림어업':'기타','기타':'기타'};
+/* 문의 양식의 '매출규모'는 필수 항목. 매출이 없거나 작년 매출이 없으면 올해 매출, 그것도 없으면 '1억미만'으로 보낸다 */
+function revForm(){var b=revBand();if(b&&REVMAP[b])return REVMAP[b];var n=S.ans.revNow;if(n&&REVMAP[n])return REVMAP[n];return '1억미만';}
 var REVMAP={'5천만 원 미만':'1억미만','5천만~1억 원':'1억미만','1억~3억 원':'1~3억','3억~5억 원':'3~5억','5억~10억 원':'5~10억','10억 원 이상':'10억 이상'};
 function openJoin(){var pre=load('irw_check_member_draft')||{};
  var h='<div class="c2-join"><h3>30초면 끝나요<br>나머지 지원금까지 전부 열려요</h3><div class="c2-chips"><span>비용 없음</span><span>카드 등록 없음</span><span>자동결제 없음</span></div>';
@@ -522,20 +581,20 @@ function joinText(mkt){var a=S.ans,e=S.est||{items:[],sure:0,sureTotal:0,maybe:0
 /* 조회 고객을 회사 전산(지원금 영업)으로 넘긴다. 우리 서버가 서명해서 전산에 전달한다. 실패해도 고객 화면은 그대로. */
 function sendLead(name,phone,mkt){try{var a=S.ans,e=S.est||{},p=S.past||{};var body={name:name,phone:phone,bizName:a.bizName||undefined,industry:a.industry||undefined,province:a.province||undefined,district:a.district||undefined,openedYear:typeof a.openedYear==='number'?a.openedYear:undefined,employeeBand:a.employeeBand||undefined,entity:a.entity||undefined,revNow:a.revNow||undefined,revLast:a.revLast||undefined,
  loans:(a.loans||[]).filter(function(l){return l!=='없음';}).slice(0,10).map(function(l){var v=(a.loanAmt||{})[l]||{};return {kind:l,amountBand:v.amt||undefined,rateBand:v.rate||undefined};}),
- supportThisYear:(e.sureTotal||0)+(e.likelyTotal||0)||undefined,supportLastYear:p.sureTotal||undefined,sureCount:typeof e.sure==='number'?e.sure:undefined,consent:true,marketing:!!mkt};
+ supportThisYear:e.recTotal||undefined,supportLastYear:p.recTotal||undefined,sureCount:typeof e.sure==='number'?e.sure:undefined,consent:true,marketing:!!mkt};
  fetch(API.replace(/\/benefits$/,'/public/check-lead'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),keepalive:true}).catch(function(){});}catch(err){}}
 async function submitJoin(){var name=sheet.querySelector('#j-name').value.trim(),tel=sheet.querySelector('#j-tel').value.trim(),mkt=sheet.querySelector('#j-m').checked,err=sheet.querySelector('#j-err'),go=sheet.querySelector('#j-go');var digits=tel.replace(/\D/g,'');err.hidden=true;
  if(!name){err.textContent='이름을 입력해 주세요.';err.hidden=false;return;}if(!/^01[016789]\d{7,8}$/.test(digits)){err.textContent='휴대폰 번호를 확인해 주세요.';err.hidden=false;return;}
  save('irw_check_member_draft',{name:name,tel:tel});go.disabled=true;go.textContent='등록 중…';
  try{if(!S.est&&hasProfile())compute();var f=document.querySelector('.form-widget form[id^=addForm]');if(!f)throw new Error('form');var fd=new URLSearchParams();[].forEach.call(f.querySelectorAll('input[type=hidden]'),function(i){fd.append(i.name,i.value);});
   var phone=digits.replace(/^(\d{3})(\d{3,4})(\d{4})$/,'$1-$2-$3');var a=S.ans;var hi=a.credit==='900점 이상'||a.credit==='800~899점'||a.credit==='750~799점';
-  fd.append('input_82140128aa91a',name);fd.append('input_d80bc05bd0e00',((a.province||'')+' '+(a.district||'')).trim()||'-');fd.append('input_6a69ca6d51aa1',phone);fd.append('select_BkUsP4zJwu',hi?'750점 이상':'750점 미만');fd.append('select_x6Wm3k1l88',INDMAP[a.industry]||'기타');fd.append('select_2ET23k2z10',REVMAP[revBand()]||'');fd.append('textarea_20To0555d2',joinText(mkt));
+  fd.append('input_82140128aa91a',name);fd.append('input_d80bc05bd0e00',((a.province||'')+' '+(a.district||'')).trim()||'-');fd.append('input_6a69ca6d51aa1',phone);fd.append('select_BkUsP4zJwu',hi?'750점 이상':'750점 미만');fd.append('select_x6Wm3k1l88',INDMAP[a.industry]||'기타');fd.append('select_2ET23k2z10',revForm());fd.append('textarea_20To0555d2',joinText(mkt));
   var r=await fetch('/ajax/form_add.cm',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},body:fd.toString()});var j=null;try{j=await r.json();}catch(e){}
   if(!j||j.msg!=='SUCCESS')throw new Error((j&&j.msg)||'서버 응답 오류');
   S.member={name:name,tel:phone,at:new Date().toISOString()};save('irw_check_member',S.member);
   sendLead(name,phone,mkt);
   openModal('<div class="c2-ok"><b>등록 완료</b><p style="margin:0;color:#4E5968">'+esc(name)+'님, 전체 결과가 열렸어요.</p><button type="button" class="c2-btn" id="j-done">전체 결과 보기</button></div>');sheet.querySelector('#j-done').onclick=function(){closeModal();if(hasProfile()&&S.ans.done){renderR();}else renderHome();scrollTop();};
- }catch(e){go.disabled=false;go.textContent='무료로 전체 결과 보기';err.textContent='등록에 실패했어요. 잠시 후 다시 시도하거나 010-8243-3126으로 연락 주세요.';err.hidden=false;}}
+ }catch(e){go.disabled=false;go.textContent='무료로 전체 결과 보기';err.textContent='등록에 실패했어요. 잠시 후 다시 시도하거나 tnstnska52@naver.com으로 연락 주세요.';err.hidden=false;}}
 /* ===== 공고 불러오기 ===== */
 async function fetchList(){var c=load('irw_check_cache');if(c&&Date.now()-c.at<10*60*1000&&Array.isArray(c.list))return c.list;var r=await fetch(window.IRW_CHECK_API||API,{cache:'no-store'});var d=await r.json();var list=Array.isArray(d)?d:(d.items||d.benefits||[]);save('irw_check_cache',{at:Date.now(),list:list});return list;}
 (async function init(){renderHome();try{S.list=await fetchList();}catch(e){S.list=[];box.innerHTML='<div class="c2-empty"><b>공고를 불러오지 못했어요</b><span>잠시 후 새로고침해 주세요.</span></div>';return;}
