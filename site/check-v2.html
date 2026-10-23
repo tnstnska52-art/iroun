@@ -192,6 +192,22 @@
 @media (hover:hover){.doz_sys button.c2-row:hover .t b{color:var(--blue)}.doz_sys button.c2-row:hover .c2-chev{color:var(--blue);transform:translateX(3px)}.doz_sys button.c2-row.red:hover .t b,.doz_sys button.c2-row.red:hover .c2-chev{color:#D92D20}}
 .doz_sys button.c2-row:active{opacity:.75}
 @media (max-width:480px){.doz_sys .c2-list .c2-row .t b{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;line-height:1.35}.doz_sys .c2-list .c2-row .c2-amt{font-size:14px}}
+.doz_sys .c2-row.lk{cursor:pointer}
+.doz_sys .c2-row.lk .lk-k{display:block;font-size:13px;font-weight:700;color:var(--blue);margin:0 0 2px}
+.doz_sys .c2-row.lk.red .lk-k{color:#D92D20}
+.doz_sys .c2-row.lk .lk-t{display:block;font-size:16px;font-weight:700;color:#8B95A1;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doz_sys .c2-loss{background:#FFF4F2;border:1px solid #FFD9D3;border-radius:18px;padding:18px 18px 14px;display:flex;flex-direction:column;gap:4px;margin-bottom:4px}
+.doz_sys .c2-loss .k{font-size:14px;font-weight:800;color:#D92D20}
+.doz_sys .c2-loss>b{font-size:34px;font-weight:900;color:#D92D20;letter-spacing:-.03em;line-height:1.2}
+.doz_sys .c2-loss .d{font-size:15px;font-weight:600;color:var(--ink)}
+.doz_sys .c2-loss ul{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.doz_sys .c2-loss li{font-size:14px;color:#4E5968;padding-left:12px;position:relative}
+.doz_sys .c2-loss li:before{content:'·';position:absolute;left:2px}
+.doz_sys .c2-loss li b{color:#D92D20}
+.doz_sys .c2-agree label span{display:flex;flex-direction:column;gap:1px;line-height:1.35}
+.doz_sys .c2-agree label small{font-size:12px;font-weight:500;color:var(--mute)}
+.doz_sys .c2-agree label.all{background:var(--soft);border:1.5px solid var(--blue);border-radius:12px;padding:12px 14px;border-bottom:1.5px solid var(--blue);color:var(--blue)}
+.doz_sys .c2-agree label.all small{color:#4E6FD8}
 @media (prefers-reduced-motion:reduce){.doz_sys #chk2 *{animation:none!important;transition:none!important}}
 .c2-fit{margin-bottom:6px}.c2-fit button.on{font-weight:800}
 </style>
@@ -423,7 +439,17 @@ function amountOf(b){if(b.maxAmount)return won(b.maxAmount);var e=estOf(b);retur
 var MLABEL={cash:'통장 입금',refund:'환급',voucher:'바우처·감면',purchase:'구입비 보조'};
 function subOf(x,red){var b=x.benefit,dd=dday(b),why=fitWhy(b);if(why)return why+' · '+(red?(b.endsAt?fmtDate(b.endsAt)+' 마감':'마감'):(dd.days!==undefined?dd.days+'일 남음':dd.label));if(red)return (b.endsAt?fmtDate(b.endsAt)+' 마감':'마감')+' · '+b.agency;return (hireNeeded(b)?'직원 고용 시 · ':'')+(MLABEL[moneyType(b)]?MLABEL[moneyType(b)]+' · ':'')+(x.result==='조건 일치'?'조건 일치 · ':x.m?'확인 필요 · ':'')+(dd.days!==undefined?dd.days+'일 남음':dd.label);}
 function row(x,red){var b=x.benefit,dd=dday(b);return '<button type="button" class="c2-row'+(red?' red':'')+'" data-id="'+esc(b.id)+'"><span class="ic ic-'+moneyType(b)+'">'+(ICO[moneyType(b)]||ICO.cash)+'</span><span class="t"><b>'+(!red&&tailored(b)?'<span class="c2-tag">맞춤</span>':'')+esc(b.title)+'</b><small class="'+(!red&&dd.urgent?'u':'')+'">'+esc(subOf(x,red))+'</small></span><span class="c2-amt">'+esc(amountOf(b))+'</span>'+CHEV+'</button>';}
-function lockRow(){return '<div class="c2-row"><span class="ic ic-lock">'+ICO.lock+'</span><span class="t"><span class="c2-sk" style="display:block;width:72%"></span><span class="c2-sk" style="display:block;width:44%;height:12px;margin-top:6px"></span></span><span class="c2-sk" style="width:64px"></span></div>';}
+/* 잠긴 줄: 지원 종류·금액·마감은 보이고 공고 이름만 가린다. 연도·[지역]·흔한 끝말(지원사업 등)은 남긴다 */
+var GEN=/^(지원사업|지원금|지원|사업|공고|모집|시행|참여기업|참여|신청|안내|장려금|보조금|바우처|변경|재공고)$/,SUF=/(지원사업|지원금|보조금|장려금|지원|사업|공고)$/;
+function maskTitle(t){var w=String(t||'').replace(/\s+/g,' ').trim().split(' '),head=[],tail=[];
+ while(w.length&&/^\d{4}년$|^\[[^\]]+\]$/.test(w[0]))head.push(w.shift());while(w.length>1&&GEN.test(w[w.length-1]))tail.unshift(w.pop());
+ var mid;if(w.length>=3){mid=['■■■■',w[w.length-1]];}else{var last=w[w.length-1]||'',m=last.match(SUF);mid=[m&&m[1]!==last?'■■■■'+m[1]:'■■■■'];}
+ return head.concat(mid,tail).join(' ');}
+function lockRow(x,red){if(!x||!x.benefit)return '<div class="c2-row"><span class="ic ic-lock">'+ICO.lock+'</span><span class="t"><span class="c2-sk" style="display:block;width:72%"></span><span class="c2-sk" style="display:block;width:44%;height:12px;margin-top:6px"></span></span><span class="c2-sk" style="width:64px"></span></div>';
+ var b=x.benefit,dd=dday(b),mt=moneyType(b);return '<button type="button" class="c2-row lk'+(red?' red':'')+'" data-join><span class="ic ic-'+mt+'">'+(ICO[mt]||ICO.cash)+'</span><span class="t"><small class="lk-k">🔒 '+(hireNeeded(b)?'직원 고용 시 · ':'')+(MLABEL[mt]||'지원금')+'</small><b class="lk-t">'+esc(maskTitle(b.title))+'</b></span><span class="c2-amt">'+esc(amountOf(b))+'</span>'+CHEV+'</button>';}
+/* 잠긴 것 요약: 지금 보고 있는 목록에서 공개 3건 뒤 나머지 */
+function lockInfo(items){var list=sorted(items||[]),rest=list.slice(FREE);return {n:rest.length,total:sumOf(rest),soon:rest.filter(function(x){var d=daysLeft(x.benefit.endsAt);return d!==null&&d>=0&&d<=30;}).length,rest:rest};}
+function lockBox(items){var L=lockInfo(items);return '<div class="c2-lockbox"><b>🔒 '+L.n+'건 더'+(L.total?' · 약 '+won(L.total):'')+'</b><span class="c2-note" style="margin-top:-4px">대표님 조건에 맞는 지원금이 잠겨 있어요</span><button type="button" class="c2-btn" data-join>잠긴 지원금 전부 확인하기</button><div class="c2-note">비용 없음 · 카드 등록 없음 · 자동결제 없음</div></div>';}
 /* 맨 위 금액: '신청해볼 만한' 공고 합계(조건 일치 + 조건 확인 필요). 융자·교육·1억 초과는 빼고, 아래에 나눠서 적는다. 전체 합계는 작게 함께 적는다 */
 function totalCard(label,est,red,note,act){var rec=est.recItems||est.items,tot=est.recTotal!=null?est.recTotal:(est.total||0),sureT=est.recSureTotal!=null?est.recSureTotal:(est.sureTotal||0),rest=Math.max(0,tot-sureT),hidden=est.items.length-rec.length;var m=tot>0?'<div class="m">'+(tot>=1e8?Math.floor(tot/1e8)+'<small>억</small> '+(Math.floor(tot%1e8/1e4)?Math.floor(tot%1e8/1e4).toLocaleString('ko-KR')+'<small>만원</small>':''):Math.floor(tot/1e4).toLocaleString('ko-KR')+'<small>만원</small>')+'</div>':'';
  return '<button type="button" class="c2-total'+(red?' red':'')+'" '+(act||'')+'><div class="l">'+esc(label)+'<span>'+rec.length+'건</span></div>'+m+'<div class="n">'+esc((note?note+' · ':'')+(tot>0?'조건 일치 '+won(sureT)+(rest?' + 조건 확인 필요 '+won(rest):'')+' · 신청해볼 만한 '+rec.length+'건 합계':'금액은 공고에서 확인'))+'</div>'+(!red?mix(est):'')+(hidden>0?'<div class="x">전체 보면 '+(est.total?won(est.total)+' · ':'')+est.items.length+'건 (가능성 낮은 공고 '+hidden+'건 포함)</div>':'')+'</button>';}
@@ -515,7 +541,7 @@ function renderR(){stopTimers();S.view='r';if(!S.list){box.innerHTML='<div class
   else h+='<div class="c2-sec"><span class="c2-wig" aria-hidden="true">👉</span>받을 수 있는 지원금</div>'+sortBar(est)+lockedList(est.items,false);
   if(past.items.length)h+='<div class="c2-sec"><span class="c2-pulse" aria-hidden="true">⏰</span>'+(YEAR-1)+'년에 놓친 지원금</div>'+fitBar(past)+lockedList(past.items,true);
   h+='<div class="c2-small"><span class="c2-wig" aria-hidden="true">✏️</span><button type="button" data-redo>조건 다시 고르기</button></div>';
-  box.innerHTML=h;bindRows();bindCommon();return;}
+  box.innerHTML=h;bindRows();bindCommon();nudge();return;}
  h+=pickCard('c2-p1','놓치기 쉬운 지원금','🎯',picks)+pickCard('c2-p2','놓치기 쉬운 환급금','🎁',refunds);
  if(now.length)h+='<button type="button" class="c2-sec" data-list="now"><span class="c2-wig" aria-hidden="true">👉</span>지금 신청 가능한 지원금<span class="x">›</span></button>'+rollList('c2-now',now);
  if(!est.items.length)h+='<div class="c2-empty"><b>지금 조건에 맞는 공고가 없어요</b><span>새 공고가 올라오면 다시 확인해 보세요. 조건을 바꿔 보셔도 돼요.</span></div>';
@@ -524,7 +550,7 @@ function renderR(){stopTimers();S.view='r';if(!S.list){box.innerHTML='<div class
  h+='<div class="c2-small"><span class="c2-wig" aria-hidden="true">✏️</span><button type="button" data-redo>조건 다시 고르기</button></div>';
  if(S.member)h+='<div class="c2-note">'+esc(S.member.name)+'님, 전체 결과가 열려 있어요</div>';
  box.innerHTML=h;
- bindPick('c2-p1',picks,'오늘 신청 가능',0);bindPick('c2-p2',refunds,'신청 가능',2500);bindRoll('c2-now',now.length);bindRows();bindCommon();}
+ bindPick('c2-p1',picks,'오늘 신청 가능',0);bindPick('c2-p2',refunds,'신청 가능',2500);bindRoll('c2-now',now.length);bindRows();bindCommon();nudge();}
 /* 정렬: 추천순(기본) / 금액 큰 순 / 최신순. 조건 일치 공고를 먼저 두고 그 안에서 정렬한다 */
 S.sort=S.sort||'rec';
 function dateOf(b){var t=Date.parse(b.startsAt||'');return isFinite(t)?t:0;}
@@ -533,7 +559,7 @@ function fitBar(est){if(!est)return '';var r=(est.recItems||est.items).length;re
 function sortBar(est){return fitBar(est)+'<div class="c2-sort" role="group" aria-label="정렬">'+[['rec','추천순'],['amt','금액 큰 순'],['new','최신순']].map(function(o){return '<button type="button" data-sort="'+o[0]+'" class="'+(S.sort===o[0]?'on':'')+'">'+o[1]+'</button>';}).join('')+'</div>';}
 /* 3건 공개 + 2건 잠금 줄 + 가입 버튼 */
 function lockedList(items,red){items=sorted(items);var open=items.slice(0,FREE),rest=items.length-open.length;var h='<div class="c2-list">'+open.map(function(x){return row(x,red);}).join('');
- if(rest>0)h+=items.slice(FREE,FREE+2).map(lockRow).join('')+'<div class="c2-lockbox"><b>'+rest+'건 더 있어요</b><span class="c2-note" style="margin-top:-4px">이름과 번호만 넣으면 전부 볼 수 있어요</span><button type="button" class="c2-btn" data-join>무료로 전체 보기</button><div class="c2-note">비용 없음 · 카드 등록 없음 · 자동결제 없음</div></div>';
+ if(rest>0)h+=items.slice(FREE,FREE+2).map(function(x){return lockRow(x,red);}).join('')+lockBox(items);
  return h+'</div>';}
 function bindCommon(){[].forEach.call(box.querySelectorAll('[data-fit]'),function(b){b.onclick=function(){S.fit=b.getAttribute('data-fit');if(S.view==='list')renderList();else renderR();};});[].forEach.call(box.querySelectorAll('[data-sort]'),function(b){b.onclick=function(){S.sort=b.getAttribute('data-sort');if(S.view==='list')renderList();else renderR();};});[].forEach.call(box.querySelectorAll('[data-join]'),function(b){b.onclick=openJoin;});[].forEach.call(box.querySelectorAll('[data-list]'),function(b){b.onclick=function(){S.tab=b.getAttribute('data-list');renderList();scrollTop();};});var rd=box.querySelector('[data-redo]');if(rd)rd.onclick=function(){S.idx=0;renderQ();scrollTop();};}
 /* ===== 지원금 목록 (3건 공개 + 잠금) ===== */
@@ -543,10 +569,10 @@ function renderList(){stopTimers();S.view='list';if(!S.est)compute();var now=S.e
  h+=totalCard(red?'놓친 지원금':'신청 가능 지원금',cur,red,red?'올해는 놓치지 마세요':null);
  if(!cur.items.length)h+='<div class="c2-empty"><b>'+(red?'놓친 지원금이 없어요':'지금 조건에 맞는 공고가 없어요')+'</b><span>'+(red?'확인된 자료가 없어요':'새 공고가 뜨면 다시 확인해 보세요')+'</span></div>';
  else{h+=sortBar(cur);var list=sorted(cur.items);var open=S.member?list:list.slice(0,FREE),rest=list.length-open.length;h+='<div class="c2-list">'+open.map(function(x){return row(x,red);}).join('');
-  if(rest>0){h+=list.slice(FREE,FREE+2).map(lockRow).join('')+'<div class="c2-lockbox"><b>'+rest+'건 더 있어요</b><button type="button" class="c2-btn" data-join>무료로 전체 보기</button><div class="c2-note">비용 없음 · 카드 등록 없음 · 자동결제 없음</div></div>';}
+  if(rest>0){h+=list.slice(FREE,FREE+2).map(function(x){return lockRow(x,red);}).join('')+lockBox(cur.items);}
   h+='</div>';}
  h+='<div class="c2-small"><button type="button" data-redo>조건 다시 고르기</button></div>';
- box.innerHTML=h;box.querySelector('[data-back]').onclick=function(){renderR();scrollTop();};[].forEach.call(box.querySelectorAll('[data-tab]'),function(b){b.onclick=function(){S.tab=b.getAttribute('data-tab');renderList();};});bindRows();bindCommon();}
+ box.innerHTML=h;box.querySelector('[data-back]').onclick=function(){renderR();scrollTop();};[].forEach.call(box.querySelectorAll('[data-tab]'),function(b){b.onclick=function(){S.tab=b.getAttribute('data-tab');renderList();};});bindRows();bindCommon();nudge();}
 /* ===== 상세 ===== */
 function openModal(html){sheet.innerHTML=html;modal.hidden=false;document.documentElement.style.overflow='hidden';sheet.parentNode.scrollTop=0;}
 function closeModal(){modal.hidden=true;document.documentElement.style.overflow='';}
@@ -577,12 +603,23 @@ var INDMAP={'음식점':'요식업','도소매':'도소매업','제조':'제조�
    '2억 이상'처럼 상한을 모르는 구간은 아래 경계인 '1~3억'으로 보낸다(정확한 선택값은 상담 내용과 전산에 그대로 남는다) */
 var REVMAP={'1000만원 미만':'1억미만','1000~5000만원':'1억미만','5000만원~1억':'1억미만','1억~2억':'1~3억','2억 이상':'1~3억'};
 function revForm(){var b=revBand();if(b&&REVMAP[b])return REVMAP[b];var n=S.ans.revNow;if(n&&REVMAP[n])return REVMAP[n];return '1억미만';}
-function openJoin(){var pre=load('irw_check_member_draft')||{};
- var h='<div class="c2-join"><h3>30초면 끝나요<br>나머지 지원금까지 전부 열려요</h3><div class="c2-chips"><span>비용 없음</span><span>카드 등록 없음</span><span>자동결제 없음</span></div>';
+/* 결과를 본 뒤 4초가 지나면 한 번만 잠긴 지원금 확인 창을 올린다. 닫으면 다시 띄우지 않고 하단 버튼으로만 연다 */
+function nudge(){bar();if(S.member||load('irw_nudge_shown'))return;var t=setTimeout(function(){if(S.member||!modal.hidden||(S.view!=='r'&&S.view!=='list'))return;if(!lockInfo(S.est&&S.est.items).n)return;save('irw_nudge_shown',1);openJoin();},4000);S.timers.push(t);}
+/* 페이지 하단 고정 버튼(모바일)·떠 있는 버튼(PC): 결과 화면에서 가입 전이면 '놓치는 돈' 버튼으로 바꾼다 */
+function bar(){var L=(S.est&&!S.member&&(S.view==='r'||S.view==='list'))?lockInfo(S.est.items):{n:0};[].forEach.call(document.querySelectorAll('.mbar a.main, #floatCta'),function(a){if(a.dataset.c2o===undefined)a.dataset.c2o=a.innerHTML;if(L.n&&L.total){a.innerHTML='<span>⚠ 놓치는 돈 '+esc(won(L.total))+' 확인하기</span> <i aria-hidden="true">→</i>';a.onclick=function(e){e.preventDefault();e.stopPropagation();openJoin();};if(a.id==='floatCta')a.hidden=false;}else{a.innerHTML=a.dataset.c2o;a.onclick=null;}});}
+function openJoin(){var pre=load('irw_check_member_draft')||{},L=lockInfo(S.est&&S.est.items),P=S.past&&!S.member?S.past.recTotal:0;
+ var h='<div class="c2-join">';
+ if(L.n&&L.total){h+='<div class="c2-loss"><span class="k">⚠ 확인하지 않으면 놓치는 돈</span><b>'+esc(won(L.total))+'</b><span class="d">대표님 조건에 맞는 '+L.n+'건이 아직 잠겨 있어요</span><ul>'+(L.soon?'<li>그중 <b>'+L.soon+'건</b>은 30일 안에 마감돼요</li>':'')+(P?'<li>작년에 같은 조건 사업장이 놓친 돈 <b>'+esc(won(P))+'</b></li>':'')+'</ul></div>';}
+ else h+='<h3>30초면 끝나요<br>나머지 지원금까지 전부 열려요</h3>';
  h+='<label class="c2-field" style="color:#4E5968;font-weight:600">대표자 이름<input class="c2-in" id="j-name" autocomplete="name" value="'+esc(pre.name||'')+'" placeholder="홍길동"></label>';
  h+='<label class="c2-field" style="color:#4E5968;font-weight:600">휴대폰 번호<input class="c2-in" id="j-tel" type="tel" inputmode="numeric" autocomplete="tel" value="'+esc(pre.tel||'')+'" placeholder="010-0000-0000"></label>';
- h+='<div class="c2-agree"><label class="all"><input type="checkbox" id="j-all" checked>전체 동의 (선택 항목 포함)</label><label><input type="checkbox" id="j-p" checked>(필수) 개인정보 수집·이용 동의 <a href="https://www.irowoon.com/?mode=privacy" target="_blank" rel="noopener">보기</a></label><label><input type="checkbox" id="j-t" checked>(필수) 이용약관 동의 <a href="https://www.irowoon.com/?mode=policy" target="_blank" rel="noopener">보기</a></label><div class="s">주민번호·계좌번호는 묻지 않아요</div><label><input type="checkbox" id="j-m" checked>(선택) 마케팅 정보 수신 동의 (광고)</label></div>';
- h+='<p class="c2-err" id="j-err" hidden></p><button type="button" class="c2-btn" id="j-go">무료로 전체 결과 보기</button></div>';
+ /* 필수 2개는 체크된 채로, 선택(마케팅)은 고객이 직접 체크해야 한다(미리 체크하면 동의로 인정되지 않음). 전체 동의를 누르면 함께 체크된다 */
+ h+='<div class="c2-agree"><label class="all"><input type="checkbox" id="j-all"><span>전체 동의<small>개인정보 수집·이용, 이용약관, 마케팅 수신</small></span></label>'
+  +'<label><input type="checkbox" id="j-p" checked><span>(필수) 내 지원금 전부 보기<small>개인정보 수집·이용 동의</small></span><a href="https://www.irowoon.com/?mode=privacy" target="_blank" rel="noopener">보기</a></label>'
+  +'<label><input type="checkbox" id="j-t" checked><span>(필수) 내 환급금 전부 보기<small>이용약관 동의</small></span><a href="https://www.irowoon.com/?mode=policy" target="_blank" rel="noopener">보기</a></label>'
+  +'<label><input type="checkbox" id="j-m"><span>(선택) 새 지원금 생기면 먼저 받기<small>마케팅·광고 정보 수신 동의</small></span><a href="https://www.irowoon.com/?mode=privacy" target="_blank" rel="noopener">보기</a></label>'
+  +'<div class="s">주민번호·계좌번호는 묻지 않아요</div></div>';
+ h+='<p class="c2-err" id="j-err" hidden></p><button type="button" class="c2-btn" id="j-go">'+(L.n&&L.total?'놓치기 전에 지금 확인하기':'무료로 전체 결과 보기')+'</button><div class="c2-note">비용 없음 · 원하면 바로 삭제</div></div>';
  openModal(h);var all=sheet.querySelector('#j-all'),items=['#j-p','#j-t','#j-m'].map(function(s){return sheet.querySelector(s);});
  function sync(){all.checked=items.every(function(i){return i.checked;});sheet.querySelector('#j-go').disabled=!(items[0].checked&&items[1].checked);}
  all.onchange=function(){items.forEach(function(i){i.checked=all.checked;});sync();};items.forEach(function(i){i.onchange=sync;});sync();
@@ -603,7 +640,7 @@ async function submitJoin(){var name=sheet.querySelector('#j-name').value.trim()
   fd.append('input_82140128aa91a',name);fd.append('input_d80bc05bd0e00',((a.province||'')+' '+(a.district||'')).trim()||'-');fd.append('input_6a69ca6d51aa1',phone);fd.append('select_BkUsP4zJwu',hi?'750점 이상':'750점 미만');fd.append('select_x6Wm3k1l88',INDMAP[a.industry]||'기타');fd.append('select_2ET23k2z10',revForm());fd.append('textarea_20To0555d2',joinText(mkt));
   var r=await fetch('/ajax/form_add.cm',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},body:fd.toString()});var j=null;try{j=await r.json();}catch(e){}
   if(!j||j.msg!=='SUCCESS')throw new Error((j&&j.msg)||'서버 응답 오류');
-  S.member={name:name,tel:phone,at:new Date().toISOString()};save('irw_check_member',S.member);
+  S.member={name:name,tel:phone,at:new Date().toISOString()};save('irw_check_member',S.member);bar();
   sendLead(name,phone,mkt);
   openModal('<div class="c2-ok"><b>등록 완료</b><p style="margin:0;color:#4E5968">'+esc(name)+'님, 전체 결과가 열렸어요.</p><button type="button" class="c2-btn" id="j-done">전체 결과 보기</button></div>');sheet.querySelector('#j-done').onclick=function(){closeModal();if(hasProfile()&&S.ans.done){renderR();}else renderHome();scrollTop();};
  }catch(e){go.disabled=false;go.textContent='무료로 전체 결과 보기';err.textContent='등록에 실패했어요. 잠시 후 다시 시도하거나 tnstnska52@naver.com으로 연락 주세요.';err.hidden=false;}}
