@@ -621,7 +621,7 @@ function openDetail(id){var x=findItem(id);if(!x)return;var b=x.benefit,dd=dday(
   if(x.m){if(x.m.reasons.length)h+=boxSec('맞는 조건','<ul>'+x.m.reasons.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ul>');if(x.m.unknowns.length)h+=boxSec('확인할 사항','<ul>'+x.m.unknowns.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ul>');}}
  else if(!closed){h+=boxSec('이렇게 진행하세요',steps.map(function(s,i){return i===0?'<div class="c2-step"><i>1</i><span><b>'+esc(s[0])+'</b></span></div>':'<div class="c2-step off"><i>'+(i+1)+'</i><span class="sk" style="max-width:'+(120+(i*37)%90)+'px"></span><span style="font-size:13px">🔒</span></div>';}).join('')+'<div class="c2-lockin"><b>이 지원금 신청 방법,<br>번호만 넣으면 바로 보여드려요</b>'+(dd.days!==undefined&&dd.days<=30&&b.endsAt?'<span class="c2-note" style="color:#D92D20;font-weight:700">'+esc(fmtDate(b.endsAt))+' 마감이에요 · 마감 전에 담당자가 챙겨드려요</span>':'')+'<button type="button" class="c2-btn" data-join>신청 방법 바로 보기</button></div>');}
  h+=boxSec('공식 출처',esc(b.agency)+' 공고예요<br>신청과 선정은 기관이 합니다'+(b.checkedAt?'<small style="font-size:14px;color:#6B7684">확인일 '+esc(fmtDate(b.checkedAt))+'</small>':''));
- h+='<div class="c2-acts">'+(!unlocked?'<button type="button" class="c2-btn" data-join>이름·번호 넣고 신청 방법 보기</button>':'<a class="c2-btn" href="'+esc(b.sourceUrl)+'" target="_blank" rel="noopener">공식 신청 페이지 ↗</a>')+'<a class="c2-btn ghost" href="https://www.irowoon.com/contact">이 지원금, 신청 도움 받기</a></div></div>';
+ h+='<div class="c2-acts">'+(!unlocked?'<button type="button" class="c2-btn" data-join>신청 방법 바로 보기</button>':'<a class="c2-btn" href="'+esc(b.sourceUrl)+'" target="_blank" rel="noopener">공식 신청 페이지 ↗</a>')+'<a class="c2-btn ghost" href="https://www.irowoon.com/contact">이 지원금, 신청 도움 받기</a></div></div>';
  openModal(h);[].forEach.call(sheet.querySelectorAll('[data-join]'),function(el){el.onclick=function(){openJoin({id:b.id});};});}
 /* ===== 무료 회원 등록 → 아임웹 상담신청 게시판 저장 ===== */
 var INDMAP={'음식점':'요식업','도소매':'도소매업','제조':'제조업','건설':'건설업','서비스':'기타','운수':'기타','숙박':'기타','교육':'기타','보건·복지':'기타','정보통신':'온라인판매업','농림어업':'기타','기타':'기타'};
@@ -656,7 +656,7 @@ function openJoin(ctx){ctx=ctx&&ctx.id?ctx:{};S.joinCtx=ctx.id||null;var pre=loa
  h+='</div>';
  openModal(h);var nm=sheet.querySelector('#j-name'),tl=sheet.querySelector('#j-tel'),tfT=sheet.querySelector('#tf-tel'),ag=sheet.querySelector('#tf-agree');
  function fmt(v){var d=v.replace(/\D/g,'').slice(0,11);return d.length<4?d:d.length<8?d.slice(0,3)+'-'+d.slice(3):d.slice(0,3)+'-'+d.slice(3,d.length-4)+'-'+d.slice(-4);}
- function okTel(){return /^01[016789]\d{7,8}$/.test(tl.value.replace(/\D/g,''));}
+ function okTel(){return /^010\d{8}$|^01[16789]\d{7,8}$/.test(tl.value.replace(/\D/g,''));}
  function showTel(focus){if(nm.value.trim().length<2)return;tfT.hidden=false;if(focus)tl.focus();}
  function showAgree(){if(!okTel()||nm.value.trim().length<1){ag.hidden=true;return;}if(ag.hidden){ag.hidden=false;tl.blur();setTimeout(function(){ag.scrollIntoView({behavior:'smooth',block:'end'});},50);}}
  nm.oninput=function(){showTel(false);};nm.onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();showTel(true);}};nm.onblur=function(){if(nm.value.trim().length>=2&&tfT.hidden)showTel(false);};
