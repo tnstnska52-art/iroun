@@ -31,6 +31,11 @@ export const checkLeadInput = z.object({
   consent: z.literal(true), marketing: z.boolean().optional(),
   // 직원 전용 링크로 들어온 고객: 전산이 발급한 추천 식별자(로그인 권한·비밀키 아님). 전산이 담당 직원을 정하는 근거로만 쓴다.
   referralToken: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  // 결과 화면에서 고객이 특정 지원금의 '신청 도움 받기'를 눌렀을 때만 있다. 전산에는 type "check.help_request" 로 간다.
+  helpRequest: z.object({
+    benefitId: short(120).min(1), title: short(200).min(1), amountText: short(40).optional(), amountWon: z.number().min(0).max(1e11).optional(),
+    endsAt: short(40).optional(), agency: short(80).optional(), sourceUrl: z.string().trim().max(500).regex(/^https?:\/\/[^\s]+$/).optional(), result: short(20).optional(),
+  }).strict().optional(),
 }).strict();
 export type CheckLeadInput = z.infer<typeof checkLeadInput>;
 
@@ -38,7 +43,7 @@ export type CheckLeadInput = z.infer<typeof checkLeadInput>;
 export function toCrmLead(x: CheckLeadInput, now = new Date()) {
   const man = (won?: number) => (won && won > 0 ? Math.round(won / 1e4) : null);
   return {
-    schemaVersion: 1, type: "check.lead", requestId: randomUUID(), occurredAt: now.toISOString(), consentAt: now.toISOString(),
+    schemaVersion: 1, type: x.helpRequest ? "check.help_request" : "check.lead", requestId: randomUUID(), occurredAt: now.toISOString(), consentAt: now.toISOString(),
     name: x.name, phone: x.phone.replace(/\D/g, ""), bizName: x.bizName ?? "", industry: x.industry ?? "", province: x.province ?? "", district: x.district ?? "",
     openedYear: x.openedYear ?? null, employeeBand: x.employeeBand ?? "", entity: x.entity ?? "", revNow: x.revNow ?? "", revLast: x.revLast ?? "",
     loans: x.loans.filter((l) => l.kind !== "없음").map((l) => ({ kind: l.kind, amount: AMOUNT_MID[l.amountBand ?? ""] ?? 0, rate: RATE_MID[l.rateBand ?? ""] ?? 0, amountBand: l.amountBand ?? "", rateBand: l.rateBand ?? "" })),
@@ -50,6 +55,7 @@ export function toCrmLead(x: CheckLeadInput, now = new Date()) {
     ...(x.policyFund ? { policyFund: x.policyFund } : {}),
     ...(x.premises ? { premises: x.premises } : {}),
     ...(x.referralToken ? { referralToken: x.referralToken } : {}),
+    ...(x.helpRequest ? { helpRequest: { ...x.helpRequest, amountMan: x.helpRequest.amountWon ? Math.round(x.helpRequest.amountWon / 1e4) : null } } : {}),
   };
 }
 
@@ -95,7 +101,9 @@ export async function flushCheckLeads(fetchImpl: typeof fetch = fetch) {
         sent++;
       } catch (e) {
         const status = (e as { status?: number }).status ?? 0;
-        const giveUp = status >= 400 && status < 500 && status !== 409 && status !== 429 && r.attempts + 1 >= 10;
+        // 도움 요청은 전산이 아직 받을 준비가 안 됐어도(4xx) 버리지 않고 50번(약 이틀)까지 다시 보낸다.
+        const help = r.payload?.type === "check.help_request";
+        const giveUp = !help && status >= 400 && status < 500 && status !== 409 && status !== 429 && r.attempts + 1 >= 10;
         const wait = Math.min(60, 2 ** Math.min(r.attempts, 6)); // 분
         await pool.query("UPDATE iroun_check_lead_outbox SET attempts=$2,next_at=now()+($3||' minutes')::interval,last_error=$4 WHERE id=$1", [r.id, giveUp ? 50 : r.attempts + 1, String(wait), (e as Error).message.slice(0, 200)]);
         failed++;

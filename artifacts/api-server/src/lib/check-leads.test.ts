@@ -27,6 +27,18 @@ describe("홈페이지 조회 고객 → 전산", () => {
     expect(toCrmLead(checkLeadInput.parse(base))).not.toHaveProperty("policyFund");
     expect(checkLeadInput.safeParse({ ...base, policyFund: "예" }).success).toBe(false);
   });
+  it("지원금 도움 요청은 type check.help_request 로, 지원금 정보와 함께 넘긴다", () => {
+    const base = { name: "가상대표", phone: "01055550099", consent: true as const };
+    const hr = { benefitId: "bizinfo-PBLN_1", title: "가상 고용보험료 지원", amountText: "예상 39만원", amountWon: 390000, endsAt: "2026-12-31", agency: "가상기관", sourceUrl: "https://www.bizinfo.go.kr/x", result: "조건 일치" };
+    const out = toCrmLead(checkLeadInput.parse({ ...base, helpRequest: hr }));
+    expect(out.type).toBe("check.help_request");
+    expect(out.helpRequest).toEqual({ ...hr, amountMan: 39 });
+    expect(toCrmLead(checkLeadInput.parse(base)).type).toBe("check.lead");
+    expect(toCrmLead(checkLeadInput.parse(base))).not.toHaveProperty("helpRequest");
+    expect(checkLeadInput.safeParse({ ...base, helpRequest: { title: "제목만" } }).success).toBe(false);
+    expect(checkLeadInput.safeParse({ ...base, helpRequest: { ...hr, memo: "x" } }).success).toBe(false);
+    expect(checkLeadInput.safeParse({ ...base, helpRequest: { ...hr, sourceUrl: "javascript:alert(1)" } }).success).toBe(false);
+  });
   it("동의 없거나 모르는 항목이 있으면 거절", () => {
     expect(checkLeadInput.safeParse({ ...input, consent: false }).success).toBe(false);
     expect(checkLeadInput.safeParse({ ...input, password: "x" }).success).toBe(false);
