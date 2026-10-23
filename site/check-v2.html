@@ -1,5 +1,5 @@
 <section class="sec light" style="padding-block:clamp(28px,5vw,64px)"><div class="wrap" style="max-width:560px">
-<div id="chk2" class="c2"><div class="c2-loading">공고를 불러오는 중이에요…</div></div>
+<div id="chk2" class="c2" data-questionnaire-version="2"><div class="c2-loading">공고를 불러오는 중이에요…</div></div>
 <p class="c2-disc">공고 원문에 적힌 최대 금액을 더한 것으로, 실제 지급액·선정 여부를 뜻하지 않습니다. 세부 자격은 공식 신청처에서 확인해 주세요. 이로운사람들 서비스 · 정부기관이 아닙니다.</p>
 </div></section>
 </main>
@@ -209,21 +209,20 @@ var PROVINCES=Object.keys(DISTRICTS);
 var INDUSTRIES=['음식점','도소매','서비스','제조','건설','운수','숙박','교육','보건·복지','정보통신','농림어업','기타'];
 var YEAR=new Date(Date.now()+9*3600000).getUTCFullYear();
 var OPEN_YEARS=[];for(var y=YEAR;y>=2010;y--)OPEN_YEARS.push(y+'년');OPEN_YEARS.push('2009년 이전');
-var LOANS=['은행 신용대출','은행 담보대출','보증서 대출 (재단·신보·기보)','정책자금','카드론·캐피탈','대부업','없음'];
-var BADS=['최근 1년 안에 연체','국세·지방세 체납','4대보험 체납','보증사고 (대위변제)','해당 없음'];
-var CREDITS=['900점 이상','800~899점','750~799점','700~749점','600~699점','600점 미만','잘 모르겠어요'];
-var REVS=['5천만 원 미만','5천만~1억 원','1억~3억 원','3억~5억 원','5억~10억 원','10억 원 이상'];
-var LOAN_AMTS=['1천만 원 미만','1천만~3천만 원','3천만~5천만 원','5천만~1억 원','1억~3억 원','3억 원 이상'];
-var LOAN_RATES=['3% 미만','3~4%','4~5%','5~6%','6~8%','8~12%','12% 이상','잘 모르겠어요'];
+var CREDITS=['750~990점','700~750점','600~700점','600점 미만'];
+var REVS=['1000만원 미만','1000~5000만원','5000만원~1억','1억~2억','2억 이상'];
 var ASK='정확한 지원사업을 고르기 위해 최대한 실제와 가깝게 골라주세요';
-/* 질문 순서: 지원금 판정에 쓰는 것 먼저, 정책자금 상담용은 뒤에 */
-/* 질문 순서: 고른 답에 따라 지역(시·군·구), 작년 매출, 대출별 금액·금리 질문이 붙는다 */
-function steps(){var a=S.ans,s=['entity','industry','province'];if((DISTRICTS[a.province]||[]).length)s.push('district');s.push('opened','revNow');if(!(a.openedYear>=YEAR))s.push('revLast');s.push('employeeBand','premises','woman','credit','loans');(a.loans||[]).forEach(function(l){if(l!=='없음')s.push('amt|'+l,'rate|'+l);});s.push('bad','bizName');return s;}
+/* 상호 먼저, 지역·개업연도·매출·사업장·신용점수·현재 연체/세금 체납만 수집 */
+function steps(){var a=S.ans,s=['bizName','entity','industry','province'];if((DISTRICTS[a.province]||[]).length)s.push('district');s.push('opened','revNow');if(!(a.openedYear>=YEAR))s.push('revLast');s.push('premises','credit','currentArrears');return s;}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function load(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 var S={view:'home',idx:0,ans:load('irw_c2_ans')||{},list:null,member:load('irw_check_member'),tab:'now',timers:[]};
-if(!S.ans.loans)S.ans.loans=[];if(!S.ans.bad)S.ans.bad=[];if(!S.ans.loanAmt)S.ans.loanAmt={};
+// 과거 선택 구간을 새 구간의 정확한 값으로 추정하지 않는다. 서버의 과거 고객정보는 유지한다.
+if(S.ans.questionnaireVersion!==2||S.ans.revenueYear!==YEAR){
+ ['employeeBand','woman','openedMonth','loans','loanAmt','bad','currentArrears','credit','revNow','revLast'].forEach(function(k){delete S.ans[k];});
+ S.ans.done=false;S.ans.questionnaireVersion=2;S.ans.revenueYear=YEAR;save('irw_c2_ans',S.ans);
+}
 
 /* ===== 판정 (앱 서버 benefit-domain.ts 와 같은 규칙) ===== */
 var ALIAS=[["서울","서울특별시","서울시"],["부산","부산광역시","부산시"],["대구","대구광역시"],["인천","인천광역시"],["광주","광주광역시"],["대전","대전광역시"],["울산","울산광역시"],["세종","세종특별자치시"],["경기","경기도"],["강원","강원도","강원특별자치도"],["충북","충청북도"],["충남","충청남도"],["전북","전라북도","전북특별자치도"],["전남","전라남도"],["경북","경상북도"],["경남","경상남도"],["제주","제주도","제주특별자치도"],["전남광주","전남광주통합특별시","전남광주특별시"]];
@@ -232,7 +231,7 @@ function sameProvince(a,b){return !!a&&!!b&&(a===b||(b==='전남광주'&&(a==='�
 function effectiveRegion(b){var r=String(b.region||'').trim();if(r==='전국'||provinceKey(r.split(/\s+/)[0]||''))return r;var ag=String(b.agency||'').trim().split(/\s+/)[0]||'';return provinceKey(ag)?ag:r;}
 function provinceKey(s){s=String(s).trim();for(var i=0;i<ALIAS.length;i++)if(ALIAS[i].indexOf(s)>=0)return ALIAS[i][0];return undefined;}
 /* 매출 구간(원). 위쪽 끝은 다음 구간 바로 아래까지 */
-var REV={"5천만 원 미만":[0,5e7-1],"5천만~1억 원":[5e7,1e8-1],"1억~3억 원":[1e8,3e8-1],"3억~5억 원":[3e8,5e8-1],"5억~10억 원":[5e8,1e9-1],"10억 원 이상":[1e9,Infinity],"1억 원 미만":[0,1e8-1],"3억~10억 원":[3e8,1e9-1]};
+var REV={"1000만원 미만":[0,1e7-1],"1000~5000만원":[1e7,5e7-1],"5000만원~1억":[5e7,1e8-1],"1억~2억":[1e8,2e8-1],"2억 이상":[2e8,Infinity],"5천만 원 미만":[0,5e7-1],"5천만~1억 원":[5e7,1e8-1],"1억~3억 원":[1e8,3e8-1],"3억~5억 원":[3e8,5e8-1],"5억~10억 원":[5e8,1e9-1],"10억 원 이상":[1e9,Infinity],"1억 원 미만":[0,1e8-1],"3억~10억 원":[3e8,1e9-1]};
 var BAND={"없음":[0,0],"1~4명":[1,4],"5~9명":[5,9],"10~29명":[10,29],"30명 이상":[30,Infinity]};
 function rangeCompare(min,max,op,exp){if(typeof exp!=='number')return undefined;if(op==='gte'||op==='after')return min>=exp?true:max<exp?false:undefined;if(op==='lte'||op==='before')return max<=exp?true:min>exp?false:undefined;return undefined;}
 function compare(a,op,e){if(a===undefined||a===null||a===''||a==='잘 모르겠어요'||a==='모름')return undefined;if(op==='eq')return a===e;if(op==='in')return Array.isArray(e)?e.indexOf(a)>=0:undefined;if(op==='gte'||op==='lte'){if(typeof a!=='number'||typeof e!=='number')return undefined;return op==='gte'?a>=e:a<=e;}if(op==='before'||op==='after'){if(typeof a!=='string'||typeof e!=='string'||!isFinite(Date.parse(a))||!isFinite(Date.parse(e)))return undefined;return op==='before'?Date.parse(a)<=Date.parse(e):Date.parse(a)>=Date.parse(e);}return undefined;}
@@ -256,6 +255,7 @@ function matchBenefit(b,p,now){now=now||new Date();var year=new Date(now.getTime
  if(!(b.rules||[]).length&&!b.openToAll)unknowns.push('세부 자격은 공식 신청처에서 확인해야 합니다.');
  (b.rules||[]).forEach(function(r){var res=evalRule(r,biz,p,year);if(res===true)reasons.push(r.label+': 입력 조건과 일치합니다.');else if(res===false)excl.push(r.label+': 입력 조건과 다릅니다.');else unknowns.push(r.label+': 추가 확인이 필요합니다.');});
  /* 체납·연체: 공고에 제외 조건이 있고 답했으면 그 답으로 판정 */
+ if(biz.currentArrears==='O')unknowns.push('현재 연체 또는 세금 체납의 종류와 해당 공고의 제외 조건을 확인해 주세요.');
  var text=checks.concat((b.rules||[]).map(function(r){return r.label;}),[b.summary||'',b.support||'']).join(' ');
  [[ARREARS,biz.arrears,'세금·4대보험 체납이 있으면 신청할 수 없는 공고입니다.','체납이 없습니다.'],[DELINQ,biz.delinquency,'금융 연체·보증사고가 있으면 신청할 수 없는 공고입니다.','연체·보증사고가 없습니다.']].forEach(function(g){if(!g[0].test(text)||!g[1])return;if(g[1]==='예')excl.push(g[2]);else{reasons.push(g[3]);for(var i=unknowns.length-1;i>=0;i--)if(g[0].test(unknowns[i])&&checks.indexOf(unknowns[i])>=0)unknowns.splice(i,1);}});
  return {result:excl.length?'대상 제외':unknowns.length?'추가 확인 필요':'조건 일치',reasons:reasons,unknowns:unknowns,exclusions:excl};}
@@ -365,6 +365,7 @@ var EMPR={'없음':[0,0],'1~4명':[1,4],'5~9명':[5,9],'10~29명':[10,29],'30명
 function textLimit(b){var t=b.summary||'',has=function(f){return (b.rules||[]).some(function(r){return r.field===f;});},res='ok';var ly=String(YEAR-1);if(S.ans.openedYear>=YEAR&&new RegExp("('|‘|’)?"+ly.slice(2)+"년\\s*(연\\s*)?매출|"+ly+"년\\s*(연\\s*)?매출").test(t))return 'out';var rb=revBand(),rv=rb&&REV[rb];var mr=t.match(/매출(?:액)?\s*(?:이|은|가)?\s*(\d+(?:\.\d+)?)\s*억\s*원?\s*(이하|미만)/);
  if(mr&&rv&&!has('revenue')){var cap=parseFloat(mr[1])*1e8-(mr[2]==='미만'?1:0);if(rv[0]>cap)return 'out';if(rv[1]>cap)res='check';}
  var ev=EMPR[S.ans.employeeBand];var me=t.match(/(?:근로자|노동자|직원|피보험자)\s*(?:수\s*)?(?:가\s*)?(\d+)\s*(?:인|명)\s*(이상|미만|이하)/);
+ if(me&&!ev&&!has('employees'))res='check';
  if(me&&ev&&!has('employees')){var n=parseInt(me[1],10),lo=me[2]==='이상'?n:0,hi=me[2]==='이상'?Infinity:me[2]==='미만'?n-1:n;if(ev[1]<lo||ev[0]>hi)return 'out';if(ev[0]<lo||ev[1]>hi)res='check';}
  return res;}
 var ORG_TARGET=/조합을?\s*대상|상인회|개설자|지방\s*자치\s*단체|지자체를?\s*대상|회원사|유료\s*회원|농협|영농\s*조합|농업\s*(회사\s*)?법인|협동\s*조합|생산자\s*단체|유통\s*(법인|조직)|산지\s*유통|사회적\s*기업|예비\s*사회적\s*기업/;
@@ -387,9 +388,9 @@ var GATE_NOTE=/특정 상황|우리 업종|단체가 대상|매출·직원 수 �
 function todayPicks(items){var judged=items.some(function(x){return x.m;});return items.filter(function(x){var t=moneyType(x.benefit);return openToday(x.benefit)&&rank(x.benefit)<=1&&t!=='refund'&&(!judged||x.result==='조건 일치')&&!(x.m&&x.m.unknowns.some(function(u){return GATE_NOTE.test(u);}));}).map(function(x){var b=x.benefit;var e=easeOf(b);return {x:x,s:(rank(b)===0?50:20)+(x.result==='조건 일치'?60:0)+(5-difficulty(b))*10+(e===0?40:e===2?-25:0)+(EASY.test(b.title+' '+b.category)?15:0),l:left(b)};}).sort(function(p,q){return q.s-p.s||p.l-q.l;}).slice(0,5).map(function(p){return p.x;});}
 /* ===== 고객 정보 ===== */
 function revBand(){var v=S.ans.revLast;if(!v||v.indexOf('없음')===0)v=S.ans.openedYear>=YEAR?S.ans.revNow:null;if(!v||v.indexOf('없음')===0)return undefined;return REV[v]?v:undefined;}
-function profile(){var a=S.ans;var bad=a.bad||[];var none=bad.indexOf('해당 없음')>=0;var answered=bad.length>0;
- return {personal:{},businesses:[{id:'web',industry:a.industry,province:a.province,district:a.district,openedYear:a.openedYear,revenue:revBand(),employeeBand:a.employeeBand,premises:a.premises,entity:a.entity,womanOwned:a.woman,situation:'운영 중',
-  arrears:answered?(bad.some(function(x){return /체납/.test(x);})?'예':'아니오'):undefined,delinquency:answered?(bad.some(function(x){return /연체|보증사고/.test(x);})?'예':'아니오'):undefined}]};}
+function profile(){var a=S.ans;
+ // O는 연체와 체납 중 하나 이상이라는 뜻이다. 세금/4대보험 체납·과거 보증사고를 개별 확정하지 않는다.
+ return {personal:{},businesses:[{id:'web',industry:a.industry,province:a.province,district:a.district,openedYear:a.openedYear,revenue:revBand(),premises:a.premises,entity:a.entity,situation:'운영 중',currentArrears:a.currentArrears}]};}
 function hasProfile(){return !!(S.ans.industry&&S.ans.province);}
 /* ===== 표시 도우미 ===== */
 function won(n){if(n>=1e8){var e=Math.floor(n/1e8),m=Math.floor((n%1e8)/1e4);return m?e+'억 '+m.toLocaleString('ko-KR')+'만원':e+'억원';}if(n>=1e4)return Math.floor(n/1e4).toLocaleString('ko-KR')+'만원';return n.toLocaleString('ko-KR')+'원';}
@@ -455,16 +456,12 @@ function Qdef(k){var a=S.ans;switch(k){
  case 'province':return choiceQ('province','사업장은 어디에 있나요?','사업장 주소 기준이에요',PROVINCES,'g3',null,function(o){return SHORT[o]||o;});
  case 'district':return choiceQ('district',(SHORT[a.province]||'')+' 어느 시·군·구인가요?','시·군·구마다 따로 하는 지원사업이 많아요',DISTRICTS[a.province]||[],'g3');
  case 'opened':return {type:'opened'};
- case 'revNow':return choiceQ('revNow',YEAR+'년 올해 지금까지\n매출은 어느 정도인가요?',ASK,['아직 매출 없음'].concat(REVS));
- case 'revLast':return choiceQ('revLast','작년 '+(YEAR-1)+'년 매출은\n얼마였나요?','부가세·종합소득세 신고 기준이에요. '+ASK,['없음 (작년엔 개업 전)'].concat(REVS));
- case 'employeeBand':return choiceQ('employeeBand','4대보험에 가입된\n직원은 몇 명인가요?','대표자 본인은 빼고 세어주세요',['없음','1~4명','5~9명','10~29명','30명 이상']);
+ case 'revNow':return choiceQ('revNow',YEAR+'년 올해 지금까지\n매출은 어느 정도인가요?',ASK,REVS);
+ case 'revLast':return choiceQ('revLast','작년 '+(YEAR-1)+'년 매출은\n얼마였나요?','부가세·종합소득세 신고 기준이에요. '+ASK,REVS);
  case 'premises':return choiceQ('premises','사업장은\n임차인가요, 자가인가요?','임차료 지원사업을 찾는 데 써요',['임차 (월세·전세)','자가 (내 건물)'],'',function(o){return o.indexOf('임차')===0?'임차':'자가';});
- case 'woman':return choiceQ('woman','대표님이\n여성이신가요?','여성 기업 전용 지원사업을 찾는 데 써요',['예','아니오']);
- case 'credit':return choiceQ('credit','대표님 신용점수는\n어느 정도인가요?','NICE 점수 기준이에요. '+ASK,CREDITS);
- case 'loans':return {type:'multi',key:'loans',title:'지금 쓰고 있는 대출을\n모두 골라주세요',hint:'여러 개 고를 수 있어요',opts:LOANS,none:'없음'};
- case 'bad':return {type:'multi',key:'bad',title:'해당되는 게 있나요?',hint:'있어도 받을 수 있는 지원금이 있어요. 체납·연체가 있으면 안 되는 사업을 걸러드려요.',opts:BADS,none:'해당 없음'};
- case 'bizName':return {type:'bizName'};}
- var lp=k.split('|');if(lp.length===2){var l=lp[1],slot=lp[0];var q=slot==='amt'?choiceQ(k,l+'\n얼마나 쓰고 계세요?','지금 남아 있는 금액 기준이에요. '+ASK,LOAN_AMTS):choiceQ(k,l+'\n지금 금리는 몇 %인가요?','대출 앱이나 약정서에 적힌 금리예요. '+ASK,LOAN_RATES);q.get=function(){return (a.loanAmt[l]||{})[slot];};q.set=function(v){a.loanAmt[l]=a.loanAmt[l]||{};a.loanAmt[l][slot]=v;};return q;}}
+ case 'credit':return choiceQ('credit','대표님 신용점수는\n어느 정도인가요?','NICE 기준 · 정확히 750점은 첫 번째, 700점은 두 번째를 골라주세요.',CREDITS);
+ case 'currentArrears':return choiceQ('currentArrears','현재 연체 중이거나\n세금 체납이 있나요?','현재 연체 또는 국세·지방세 체납이 하나라도 있으면 O, 모두 없으면 X',['O','X'],'g2');
+ case 'bizName':return {type:'bizName'};}}
 function advance(){save('irw_c2_ans',S.ans);var n=S.idx+1;if(n>=steps().length){analyzing();return;}S.idx=n;renderQ();}
 function sel(id,opts,cur){return '<select class="c2-sel" id="'+id+'">'+opts.map(function(o){return '<option'+(o===cur?' selected':'')+'>'+esc(o)+'</option>';}).join('')+'</select>';}
 function renderQ(){stopTimers();S.view='q';var st=steps();if(S.idx>=st.length)S.idx=st.length-1;var key=st[S.idx],q=Qdef(key),a=S.ans,total=st.length;
@@ -472,21 +469,21 @@ function renderQ(){stopTimers();S.view='q';var st=steps();if(S.idx>=st.length)S.
  var foot='';
  if(q.type==='choice'){var cur=q.get?q.get():a[q.key];h+='<h2>'+esc(q.title)+'</h2><div class="hint">'+esc(q.hint)+'</div><div class="c2-opts '+q.grid+'">'+q.opts.map(function(o){var v=q.map?q.map(o):o;var lab=Qlabel(q.key,o);return '<button type="button" class="c2-opt'+(cur===v?' on':'')+'" data-v="'+esc(o)+'">'+esc(lab)+'</button>';}).join('')+'</div>';}
  else if(q.type==='multi'){var arr=a[q.key]||[];h+='<h2>'+esc(q.title)+'</h2><div class="hint">'+esc(q.hint)+'</div><div class="c2-opts">'+q.opts.map(function(o){var on=arr.indexOf(o)>=0;return '<button type="button" class="c2-opt'+(on?' on':'')+'" data-m="'+esc(o)+'"><span>'+esc(o)+'</span>'+(on?'<span>✓</span>':'')+'</button>';}).join('')+'</div>';foot='<button type="button" class="c2-btn" data-next'+(arr.length?'':' disabled')+'>다음</button>';}
- else if(q.type==='opened'){var oy=a.openedYear?(a.openedYear<=2009?'2009년 이전':a.openedYear+'년'):(YEAR-3)+'년';h+='<h2>언제 개업하셨나요?</h2><div class="hint">사업자등록증에 적힌 개업일 기준이에요</div><div style="display:flex;gap:10px"><label class="c2-field" style="flex:3">년도'+sel('c2-oy',OPEN_YEARS,oy)+'</label><label class="c2-field" style="flex:2">월'+sel('c2-om',['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],a.openedMonth||'1월')+'</label></div>';foot='<button type="button" class="c2-btn" data-next>다음</button>';}
- else if(q.type==='bizName'){h+='<h2>상호명을\n알려주세요</h2><div class="hint">사업자등록증에 적힌 상호 그대로 적어주세요</div><label class="c2-field">상호명<input class="c2-in" id="c2-bn" value="'+esc(a.bizName||'')+'" placeholder="예) 이로운식당"></label>';foot='<button type="button" class="c2-btn" data-next>입력 완료</button>';}
+ else if(q.type==='opened'){var oy=a.openedYear?(a.openedYear<=2009?'2009년 이전':a.openedYear+'년'):(YEAR-3)+'년';h+='<h2>언제 개업하셨나요?</h2><div class="hint">사업자등록증에 적힌 개업연도만 골라주세요</div><div style="display:flex;gap:10px"><label class="c2-field" style="flex:3">년도'+sel('c2-oy',OPEN_YEARS,oy)+'</label></div>';foot='<button type="button" class="c2-btn" data-next>다음</button>';}
+ else if(q.type==='bizName'){h+='<h2>상호명을\n알려주세요</h2><div class="hint">사업자등록증에 적힌 상호 그대로 적어주세요</div><label class="c2-field">상호명<input class="c2-in" id="c2-bn" maxlength="60" value="'+esc(a.bizName||'')+'" placeholder="예) 이로운식당"></label>';foot='<button type="button" class="c2-btn" data-next>다음</button>';}
  h+='<span class="c2-fill"></span>'+foot+'</div>';box.innerHTML=h;
  box.querySelector('[data-back]').onclick=function(){if(S.idx===0){S.view='home';renderHome();return;}S.idx--;renderQ();};
  [].forEach.call(box.querySelectorAll('.c2-opt[data-v]'),function(b){b.onclick=function(){var o=b.getAttribute('data-v');var v=q.map?q.map(o):o;if(q.set)q.set(v);else{if(q.key==='province'&&a.province!==v)delete a.district;a[q.key]=v;}advance();};});
  [].forEach.call(box.querySelectorAll('.c2-opt[data-m]'),function(b){b.onclick=function(){var o=b.getAttribute('data-m');var arr=(a[q.key]||[]).slice();if(o===q.none)arr=[o];else{arr=arr.filter(function(x){return x!==q.none;});arr=arr.indexOf(o)>=0?arr.filter(function(x){return x!==o;}):arr.concat([o]);}a[q.key]=arr;renderQ();};});
  var nx=box.querySelector('[data-next]');if(nx)nx.onclick=function(){
-  if(q.type==='opened'){var oy=box.querySelector('#c2-oy').value;a.openedYear=oy.indexOf('이전')>0?2009:parseInt(oy,10);a.openedMonth=box.querySelector('#c2-om').value;}
-  if(q.type==='bizName')a.bizName=box.querySelector('#c2-bn').value.trim();
+  if(q.type==='opened'){var oy=box.querySelector('#c2-oy').value;a.openedYear=oy.indexOf('이전')>0?2009:parseInt(oy,10);if(a.openedYear>=YEAR)delete a.revLast;}
+  if(q.type==='bizName'){a.bizName=box.querySelector('#c2-bn').value.trim();if(!a.bizName){box.querySelector('#c2-bn').focus();return;}}
   advance();};
  if(S.touched)scrollTop();S.touched=true;}
 function Qlabel(key,o){return key==='province'?(SHORT[o]||o):o;}
 /* ===== 찾는 중 게이지 ===== */
 function analyzing(){stopTimers();S.ans.done=true;save('irw_c2_ans',S.ans);var n=S.list?S.list.length:0,a=S.ans;
- var msgs=['대표님 조건에 맞는 지원사업을 확인 중이에요',(n?'기업마당·정부24 등 공고 '+n.toLocaleString('ko-KR')+'건을 살펴보는 중이에요':'공식 공고를 살펴보는 중이에요'),esc((SHORT[a.province]||'')+' '+(a.district||''))+' 지역 사업을 고르는 중이에요',esc(a.industry||'')+' 업종에 맞는 사업을 찾는 중이에요','직원 수·업력·매출·대표자 조건을 비교하는 중이에요','통장에 바로 들어오는 지원금부터 정리하는 중이에요'];
+ var msgs=['대표님 조건에 맞는 지원사업을 확인 중이에요',(n?'기업마당·정부24 등 공고 '+n.toLocaleString('ko-KR')+'건을 살펴보는 중이에요':'공식 공고를 살펴보는 중이에요'),esc((SHORT[a.province]||'')+' '+(a.district||''))+' 지역 사업을 고르는 중이에요',esc(a.industry||'')+' 업종에 맞는 사업을 찾는 중이에요','업력·매출·사업장 조건을 비교하는 중이에요','통장에 바로 들어오는 지원금부터 정리하는 중이에요'];
  box.innerHTML='<div class="c2-ana"><h2>🔎 지원사업을<br>찾고 있어요</h2><div class="p"><span id="c2-ap">1</span>%</div><div class="gb"><b id="c2-ab"></b></div><p id="c2-am">'+msgs[0]+'</p><small>공식 공고 원문 기준 · 잠시만 기다려 주세요</small></div>';scrollTop();
  var p=document.getElementById('c2-ap'),b=document.getElementById('c2-ab'),m=document.getElementById('c2-am'),t0=null,D=3200;
  function step(ts){if(t0===null)t0=ts;var x=Math.min(1,(ts-t0)/D);var v=Math.max(1,Math.min(100,Math.round(x*100)));p.textContent=v;b.style.width=v+'%';var k=Math.min(msgs.length-1,Math.floor(x*msgs.length));if(m.getAttribute('data-k')!=String(k)){m.setAttribute('data-k',k);m.innerHTML=msgs[k];}if(x<1)requestAnimationFrame(step);else setTimeout(function(){S.view='r';renderR();},300);}
@@ -562,9 +559,10 @@ function openDetail(id){var x=findItem(id);if(!x)return;var b=x.benefit,dd=dday(
  openModal(h);[].forEach.call(sheet.querySelectorAll('[data-join]'),function(b){b.onclick=openJoin;});}
 /* ===== 무료 회원 등록 → 아임웹 상담신청 게시판 저장 ===== */
 var INDMAP={'음식점':'요식업','도소매':'도소매업','제조':'제조업','건설':'건설업','서비스':'기타','운수':'기타','숙박':'기타','교육':'기타','보건·복지':'기타','정보통신':'온라인판매업','농림어업':'기타','기타':'기타'};
-/* 문의 양식의 '매출규모'는 필수 항목. 매출이 없거나 작년 매출이 없으면 올해 매출, 그것도 없으면 '1억미만'으로 보낸다 */
+/* 문의 양식의 '매출규모'는 필수 항목이라 빈 값이면 등록이 거절된다. 아임웹 구간에 정확히 들어가면 그 값,
+   '2억 이상'처럼 상한을 모르는 구간은 아래 경계인 '1~3억'으로 보낸다(정확한 선택값은 상담 내용과 전산에 그대로 남는다) */
+var REVMAP={'1000만원 미만':'1억미만','1000~5000만원':'1억미만','5000만원~1억':'1억미만','1억~2억':'1~3억','2억 이상':'1~3억'};
 function revForm(){var b=revBand();if(b&&REVMAP[b])return REVMAP[b];var n=S.ans.revNow;if(n&&REVMAP[n])return REVMAP[n];return '1억미만';}
-var REVMAP={'5천만 원 미만':'1억미만','5천만~1억 원':'1억미만','1억~3억 원':'1~3억','3억~5억 원':'3~5억','5억~10억 원':'5~10억','10억 원 이상':'10억 이상'};
 function openJoin(){var pre=load('irw_check_member_draft')||{};
  var h='<div class="c2-join"><h3>30초면 끝나요<br>나머지 지원금까지 전부 열려요</h3><div class="c2-chips"><span>비용 없음</span><span>카드 등록 없음</span><span>자동결제 없음</span></div>';
  h+='<label class="c2-field" style="color:#4E5968;font-weight:600">대표자 이름<input class="c2-in" id="j-name" autocomplete="name" value="'+esc(pre.name||'')+'" placeholder="홍길동"></label>';
@@ -575,19 +573,19 @@ function openJoin(){var pre=load('irw_check_member_draft')||{};
  function sync(){all.checked=items.every(function(i){return i.checked;});sheet.querySelector('#j-go').disabled=!(items[0].checked&&items[1].checked);}
  all.onchange=function(){items.forEach(function(i){i.checked=all.checked;});sync();};items.forEach(function(i){i.onchange=sync;});sync();
  sheet.querySelector('#j-go').onclick=submitJoin;}
-function joinText(mkt){var a=S.ans,e=S.est||{items:[],sure:0,sureTotal:0,maybe:0},p=S.past||{items:[],sure:0,sureTotal:0};var loans=(a.loans||[]).filter(function(x){return x!=='없음';}).map(function(l){var v=a.loanAmt[l]||{};return l+' '+(v.amt||'')+' (금리 '+(v.rate||'-')+')';});
- var lines=['[홈페이지 지원금 확인 결과]','상호: '+(a.bizName||'-'),'사업자: '+(a.entity==='법인'?'법인사업자':'개인사업자'),'업종: '+(a.industry||''),'지역: '+(a.province||'')+' '+(a.district||''),'개업: '+(a.openedYear<=2009?'2009년 이전':(a.openedYear||'')+'년 '+(a.openedMonth||'')),'매출: '+YEAR+'년(현재까지) '+(a.revNow||'-')+' / '+(YEAR-1)+'년 '+(a.revLast||'-'),'4대보험 직원: '+(a.employeeBand||''),'사업장: '+(a.premises||''),'여성 대표: '+(a.woman||''),'신용점수: '+(a.credit||''),'기대출: '+(loans.length?loans.join(', '):'없음'),'연체·체납: '+((a.bad||[]).join(', ')||'-'),'','신청 가능(조건 일치) '+e.sure+'건 / 최대 '+(e.sureTotal?won(e.sureTotal):'금액 미표기')+' · 확인 필요 '+e.maybe+'건','작년 놓친 지원금 '+p.items.length+'건','','[동의] 개인정보 수집·이용(필수) 예 / 이용약관(필수) 예 / 마케팅 수신(선택) '+(mkt?'예':'아니오')+' · '+new Date().toLocaleString('ko-KR'),''];
+function joinText(mkt){var a=S.ans,e=S.est||{items:[],sure:0,sureTotal:0,maybe:0},p=S.past||{items:[],sure:0,sureTotal:0};
+ var lines=['[홈페이지 지원금 확인 결과]','상호: '+(a.bizName||'-'),'사업자: '+(a.entity==='법인'?'법인사업자':'개인사업자'),'업종: '+(a.industry||''),'지역: '+(a.province||'')+' '+(a.district||''),'개업: '+(a.openedYear<=2009?'2009년 이전':(a.openedYear||'')+'년'),'매출: '+YEAR+'년(현재까지) '+(a.revNow||'-')+' / '+(YEAR-1)+'년 '+(a.openedYear>=YEAR?'개업 전 (질문 제외)':a.revLast||'-'),'사업장: '+(a.premises||''),'신용점수: '+(a.credit||''),'현재 연체 또는 세금 체납: '+(a.currentArrears||'-'),'','신청 가능(조건 일치) '+e.sure+'건 / 최대 '+(e.sureTotal?won(e.sureTotal):'금액 미표기')+' · 확인 필요 '+e.maybe+'건','작년 놓친 지원금 '+p.items.length+'건','','[동의] 개인정보 수집·이용(필수) 예 / 이용약관(필수) 예 / 마케팅 수신(선택) '+(mkt?'예':'아니오')+' · '+new Date().toLocaleString('ko-KR'),''];
  e.items.slice(0,10).forEach(function(x,i){lines.push((i+1)+'. '+x.benefit.title+' ('+x.result+(x.benefit.maxAmount?', '+won(x.benefit.maxAmount):'')+')');});return lines.join('\n');}
 /* 조회 고객을 회사 전산(지원금 영업)으로 넘긴다. 우리 서버가 서명해서 전산에 전달한다. 실패해도 고객 화면은 그대로. */
-function sendLead(name,phone,mkt){try{var a=S.ans,e=S.est||{},p=S.past||{};var body={name:name,phone:phone,bizName:a.bizName||undefined,industry:a.industry||undefined,province:a.province||undefined,district:a.district||undefined,openedYear:typeof a.openedYear==='number'?a.openedYear:undefined,employeeBand:a.employeeBand||undefined,entity:a.entity||undefined,revNow:a.revNow||undefined,revLast:a.revLast||undefined,
- loans:(a.loans||[]).filter(function(l){return l!=='없음';}).slice(0,10).map(function(l){var v=(a.loanAmt||{})[l]||{};return {kind:l,amountBand:v.amt||undefined,rateBand:v.rate||undefined};}),
- supportThisYear:e.recTotal||undefined,supportLastYear:p.recTotal||undefined,sureCount:typeof e.sure==='number'?e.sure:undefined,consent:true,marketing:!!mkt};
+function sendLead(name,phone,mkt){try{var a=S.ans,e=S.est||{},p=S.past||{};var body={name:name,phone:phone,bizName:a.bizName||undefined,industry:a.industry||undefined,province:a.province||undefined,district:a.district||undefined,openedYear:typeof a.openedYear==='number'?a.openedYear:undefined,questionnaireVersion:2,revenueYear:YEAR,premises:a.premises||undefined,creditBand:a.credit||undefined,currentArrears:a.currentArrears||undefined,entity:a.entity||undefined,revNow:a.revNow||undefined,revLast:a.revLast||undefined,
+ loans:[],
+ supportThisYear:(e.sureTotal||0)+(e.likelyTotal||0)||undefined,supportLastYear:p.sureTotal||undefined,sureCount:typeof e.sure==='number'?e.sure:undefined,consent:true,marketing:!!mkt};
  fetch(API.replace(/\/benefits$/,'/public/check-lead'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),keepalive:true}).catch(function(){});}catch(err){}}
 async function submitJoin(){var name=sheet.querySelector('#j-name').value.trim(),tel=sheet.querySelector('#j-tel').value.trim(),mkt=sheet.querySelector('#j-m').checked,err=sheet.querySelector('#j-err'),go=sheet.querySelector('#j-go');var digits=tel.replace(/\D/g,'');err.hidden=true;
  if(!name){err.textContent='이름을 입력해 주세요.';err.hidden=false;return;}if(!/^01[016789]\d{7,8}$/.test(digits)){err.textContent='휴대폰 번호를 확인해 주세요.';err.hidden=false;return;}
  save('irw_check_member_draft',{name:name,tel:tel});go.disabled=true;go.textContent='등록 중…';
  try{if(!S.est&&hasProfile())compute();var f=document.querySelector('.form-widget form[id^=addForm]');if(!f)throw new Error('form');var fd=new URLSearchParams();[].forEach.call(f.querySelectorAll('input[type=hidden]'),function(i){fd.append(i.name,i.value);});
-  var phone=digits.replace(/^(\d{3})(\d{3,4})(\d{4})$/,'$1-$2-$3');var a=S.ans;var hi=a.credit==='900점 이상'||a.credit==='800~899점'||a.credit==='750~799점';
+  var phone=digits.replace(/^(\d{3})(\d{3,4})(\d{4})$/,'$1-$2-$3');var a=S.ans;var hi=a.credit==='750~990점';
   fd.append('input_82140128aa91a',name);fd.append('input_d80bc05bd0e00',((a.province||'')+' '+(a.district||'')).trim()||'-');fd.append('input_6a69ca6d51aa1',phone);fd.append('select_BkUsP4zJwu',hi?'750점 이상':'750점 미만');fd.append('select_x6Wm3k1l88',INDMAP[a.industry]||'기타');fd.append('select_2ET23k2z10',revForm());fd.append('textarea_20To0555d2',joinText(mkt));
   var r=await fetch('/ajax/form_add.cm',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8','X-Requested-With':'XMLHttpRequest'},body:fd.toString()});var j=null;try{j=await r.json();}catch(e){}
   if(!j||j.msg!=='SUCCESS')throw new Error((j&&j.msg)||'서버 응답 오류');
