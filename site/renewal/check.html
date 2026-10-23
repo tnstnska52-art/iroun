@@ -1304,7 +1304,7 @@ function openJoin(ctx){ctx=ctx&&ctx.id?ctx:{};S.joinCtx=ctx.id||null;var pre=loa
  else if(L.n&&L.total){var first=L.rest.filter(function(x){var d=daysLeft(x.benefit.endsAt);return d!==null&&d>=0&&d<=30;}).sort(function(x,y){return daysLeft(x.benefit.endsAt)-daysLeft(y.benefit.endsAt);})[0];
   h+='<div class="c2-loss"><span class="k">⚠ 확인하지 않으면 놓칠 수 있는 지원금</span><b>'+esc(won(L.total))+'</b><span class="d">대표님 조건으로 찾은 '+L.n+'건이 아직 잠겨 있어요</span><span class="d" style="font-size:12px;font-weight:500;color:#6B7684">공고에 적힌 금액의 참고 합계예요</span><ul>'+(first?'<li>가장 빠른 마감 <b>'+esc(fmtDate(first.benefit.endsAt))+'</b> · 마감 전에 담당자가 챙겨드려요</li>':'')+(L.soon>1?'<li>30일 안에 마감되는 지원금 <b>'+L.soon+'건</b></li>':'')+(P?'<li>작년('+(YEAR-1)+'년)에 대표님 조건으로 놓친 지원금 <b>'+esc(won(P))+'</b></li>':'')+'</ul></div>';}
  else h+='<h3>나머지 지원금까지<br>전부 열어드릴게요</h3>';
- h+='<div class="c2-why"><span>✓ 신청 방법·필요 서류 바로 공개</span><span>✓ 마감 전에 담당자가 챙겨드려요</span></div>';
+ h+='<div class="c2-why"><span>✓ 신청 방법·필요 서류 바로 공개</span><span>✓ 담당자가 서류 준비까지 도와드려요</span></div>';
  h+='<label class="c2-tf" id="tf-name"><span>이름</span><input class="c2-in" id="j-name" autocomplete="name" enterkeyhint="next" value="'+esc(pre.name||'')+'" placeholder="이름을 입력해 주세요"></label>';
  h+='<label class="c2-tf" id="tf-tel"'+(pre.name?'':' hidden')+'><span>휴대폰 번호</span><input class="c2-in" id="j-tel" type="tel" inputmode="numeric" autocomplete="tel" enterkeyhint="done" maxlength="13" value="'+esc(pre.tel||'')+'" placeholder="010-0000-0000"></label>';
  h+='<p class="c2-err" id="j-err" hidden></p>';
