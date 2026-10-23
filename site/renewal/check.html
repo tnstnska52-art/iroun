@@ -890,7 +890,7 @@ var CREDITS=['750~990점','700~750점','600~700점','600점 미만'];
 var REVS=['1000만원 미만','1000~5000만원','5000만원~1억','1억~2억','2억 이상'];
 var ASK='정확한 지원사업을 고르기 위해 최대한 실제와 가깝게 골라주세요';
 /* 상호 먼저, 지역·개업연도·매출·사업장·신용점수·현재 연체/세금 체납만 수집 */
-function steps(){var a=S.ans,s=['bizName','entity','industry','province'];if((DISTRICTS[a.province]||[]).length)s.push('district');s.push('opened','revNow');if(!(a.openedYear>=YEAR))s.push('revLast');s.push('premises','credit','currentArrears');return s;}
+function steps(){var a=S.ans,s=['bizName','entity','industry','province'];if((DISTRICTS[a.province]||[]).length)s.push('district');s.push('opened','revNow');if(!(a.openedYear>=YEAR))s.push('revLast');s.push('premises','policyFund','credit','currentArrears');return s;}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function load(k){try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
@@ -1164,6 +1164,7 @@ function Qdef(k){var a=S.ans;switch(k){
  case 'revNow':return choiceQ('revNow',YEAR+'년 올해 지금까지\n매출은 어느 정도인가요?',ASK,REVS);
  case 'revLast':return choiceQ('revLast','작년 '+(YEAR-1)+'년 매출은\n얼마였나요?','부가세·종합소득세 신고 기준이에요. '+ASK,REVS);
  case 'premises':return choiceQ('premises','사업장은\n임차인가요, 자가인가요?','임차료 지원사업을 찾는 데 써요',['임차 (월세·전세)','자가 (내 건물)'],'',function(o){return o.indexOf('임차')===0?'임차':'자가';});
+ case 'policyFund':return choiceQ('policyFund','정책자금을\n받은 적이 있나요?','중진공·소진공·지역신용보증재단 등에서 받은 정책자금이 한 번이라도 있으면 O',['O','X'],'g2');
  case 'credit':return choiceQ('credit','대표님 신용점수는\n어느 정도인가요?','NICE 기준 · 정확히 750점은 첫 번째, 700점은 두 번째를 골라주세요.',CREDITS);
  case 'currentArrears':return choiceQ('currentArrears','현재 연체 중이거나\n세금 체납이 있나요?','현재 연체 또는 국세·지방세 체납이 하나라도 있으면 O, 모두 없으면 X',['O','X'],'g2');
  case 'bizName':return {type:'bizName'};}}
@@ -1290,10 +1291,10 @@ function openJoin(){var pre=load('irw_check_member_draft')||{},L=lockInfo(S.est&
  all.onchange=function(){items.forEach(function(i){i.checked=all.checked;});sync();};items.forEach(function(i){i.onchange=sync;});sync();
  sheet.querySelector('#j-go').onclick=submitJoin;}
 function joinText(mkt){var a=S.ans,e=S.est||{items:[],sure:0,sureTotal:0,maybe:0},p=S.past||{items:[],sure:0,sureTotal:0};
- var lines=['[홈페이지 지원금 확인 결과]','상호: '+(a.bizName||'-'),'사업자: '+(a.entity==='법인'?'법인사업자':'개인사업자'),'업종: '+(a.industry||''),'지역: '+(a.province||'')+' '+(a.district||''),'개업: '+(a.openedYear<=2009?'2009년 이전':(a.openedYear||'')+'년'),'매출: '+YEAR+'년(현재까지) '+(a.revNow||'-')+' / '+(YEAR-1)+'년 '+(a.openedYear>=YEAR?'개업 전 (질문 제외)':a.revLast||'-'),'사업장: '+(a.premises||''),'신용점수: '+(a.credit||''),'현재 연체 또는 세금 체납: '+(a.currentArrears||'-'),'','신청 가능(조건 일치) '+e.sure+'건 / 최대 '+(e.sureTotal?won(e.sureTotal):'금액 미표기')+' · 확인 필요 '+e.maybe+'건','작년 놓친 지원금 '+p.items.length+'건','','[동의] 개인정보 수집·이용(필수) 예 / 이용약관(필수) 예 / 마케팅 수신(선택) '+(mkt?'예':'아니오')+' · '+new Date().toLocaleString('ko-KR'),''];
+ var lines=['[홈페이지 지원금 확인 결과]','상호: '+(a.bizName||'-'),'사업자: '+(a.entity==='법인'?'법인사업자':'개인사업자'),'업종: '+(a.industry||''),'지역: '+(a.province||'')+' '+(a.district||''),'개업: '+(a.openedYear<=2009?'2009년 이전':(a.openedYear||'')+'년'),'매출: '+YEAR+'년(현재까지) '+(a.revNow||'-')+' / '+(YEAR-1)+'년 '+(a.openedYear>=YEAR?'개업 전 (질문 제외)':a.revLast||'-'),'사업장: '+(a.premises||''),'신용점수: '+(a.credit||''),'정책자금 받은 적: '+(a.policyFund||'-'),'현재 연체 또는 세금 체납: '+(a.currentArrears||'-'),'','신청 가능(조건 일치) '+e.sure+'건 / 최대 '+(e.sureTotal?won(e.sureTotal):'금액 미표기')+' · 확인 필요 '+e.maybe+'건','작년 놓친 지원금 '+p.items.length+'건','','[동의] 개인정보 수집·이용(필수) 예 / 이용약관(필수) 예 / 마케팅 수신(선택) '+(mkt?'예':'아니오')+' · '+new Date().toLocaleString('ko-KR'),''];
  e.items.slice(0,10).forEach(function(x,i){lines.push((i+1)+'. '+x.benefit.title+' ('+x.result+(x.benefit.maxAmount?', '+won(x.benefit.maxAmount):'')+')');});return lines.join('\n');}
 /* 조회 고객을 회사 전산(지원금 영업)으로 넘긴다. 우리 서버가 서명해서 전산에 전달한다. 실패해도 고객 화면은 그대로. */
-function sendLead(name,phone,mkt){try{var a=S.ans,e=S.est||{},p=S.past||{};var body={name:name,phone:phone,bizName:a.bizName||undefined,industry:a.industry||undefined,province:a.province||undefined,district:a.district||undefined,openedYear:typeof a.openedYear==='number'?a.openedYear:undefined,questionnaireVersion:2,revenueYear:YEAR,premises:a.premises||undefined,creditBand:a.credit||undefined,currentArrears:a.currentArrears||undefined,entity:a.entity||undefined,revNow:a.revNow||undefined,revLast:a.revLast||undefined,
+function sendLead(name,phone,mkt){try{var a=S.ans,e=S.est||{},p=S.past||{};var body={name:name,phone:phone,bizName:a.bizName||undefined,industry:a.industry||undefined,province:a.province||undefined,district:a.district||undefined,openedYear:typeof a.openedYear==='number'?a.openedYear:undefined,questionnaireVersion:2,revenueYear:YEAR,premises:a.premises||undefined,creditBand:a.credit||undefined,currentArrears:a.currentArrears||undefined,policyFund:a.policyFund||undefined,entity:a.entity||undefined,revNow:a.revNow||undefined,revLast:a.revLast||undefined,
  loans:[],
  supportThisYear:e.sureTotal||undefined,supportLastYear:p.sureTotal||undefined,sureCount:typeof e.sure==='number'?e.sure:undefined,consent:true,marketing:!!mkt};
  fetch(API.replace(/\/benefits$/,'/public/check-lead'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body),keepalive:true}).catch(function(){});}catch(err){}}
