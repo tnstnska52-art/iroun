@@ -21,6 +21,12 @@ describe("홈페이지 조회 고객 → 전산", () => {
     expect(toCrmLead(input)).not.toHaveProperty("questionnaireVersion");
     for (const bad of [{ currentArrears: "예" }, { creditBand: "900점 이상" }, { questionnaireVersion: 3 }]) expect(checkLeadInput.safeParse({ ...simple, ...bad }).success).toBe(false);
   });
+  it("정책자금 수령 여부(O/X)를 그대로 넘기고, 다른 값은 거절한다", () => {
+    const base = { name: "가상대표", phone: "01055550099", consent: true as const };
+    expect(toCrmLead(checkLeadInput.parse({ ...base, policyFund: "O" }))).toMatchObject({ policyFund: "O" });
+    expect(toCrmLead(checkLeadInput.parse(base))).not.toHaveProperty("policyFund");
+    expect(checkLeadInput.safeParse({ ...base, policyFund: "예" }).success).toBe(false);
+  });
   it("동의 없거나 모르는 항목이 있으면 거절", () => {
     expect(checkLeadInput.safeParse({ ...input, consent: false }).success).toBe(false);
     expect(checkLeadInput.safeParse({ ...input, password: "x" }).success).toBe(false);

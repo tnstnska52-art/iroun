@@ -25,6 +25,7 @@ export const checkLeadInput = z.object({
   questionnaireVersion: z.literal(2).optional(), revenueYear: z.number().int().min(2020).max(2100).optional(),
   creditBand: z.enum(["750~990점", "700~750점", "600~700점", "600점 미만"]).optional(),
   currentArrears: z.enum(["O", "X"]).optional(), premises: z.enum(["임차", "자가"]).optional(),
+  policyFund: z.enum(["O", "X"]).optional(), // 정책자금을 받은 적 있음(O)/없음(X)
   loans: z.array(z.object({ kind: short(30), amountBand: short(40).optional(), rateBand: short(40).optional() })).max(10).default([]),
   supportThisYear: z.number().min(0).max(1e11).optional(), supportLastYear: z.number().min(0).max(1e11).optional(), sureCount: z.number().int().min(0).max(10000).optional(),
   consent: z.literal(true), marketing: z.boolean().optional(),
@@ -46,6 +47,7 @@ export function toCrmLead(x: CheckLeadInput, now = new Date()) {
     ...(x.revenueYear !== undefined ? { revenueYear: x.revenueYear } : {}),
     ...(x.creditBand ? { creditBand: x.creditBand } : {}),
     ...(x.currentArrears ? { currentArrears: x.currentArrears } : {}),
+    ...(x.policyFund ? { policyFund: x.policyFund } : {}),
     ...(x.premises ? { premises: x.premises } : {}),
     ...(x.referralToken ? { referralToken: x.referralToken } : {}),
   };
