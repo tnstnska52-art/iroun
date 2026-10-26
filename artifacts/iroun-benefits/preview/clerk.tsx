@@ -5,6 +5,7 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
+import { PASSWORD_MIN } from '@/lib/text';
 import { ensureUser, installPreviewServer, liveState, previewUser, resetPreview } from './server';
 
 type Listener = () => void;
@@ -124,7 +125,7 @@ export function useSignUp() {
     signUp: {
       get status() { return ref.current.status; },
       password: async ({ phoneNumber, password, firstName }: { phoneNumber: string; password: string; firstName?: string; unsafeMetadata?: unknown }): Promise<Result> => {
-        if (password.length < 8) return bad('비밀번호는 8자 이상으로 입력해 주세요.', 'form_password_length_too_short');
+        if (password.length < PASSWORD_MIN) return bad(`비밀번호는 ${PASSWORD_MIN}자 이상으로 입력해 주세요.`, 'form_password_length_too_short');
         ref.current.phone = phoneNumber; ref.current.name = firstName ?? ''; return ok;
       },
       verifications: {

@@ -1,3 +1,5 @@
+/** 로그인 서비스(Clerk 운영) 비밀번호 최소 길이와 같게 맞춘다. 바꾸면 Clerk 설정도 같이 바꾼다. */
+export const PASSWORD_MIN = 15;
 import { isAxiosLike } from './util';
 export const DISCLAIMER = '이로운사람들 서비스 · 정부기관이 아닙니다';
 export const USER_RECORD_NOTICE = '내가 남긴 기록이에요 · 기관 확인 아님';
@@ -26,7 +28,7 @@ const CLERK: Record<string, string> = {
   form_identifier_not_found: '가입된 번호를 찾을 수 없어요. 번호를 확인하거나 새로 가입해 주세요.',
   form_password_incorrect: '비밀번호가 맞지 않습니다. 다시 입력해 주세요.',
   form_password_pwned: '이 비밀번호는 유출 이력이 있어 사용할 수 없습니다. 다른 비밀번호를 정해 주세요.',
-  form_password_length_too_short: '비밀번호가 너무 짧습니다. 8자 이상으로 입력해 주세요.',
+  form_password_length_too_short: `비밀번호가 너무 짧습니다. ${PASSWORD_MIN}자 이상으로 입력해 주세요.`,
   form_password_not_strong_enough: '비밀번호가 쉬워 보입니다. 숫자와 문자를 섞어 주세요.',
   form_identifier_exists: '이미 가입된 번호예요. 로그인해 주세요.',
   form_code_incorrect: '인증번호가 맞지 않아요. 문자를 다시 확인해 주세요.',

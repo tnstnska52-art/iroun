@@ -5,7 +5,7 @@ import { Pressable, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Btn, Card, Chip, Disclaimer, Field, Notice, Page, T, Toggle, Wrap } from '@/components/ui';
 import { getMe, savePreferences } from '@workspace/api-client-react';
-import { clerkErrorMessage } from '@/lib/text';
+import { PASSWORD_MIN, clerkErrorMessage } from '@/lib/text';
 import { markSignIn } from '@/lib/draft';
 import { useColors } from '@/hooks/useColors';
 import { IS_PREVIEW } from '@/lib/estimate';
@@ -73,7 +73,7 @@ export default function AuthScreen() {
   const digits = phone.replace(/\D/g, '');
   const phoneOk = /^01[016789]\d{7,8}$/.test(digits);
   const e164 = `+82${digits.slice(1)}`;
-  const pwOk = pw.length >= 8;
+  const pwOk = pw.length >= PASSWORD_MIN;
 
   const doSignIn = () => guard(async () => {
     const r = await signIn.password({ phoneNumber: e164, password: pw });
@@ -93,7 +93,7 @@ export default function AuthScreen() {
   });
   const doSignUp = () => guard(async () => {
     if (!accountConsent || !termsConsent) { setErr('동의 2가지가 필요해요.'); return; }
-    if (!pwOk) { setErr('비밀번호는 8자 이상으로 입력해 주세요.'); return; }
+    if (!pwOk) { setErr(`비밀번호는 ${PASSWORD_MIN}자 이상으로 입력해 주세요.`); return; }
     if (pw !== pw2) { setErr('비밀번호 두 칸이 서로 달라요.'); return; }
     const r = await signUp.password({ phoneNumber: e164, password: pw, firstName: name.trim(), unsafeMetadata: { carrier } });
     if (r.error) { setErr(clerkErrorMessage(r.error)); return; }
@@ -161,7 +161,7 @@ export default function AuthScreen() {
             <Wrap>{CARRIERS.map((k) => <Chip key={k} label={k} selected={carrier === k} onPress={() => setCarrier(k)} testID={`carrier-${k}`} />)}</Wrap>
           </View>
         ) : null}
-        <Field testID="password-input" label="비밀번호" hint={mode === 'signup' ? '8자 이상' : undefined} value={pw} onChangeText={setPw} secureTextEntry autoCapitalize="none" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} textContentType={mode === 'signup' ? 'newPassword' : 'password'} error={mode === 'signup' && pw.length > 0 && !pwOk ? `8자 이상으로 입력해 주세요. (지금 ${pw.length}자)` : undefined} />
+        <Field testID="password-input" label="비밀번호" hint={mode === 'signup' ? `${PASSWORD_MIN}자 이상 · 띄어쓰기 없는 짧은 문장처럼 만들면 기억하기 쉬워요` : undefined} value={pw} onChangeText={setPw} secureTextEntry autoCapitalize="none" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} textContentType={mode === 'signup' ? 'newPassword' : 'password'} error={mode === 'signup' && pw.length > 0 && !pwOk ? `${PASSWORD_MIN}자 이상으로 입력해 주세요. (지금 ${pw.length}자)` : undefined} />
         {mode === 'signup' ? <Field testID="password2-input" label="비밀번호 확인" value={pw2} onChangeText={setPw2} secureTextEntry autoCapitalize="none" /> : null}
         {mode === 'signup' ? <>
           <Toggle testID="consent-account" label="개인정보 수집·이용 동의" desc="이름, 번호, 통신사, 사업장 조건 · 탈퇴하면 삭제" value={accountConsent} onChange={setAccountConsent} />
