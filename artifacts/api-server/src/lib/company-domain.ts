@@ -1,8 +1,8 @@
 import {createHash} from "node:crypto";
 import {type Benefit,type Profile,matchBenefit,noticeTime} from "./benefit-domain";
-export const CONSENT_VERSION="2026-10-service-2";
+export const CONSENT_VERSION="2026-10-service-3";
 export const consentTexts={
- service:"맞춤 조건 비교·신청 지원 요청 처리를 위해 선택 입력한 개인·가구·사업장 정보를 처리합니다. 계약 이용권, 회사 접수·배정·문의 기록을 관리합니다. 탈퇴 후에도 재체험 방지를 위해 확인된 이메일의 해시와 체험 시각이 별도로 남습니다. 이는 완전한 익명정보라고 단정하지 않으며 보유기간과 법적 근거를 출시 전 확정해야 하는 개발용 초안입니다. 회사 연락처도 출시 전 확정이 필요합니다.",
+ service:"맞춤 조건 비교와 신청 지원 요청 처리를 위해 입력한 개인·가구·사업장 정보, 계약 이용권, 회사 접수·배정·문의 기록을 처리합니다. 탈퇴하면 지체 없이 삭제하며, 무료 체험 재사용 방지를 위해 되돌릴 수 없게 변환한 값과 체험 시각은 체험 후 1년 보관합니다. 자세한 내용은 개인정보처리방침(https://iroun-api.onrender.com/privacy)을 확인해 주세요. 문의: tnstnska52@naver.com",
  marketing:"새 상품·행사 등 마케팅 안내 수신은 선택입니다. 거절하거나 철회해도 무료체험·계약 서비스에 불이익이 없습니다.",
 };
 export function finished(b:Benefit,now=Date.now()){

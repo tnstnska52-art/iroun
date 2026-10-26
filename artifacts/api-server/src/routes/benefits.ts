@@ -94,7 +94,7 @@ benefitsRouter.put("/preferences",authenticated,async(req,res)=>{
     await client.query("BEGIN");
     await client.query("UPDATE iroun_accounts SET preferences=$2, profile=CASE WHEN $3 THEN profile ELSE '{\"personal\":{},\"businesses\":[],\"step\":0}'::jsonb END WHERE id=$1",[id,JSON.stringify(input),input.privacyConsent]);
     if(!input.notifications) await client.query("DELETE FROM iroun_push_devices WHERE user_id=$1",[id]);
-    await audit(id,"동의 설정 변경",id,{privacyConsent:input.privacyConsent,notifications:input.notifications,accountConsent:input.accountConsent,termsConsent:input.termsConsent,policyVersion:"2026-10-10 초안"},client);
+    await audit(id,"동의 설정 변경",id,{privacyConsent:input.privacyConsent,notifications:input.notifications,accountConsent:input.accountConsent,termsConsent:input.termsConsent,policyVersion:"2026-10-27"},client);
     await client.query("COMMIT");
   }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
   res.json(input);
