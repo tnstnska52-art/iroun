@@ -28,6 +28,7 @@ const PERSONAS: { id: string | null; label: string; desc: string }[] = [
 ];
 
 function PreviewBar() {
+  if (process.env.EXPO_PUBLIC_STORE_SHOTS === '1') return null;
   const current = useSyncExternalStore(subscribe, snapshot, snapshot);
   const [open, setOpen] = useState(false);
   const known = PERSONAS.find((p) => p.id === current);

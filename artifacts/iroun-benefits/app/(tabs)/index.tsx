@@ -16,7 +16,7 @@ import { apiErrorMessage } from '@/lib/text';
 import { daysLeft, fmtDate } from '@/lib/util';
 import { remaining, useServiceStateView } from '@/lib/service';
 import { industryGate } from '@/lib/fit';
-import { FREE_COUNT, HEADLINE_STAT, IS_PREVIEW, customerMoney, customerOrder, estimate, hasConditions, missed, strictMode, useDraftProfile, won } from '@/lib/estimate';
+import { FREE_COUNT, HEADLINE_STAT, IS_PREVIEW, STORE_SHOTS, customerMoney, customerOrder, estimate, hasConditions, missed, strictMode, useDraftProfile, won } from '@/lib/estimate';
 import { difficulty } from '@/lib/difficulty';
 
 export default function Home() {
@@ -45,7 +45,7 @@ export default function Home() {
   const reqs = (svc.data?.requests ?? []).filter((x) => x.state !== '회사 지원 종료');
   const unread = (svc.data?.inbox ?? []).filter((x) => !x.read_at).length + (svc.data?.companyUpdates ?? []).filter((x) => !x.read).length;
   const alertCount = est ? est.items.length : list.filter((b) => b.status !== '마감' && (daysLeft(b.endsAt) ?? 0) >= 0).length;
-  const showStat = IS_PREVIEW || HEADLINE_STAT.verified;
+  const showStat = (IS_PREVIEW && !STORE_SHOTS) || HEADLINE_STAT.verified;
   // 오늘 실제로 접수 중인 공고만(시작 전·예산 소진·마감 제외). 저금리 융자·대출은 고객 목록에서 뺀다.
   const open = list.filter((b) => openToday(b) && customerMoney(b));
   const within30 = (b: { endsAt: string }) => { const d = daysLeft(b.endsAt); return d !== null && d >= 0 && d <= 30; };

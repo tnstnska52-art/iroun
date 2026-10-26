@@ -11,6 +11,8 @@ export { industryGate };
 /** 첫 화면 숫자: 사업자가 1년에 놓치는 지원금 평균(만원). 근거 자료 확인 전에는 실제 앱에 노출하지 않는다. */
 export const HEADLINE_STAT = { label: '1년에 놓치는 지원금 평균', manwon: 1273, verified: false };
 export const IS_PREVIEW = process.env.EXPO_PUBLIC_PREVIEW === '1';
+/** 스토어 스크린샷 촬영용 미리보기: 실제 앱과 같게 미리보기 전용 표시를 숨긴다. */
+export const STORE_SHOTS = process.env.EXPO_PUBLIC_STORE_SHOTS === '1';
 /** 가입 전에 정리본까지 열어 주는 공고 수 */
 export const FREE_COUNT = 3;
 
