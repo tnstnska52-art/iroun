@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomInset } from '@/lib/insets';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@clerk/expo';
@@ -334,12 +334,12 @@ export default function Onboarding() {
 /** 참고 영상의 입력 방식: 아래에서 올라오는 판에 한 번에 한 질문 */
 function Sheet({ title, hint, step, onClose, toast, children }: { title: string; hint?: string; step?: string; onClose: () => void; toast?: string | null; children: React.ReactNode }) {
   const c = useColors();
-  const insets = useSafeAreaInsets();
+  const bottomInset = useBottomInset();
   return (
     <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'flex-end' }}>
       <Pressable style={{ flex: 1, minHeight: 48 }} onPress={onClose} accessibilityRole="button" accessibilityLabel="입력 닫기" testID="sheet-backdrop" />
       <Toast text={toast ?? null} />
-      <View style={{ backgroundColor: c.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '88%', paddingBottom: Platform.OS === 'web' ? 8 : insets.bottom }}>
+      <View style={{ backgroundColor: c.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '88%', paddingBottom: Platform.OS === 'web' ? 8 : bottomInset }}>
         <View style={{ alignItems: 'center', paddingTop: 10 }}><View style={{ width: 44, height: 5, borderRadius: 3, backgroundColor: c.border }} /></View>
         <KeyboardAwareScrollViewCompat keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20, gap: 10 }} bottomOffset={24}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 36 }}>

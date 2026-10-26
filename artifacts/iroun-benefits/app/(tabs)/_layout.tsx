@@ -7,6 +7,7 @@ import { Tabs } from 'expo-router';
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { SymbolView } from 'expo-symbols';
 import { useUnreadReplies } from '@/lib/replies';
+import { useBottomInset } from '@/lib/insets';
 
 const TABS = [
   { name: 'index', label: '홈', sf: 'house', icon: 'home-outline' },
@@ -83,6 +84,8 @@ function ClassicTabLayout() {
   useWebTablistKeyboard();
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
+  // 안드로이드 화면 아래 뒤로가기·홈 버튼 영역만큼 탭 막대를 올린다(가려짐 방지).
+  const bottom = useBottomInset();
   return (
     <Tabs
       screenOptions={{
@@ -95,7 +98,7 @@ function ClassicTabLayout() {
           borderTopWidth: 1,
           borderTopColor: colors.border,
           paddingTop: 6,
-          ...(isWeb ? { height: 70 } : {}),
+          ...(isWeb ? { height: 70 } : { height: 62 + bottom, paddingBottom: bottom + 4 }),
         },
       }}
     >

@@ -3,6 +3,7 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import { getAuth, clerkClient } from "@clerk/express";
 import { pool } from "@workspace/db";
 import { randomUUID } from "node:crypto";
+import { gzipSync } from "node:zlib";
 import { z } from "zod";
 import { account, audit, connections } from "../lib/benefit-store";
 import { benefitSchema, excludedCategory, matchBenefit, normalizeSourceKey, officialUrl, preferencesSchema, profileSchema, publicBenefit, trackingSchema, type Benefit } from "../lib/benefit-domain";
@@ -36,14 +37,33 @@ const administrator = async (req: Request, _res: Response, next: NextFunction) =
 async function allBenefits() {return (await pool.query("SELECT data FROM iroun_benefits ORDER BY updated_at DESC")).rows.map(r=>r.data as Benefit);}
 async function visibleBenefit(id: string) { const b=(await allBenefits()).find(b=>b.id===id && publicBenefit(b)); if(!b) throw fail("공개된 혜택을 찾을 수 없습니다.",404); return b; }
 
+/** 공개 목록: 운영자용 자동 정리 기록은 빼고, 작년 1월 이전에 끝난 공고는 보내지 않는다(앱이 매번 받는 양을 줄임). */
+export function publicListItem(b:Benefit):Benefit{ const {extraction:_x,...rest}=b as Benefit&{extraction?:unknown}; return rest as Benefit; }
+export function recentEnough(b:Benefit,now=Date.now()){
+  const lastYearStart=Date.parse(`${new Date(now+9*3600000).getUTCFullYear()-1}-01-01T00:00:00+09:00`);
+  const end=b.endsAt?Date.parse(b.endsAt):NaN;
+  return !Number.isFinite(end)||end>=lastYearStart;
+}
+let listCache:{at:number,key:string,json:string,gz:Buffer}|undefined;
 benefitsRouter.get("/benefits", async(req,res)=>{
-  let items = (await allBenefits()).filter(publicBenefit);
+  const key=JSON.stringify(req.query);
+  const gzipOk=/\bgzip\b/.test(String(req.headers["accept-encoding"]??""));
+  if(process.env.NODE_ENV!=="test"&&listCache&&listCache.key===key&&Date.now()-listCache.at<60000){
+    res.set("Content-Type","application/json; charset=utf-8").set("Vary","Accept-Encoding");
+    if(gzipOk){res.set("Content-Encoding","gzip").send(listCache.gz);}else res.send(listCache.json);
+    return;
+  }
+  let items = (await allBenefits()).filter(publicBenefit).filter(b=>recentEnough(b));
   for (const key of ["kind","audience","region","status"] as const) {
     const value = req.query[key];
     if (typeof value === "string" && value && value !== "전체") items=items.filter(b=>b[key]===value || (key==="region" && b.region==="전국"));
   }
   if (typeof req.query.search === "string") {const q = req.query.search.trim().slice(0,200).toLowerCase(); items=items.filter(b=>`${b.title} ${b.summary} ${b.category} ${b.agency} ${b.support}`.toLowerCase().includes(q));}
-  res.json(items);
+  const json=JSON.stringify(items.map(publicListItem));
+  const gz=gzipSync(json);
+  listCache={at:Date.now(),key,json,gz};
+  res.set("Content-Type","application/json; charset=utf-8").set("Vary","Accept-Encoding");
+  if(gzipOk){res.set("Content-Encoding","gzip").send(gz);}else res.send(json);
 });
 benefitsRouter.get("/benefits/:id", async(req,res)=>res.json(await visibleBenefit(String(req.params.id))));
 benefitsRouter.get("/membership", async(req,res)=>{

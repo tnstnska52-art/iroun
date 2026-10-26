@@ -6,7 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ClerkProvider } from '@clerk/expo';
 import { koKR } from '@clerk/localizations';
 import { tokenCache } from '@clerk/expo/token-cache';
-import { setBaseUrl,getGetMeQueryKey,getGetRecommendationsQueryKey } from '@workspace/api-client-react';
+import { setBaseUrl,getGetMeQueryKey,getGetRecommendationsQueryKey,getListBenefitsQueryKey } from '@workspace/api-client-react';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import {
   Inter_400Regular,
@@ -58,6 +58,8 @@ const queryClient: QueryClient = new QueryClient({
     queries: { staleTime: 0, gcTime: 0, refetchOnWindowFocus: true, refetchOnReconnect: true, retry: 1 },
   },
 });
+// 공고 목록은 개인정보가 없는 공개 자료라 화면을 옮길 때마다 다시 받지 않는다(실기기 버벅임 원인).
+queryClient.setQueryDefaults(getListBenefitsQueryKey(), { staleTime: 10 * 60_000, gcTime: 60 * 60_000, refetchOnWindowFocus: false });
 
 function RootLayoutNav() {
   useWebSwipeBack();

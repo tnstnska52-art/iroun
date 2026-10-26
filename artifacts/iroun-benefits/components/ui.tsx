@@ -7,6 +7,7 @@ import { TopIcons } from '@/components/TopIcons';
 import { Feather } from '@expo/vector-icons';
 import { Link, useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomInset } from '@/lib/insets';
 import { useColors } from '@/hooks/useColors';
 import { useSettings } from '@/lib/settings';
 import { DISCLAIMER } from '@/lib/text';
@@ -60,6 +61,7 @@ export function Page({ title, subtitle, back, children, tab, right, footer, flus
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
+  const bottomInset = useBottomInset();
   const router = useRouter();
   const [focused,setFocused] = React.useState(true);
   useFocusEffect(React.useCallback(()=>{
@@ -67,7 +69,7 @@ export function Page({ title, subtitle, back, children, tab, right, footer, flus
     return ()=>setFocused(false);
   },[]));
   const top = flush ? 0 : Platform.OS === 'web' ? 10 : insets.top + 4;
-  const bottom = footer ? 24 : Platform.OS === 'web' ? 32 : insets.bottom + (tab ? 24 : 40);
+  const bottom = footer ? 24 : Platform.OS === 'web' ? 32 : bottomInset + (tab ? 24 : 40);
   // 탭 화면은 제목을 고정 줄에 두고, 그 밖의 화면은 뒤로 가기를 고정 줄에 둔다.
   const barTitle = !header && tab && !back ? title : undefined;
   return (
@@ -103,7 +105,7 @@ export function Page({ title, subtitle, back, children, tab, right, footer, flus
       {children}
     </KeyboardAwareScrollViewCompat>
     {footer ? (
-      <View style={{ backgroundColor: c.card, borderTopWidth: 1, borderTopColor: c.border, paddingHorizontal: 16, paddingTop: 10, paddingBottom: (Platform.OS === 'web' ? 12 : insets.bottom + 10), gap: 8, maxWidth: 720, width: '100%', alignSelf: 'center' }}>
+      <View style={{ backgroundColor: c.card, borderTopWidth: 1, borderTopColor: c.border, paddingHorizontal: 16, paddingTop: 10, paddingBottom: (Platform.OS === 'web' ? 12 : bottomInset + 10), gap: 8, maxWidth: 720, width: '100%', alignSelf: 'center' }}>
         {footer}
       </View>
     ) : null}

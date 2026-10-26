@@ -86,7 +86,20 @@ function summarize(items: EstimateItem[], profile: Profile): Estimate {
  * 받을 수 있는 지원금. 내 조건으로 '대상 제외'가 아닌 진행 중 공고를 모으고,
  * 공고 원문에 적힌 최대 금액만 더한다. 실제 지급액·선정 여부를 뜻하지 않는다.
  */
+/** 같은 목록·같은 조건이면 다시 계산하지 않는다(홈 화면의 돌아가는 카드가 몇 초마다 다시 그려도 버벅이지 않게). */
+const estimateCache = new WeakMap<Benefit[], Map<string, Estimate>>();
 export function estimate(benefits: Benefit[], profile: Profile, strict = false): Estimate {
+  const key = `${strict ? 1 : 0}|${new Date().toDateString()}|${JSON.stringify(profile)}`;
+  let byKey = estimateCache.get(benefits);
+  const hit = byKey?.get(key);
+  if (hit) return hit;
+  const result = estimateUncached(benefits, profile, strict);
+  if (!byKey) { byKey = new Map(); estimateCache.set(benefits, byKey); }
+  if (byKey.size > 20) byKey.clear();
+  byKey.set(key, result);
+  return result;
+}
+function estimateUncached(benefits: Benefit[], profile: Profile, strict = false): Estimate {
   const items: EstimateItem[] = [], pending: EstimateItem[] = [];
   for (const b of benefits) {
     // 마감·예산 소진·접수 전 공고와 저금리 융자·대출은 고객 목록에 넣지 않는다.
@@ -123,7 +136,19 @@ export function strictMode(contractActive: boolean | undefined, p?: Profile | nu
  * 당시 조건은 지금 입력한 정보로 비교한다. 개업 전에 마감된 공고는 뺀다.
  * year를 주면 그 해에 마감된 것만 센다.
  */
+const missedCache = new WeakMap<Benefit[], Map<string, Estimate>>();
 export function missed(benefits: Benefit[], profile: Profile, year?: number): Estimate {
+  const key = `${year ?? ''}|${JSON.stringify(profile)}`;
+  let byKey = missedCache.get(benefits);
+  const hit = byKey?.get(key);
+  if (hit) return hit;
+  const result = missedUncached(benefits, profile, year);
+  if (!byKey) { byKey = new Map(); missedCache.set(benefits, byKey); }
+  if (byKey.size > 20) byKey.clear();
+  byKey.set(key, result);
+  return result;
+}
+function missedUncached(benefits: Benefit[], profile: Profile, year?: number): Estimate {
   const opened = (profile.businesses[0] as { openedYear?: number } | undefined)?.openedYear;
   const items: EstimateItem[] = [];
   for (const b of benefits) {
