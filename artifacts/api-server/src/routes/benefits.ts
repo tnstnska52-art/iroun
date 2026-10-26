@@ -161,6 +161,8 @@ export async function eraseAccount(id:string,deletionId:string,actor:string){
     await client.query("DELETE FROM iroun_grants WHERE user_id=$1",[id]);
     await client.query("DELETE FROM iroun_subscriptions WHERE user_id=$1",[id]);
     await client.query("UPDATE iroun_service_requests SET assigned_to=NULL WHERE assigned_to=$1",[id]);
+    // 고객이 올린 서류와 정책자금 상담 신청도 함께 지운다(계정 행은 남기므로 연쇄 삭제가 일어나지 않는다).
+    for(const t of ["iroun_documents","iroun_fund_leads"]) if((await client.query("SELECT to_regclass($1) r",[t])).rows[0].r) await client.query(`DELETE FROM ${t} WHERE user_id=$1`,[id]);
     // 전산 계약 연결은 다른 계정으로 옮겨지지 않도록 남기되, 번호 해시는 지우고 회사 확인으로 돌린다.
     await client.query("UPDATE iroun_crm_links SET phone_hash=NULL,state=CASE WHEN status='active' THEN 'review_required' ELSE state END,review_reason=CASE WHEN status='active' THEN '연결된 계정 삭제' ELSE review_reason END,updated_at=now() WHERE user_id=$1",[id]);
     for(const table of ["iroun_push_devices","iroun_push_jobs","iroun_billing_sync","iroun_billing_transactions","iroun_trials","iroun_contracts","iroun_owner_codes","iroun_consents","iroun_staff","iroun_service_requests","iroun_inquiries","iroun_inbox"]) await client.query(`DELETE FROM ${table} WHERE user_id=$1`,[id]);

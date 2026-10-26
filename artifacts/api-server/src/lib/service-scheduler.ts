@@ -4,6 +4,7 @@ import { logger } from "./logger";
 import {catalog} from "./public-feed-model";
 import {runPublicFeed,publicFeedScheduleReady,storedFeedState} from "./public-feeds";
 import {crmSyncReady,startCrmSync} from "./crm-contracts";
+import {pool} from "@workspace/db";
 import {checkLeadReady,flushCheckLeads} from "./check-leads";
 import {aiReady,runAiStructuring} from "./ai-structure";
 import {runBizinfoArchive} from "./bizinfo-archive";
@@ -23,6 +24,20 @@ export async function collectAll(){
   if(bizinfoFeedConfiguration().ready)await runBizinfoArchive().catch(e=>logger.warn({err:(e as Error).message},"기업마당 작년 공고 수집 실패"));
   if(aiReady())await runAiStructuring().catch(()=>logger.warn("AI 공고 정리 실패"));
   await hideDuplicates().catch(()=>logger.warn("중복 공고 정리 실패"));
+}
+/** 개인정보처리방침의 보유 기간이 지난 기록을 지운다(하루 한 번). */
+export async function purgeExpired(client:Pick<typeof pool,"query">=pool){
+  const jobs:[string,string][]=[
+    ["iroun_fund_leads","updated_at < now() - interval '1 year'"],
+    ["iroun_trial_ledger","started_at < now() - interval '1 year'"],
+    ["iroun_audit","created_at < now() - interval '5 years'"],
+  ];
+  let removed=0;
+  for(const [t,w] of jobs){
+    if(!(await client.query("SELECT to_regclass($1) r",[t])).rows[0].r)continue;
+    removed+=(await client.query(`DELETE FROM ${t} WHERE ${w}`)).rowCount??0;
+  }
+  return removed;
 }
 /** Opt-in only. No key/flag means no provider call and no success log. */
 export function startServiceScheduler(){
@@ -47,6 +62,11 @@ export function startServiceScheduler(){
   }
   if(process.env.IROUN_PUSH_SEND_ENABLED==="true"){
     timers.push(setInterval(()=>{void deliverDeadlines().then(()=>deliverDeadlines(undefined,undefined,Date.now(),"personalized")).then(()=>checkPushReceipts()).catch(()=>logger.warn("푸시 작업 실패: 제공자 확인 필요"));},60000));
+  }
+  if(process.env.DATABASE_URL){
+    const purge=()=>{void purgeExpired().catch(()=>logger.warn("보유기간 지난 기록 정리 실패"));};
+    setTimeout(purge,60000).unref();
+    timers.push(setInterval(purge,24*3600000));
   }
   // 회사 전산 패키지 계약 수신: 공동 키(CRM_APP_INBOUND_SECRET)가 있을 때만 60초마다.
   const stopCrm=crmSyncReady()?startCrmSync():()=>{};
