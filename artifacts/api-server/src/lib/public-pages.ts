@@ -179,8 +179,9 @@ export const supportHtml = () => page("고객 지원", `
 
 export function mountPublicPages(app: Express) {
   const send = (html: () => string) => (_req: unknown, res: { type: (t: string) => { send: (b: string) => void } }) => res.type("text/html; charset=utf-8").send(html());
-  app.get("/privacy", send(privacyHtml));
+  // 스토어 등록용 주소는 /privacy-policy, /account-deletion (예전 주소도 그대로 유지).
+  app.get(["/privacy","/privacy-policy"], send(privacyHtml));
   app.get("/terms", send(termsHtml));
-  app.get("/delete-account", send(deleteHtml));
+  app.get(["/delete-account","/account-deletion"], send(deleteHtml));
   app.get("/support", send(supportHtml));
 }

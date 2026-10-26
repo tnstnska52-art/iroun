@@ -41,7 +41,7 @@ app.use("/api", healthRouter);
 // 스토어 등록용 공개 안내(개인정보처리방침·약관·계정 삭제·고객 지원).
 mountPublicPages(app);
 app.get(["/","/robots.txt"],(req,res)=>{
-  if(req.path==="/robots.txt"){res.type("text/plain").send("User-agent: *\nAllow: /privacy\nAllow: /terms\nAllow: /delete-account\nAllow: /support\nDisallow: /\n");return;}
+  if(req.path==="/robots.txt"){res.type("text/plain").send("User-agent: *\nAllow: /privacy\nAllow: /privacy-policy\nAllow: /terms\nAllow: /delete-account\nAllow: /account-deletion\nAllow: /support\nDisallow: /\n");return;}
   res.type("text/plain; charset=utf-8").send(`이로운사람들 앱 서버가 켜져 있어요.\n로그인 설정: ${process.env.CLERK_SECRET_KEY?"됨":"아직 안 됨 (CLERK 키 필요)"}`);
 });
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
