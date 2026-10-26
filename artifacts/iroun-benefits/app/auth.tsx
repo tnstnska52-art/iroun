@@ -13,6 +13,8 @@ import { IS_PREVIEW } from '@/lib/estimate';
 type Mode = 'signin' | 'signup';
 const CARRIERS = ['SKT', 'KT', 'LG U+', 'SKT 알뜰폰', 'KT 알뜰폰', 'LG U+ 알뜰폰'];
 
+const KAKAO_LOGIN = process.env.EXPO_PUBLIC_KAKAO_LOGIN === '1' || process.env.EXPO_PUBLIC_PREVIEW === '1';
+
 export default function AuthScreen() {
   const c = useColors();
   const router = useRouter();
@@ -137,6 +139,8 @@ export default function AuthScreen() {
   return (
     <Page back title={mode === 'signin' ? '로그인' : '가입하기'} >
       {reauth ? <Notice tone="warn" title="본인 확인을 위해 다시 로그인해 주세요">최근 10분 안에 로그인한 기록이 있어야 회원 탈퇴를 진행할 수 있어요.</Notice> : null}
+      {/* 카카오 로그인: 로그인 서비스(Clerk 운영)에 카카오 연결을 등록한 뒤 EXPO_PUBLIC_KAKAO_LOGIN=1로 켠다. */}
+      {KAKAO_LOGIN ? (<>
       <Pressable testID="auth-kakao" accessibilityRole="button" accessibilityLabel="카카오로 3초 만에 시작하기" disabled={fetching} onPress={doKakao}
         style={({ pressed }) => ({ minHeight: 58, borderRadius: 12, backgroundColor: '#FEE500', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, opacity: fetching ? 0.5 : pressed ? 0.85 : 1 })}>
         <Feather name="message-circle" size={22} color="#191919" />
@@ -147,6 +151,7 @@ export default function AuthScreen() {
         <T v="small" color={c.mutedForeground}>또는 휴대폰 번호로</T>
         <View style={{ flex: 1, height: 1, backgroundColor: c.border }} />
       </View>
+      </>) : null}
       <Card>
         {mode === 'signup' ? <Field testID="name-input" label="이름" value={name} onChangeText={setName} autoComplete="name" textContentType="name" placeholder="홍길동" /> : null}
         <Field testID="phone-input" label="휴대폰 번호" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" placeholder="010-1234-5678" error={phone.length >= 10 && !phoneOk ? '휴대폰 번호를 다시 확인해 주세요.' : undefined} />
