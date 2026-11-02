@@ -121,7 +121,7 @@ export function officialUrl(value: string) {
   try {
     const u = new URL(value);
     return u.protocol === "https:" && !u.username && !u.password &&
-      (u.hostname.endsWith(".go.kr") || ["gov.kr", "www.gov.kr", "bizinfo.go.kr", "www.bizinfo.go.kr", "sbiz24.kr", "www.sbiz24.kr", "nhis.or.kr", "www.nhis.or.kr", "nps.or.kr", "www.nps.or.kr"].includes(u.hostname));
+      (u.hostname.endsWith(".go.kr") || ["gov.kr", "www.gov.kr", "bizinfo.go.kr", "www.bizinfo.go.kr", "sbiz24.kr", "www.sbiz24.kr", "nhis.or.kr", "www.nhis.or.kr", "nps.or.kr", "www.nps.or.kr", "www.4insure.or.kr", "total.comwel.or.kr", "www.comwel.or.kr"].includes(u.hostname));
   } catch { return false; }
 }
 // 심사·추천·경쟁으로 뽑는다는 표현. 하나라도 있으면 선정형으로 본다.

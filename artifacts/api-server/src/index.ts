@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { startServiceScheduler } from "./lib/service-scheduler";
 import { runMigrations } from "./lib/migrate";
 import { seedOfficial } from "./lib/official-seed";
+import { seedStanding } from "./lib/standing-programs";
 import { syncReviewAccounts } from "./lib/review-accounts";
 import { pool } from "@workspace/db";
 
@@ -27,6 +28,8 @@ if(process.env.IROUN_AUTO_MIGRATE!=="false"){
     const added=await seedOfficial();
     logger.info({added},"공식 기본 자료 등록");
   }
+  // 공고 없이 늘 운영되는 지원 제도(두루누리·고용장려금·소상공인 경감). 파일이 바뀌었을 때만 갱신한다.
+  await seedStanding().then(n=>{if(n)logger.info({changed:n},"상시 지원 제도 갱신");}).catch(()=>logger.warn("상시 지원 제도 등록 실패"));
   // 스토어 심사용 계정 이용권(IROUN_REVIEW_ACCOUNTS). 실패해도 서버는 켠다.
   await syncReviewAccounts().then(r=>logger.info(r,"심사용 계정 확인")).catch(()=>logger.warn("심사용 계정 이용권 처리 실패"));
 }
