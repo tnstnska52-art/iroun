@@ -13,7 +13,8 @@ import {gov24BulkReady,hideDuplicates,kstartupReady,runGov24Bulk,runKstartup} fr
 /** 기업마당 → 정부24 전체(하루 1번) → K-Startup → AI 정리 → 중복 정리. 출처 하나가 실패해도 나머지는 계속한다. */
 export async function collectAll(){
   await runBizinfoFeed().catch(()=>logger.warn("기업마당 수집 실패: 관리자 확인 필요"));
-  if(gov24BulkReady())await runGov24Bulk().catch(e=>logger.warn({err:(e as Error).message},"정부24 전체 수집 실패"));
+  if(gov24BulkReady())await runGov24Bulk().then(r=>logger.info({result:(r as {status?:string;reason?:string}).status??(r as {reason?:string}).reason,welfare:(r as {welfareCreated?:number}).welfareCreated},"정부24 전체 수집")).catch(e=>logger.warn({err:(e as Error).message},"정부24 전체 수집 실패"));
+  else logger.info("정부24 전체 수집 꺼짐(키·승인·IROUN_GOV24_BULK 확인)");
   if(kstartupReady())await runKstartup().catch(e=>logger.warn({err:(e as Error).message},"K-Startup 수집 실패"));
   // 작년 마감 공고('놓친 지원금')는 아직 다 모으지 못했으면 한 번 모은다.
   if(kstartupReady()){
