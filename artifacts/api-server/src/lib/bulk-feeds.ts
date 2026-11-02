@@ -95,7 +95,9 @@ export async function runGov24Bulk(fetcher: typeof fetch = fetch, force = false)
   if (!gov24BulkReady()) return { blocked: true, reason: "정부24 활용승인·인증키·수집 설정 필요" };
   const prior = await storedFeedState("gov24:bulk") as Record<string, unknown>;
   // 복지 수집을 처음 켠 날은 오늘 이미 읽었어도 한 번 더 읽는다.
-  if (!force && prior.lastSuccessDay === kstDay() && (!welfareEnabled() || prior.welfare !== undefined)) return { skipped: true, reason: "오늘 이미 전체 수집함" };
+  // 지난번에 전부 '자료 누락'으로 끝났으면 같은 날이라도 다시 읽는다.
+  const healthy = Number(prior.invalid ?? 0) < Number(prior.business ?? 1) && Number(prior.welfareInvalid ?? 0) < Math.max(1, Number(prior.welfare ?? 1));
+  if (!force && prior.lastSuccessDay === kstDay() && healthy && (!welfareEnabled() || prior.welfare !== undefined)) return { skipped: true, reason: "오늘 이미 전체 수집함" };
   const key = serviceKey(catalog.gov24.key, "DATA_GO_KR_SERVICE_KEY");
   const daily = Math.max(1, Number(process.env.IROUN_GOV24_DAILY_LIMIT) || 1000);
   const lock = await pool.connect();
@@ -131,14 +133,19 @@ export async function runGov24Bulk(fetcher: typeof fetch = fetch, force = false)
     if (!business.length) throw new Error("정부24 사업자 서비스 목록이 비었습니다.");
     const details = new Map((await all("serviceDetail", 500)).map((d) => [text(d["서비스ID"]), d]));
     const conditions = new Map((await all("supportConditions", 1000)).map((d) => [text(d["서비스ID"]), d]));
+    // 원인 확인용: 받은 건수와 필드 이름(값 아님)
+    Object.assign(state, { detailCount: details.size, conditionCount: conditions.size, listFields: Object.keys(list[0] ?? {}).slice(0, 30).join(","), detailFields: Object.keys([...details.values()][0] ?? {}).slice(0, 30).join(",") });
+    let firstError = "";
+    const note = (e: unknown) => { if (!firstError) firstError = String((e as Error)?.message ?? e).slice(0, 200); };
     const checkedAt = new Date().toISOString();
     for (const item of business) {
       const id = text(item["서비스ID"]);
-      const detail = details.get(id);
-      if (!id || !detail) { state.invalid = Number(state.invalid) + 1; continue; }
+      // 상세가 없으면 목록 자료(지원대상·지원내용·신청기한 포함)로 대신한다.
+      const detail = { ...item, ...(details.get(id) ?? {}) };
+      if (!id) { state.invalid = Number(state.invalid) + 1; note("서비스ID 없음"); continue; }
       const cond = conditions.get(id) ?? {};
       let b: Benefit;
-      try { b = mapPublicBenefit("gov24", item, detail, cond, checkedAt); } catch { state.invalid = Number(state.invalid) + 1; continue; }
+      try { b = mapPublicBenefit("gov24", item, detail, cond, checkedAt); } catch (e) { state.invalid = Number(state.invalid) + 1; note(e); continue; }
       if (excludedCategory(b)) { state.excluded = Number(state.excluded) + 1; continue; }
       // 시간당 소량 수집과 같은 형태로 지문을 만들어 같은 자료를 '변경'으로 보지 않게 한다.
       const sourceRecord = { list: item, detail, conditions: cond };
@@ -149,27 +156,27 @@ export async function runGov24Bulk(fetcher: typeof fetch = fetch, force = false)
       try {
         const result = await stageOfficialNotice(b, "official-gov24-bulk", { sourceRecord, baselineOnly: !old, contentHash: fingerprint });
         if (result.reused) state.updated = Number(state.updated) + 1; else state.created = Number(state.created) + 1;
-      } catch { state.invalid = Number(state.invalid) + 1; }
+      } catch (e) { state.invalid = Number(state.invalid) + 1; note(e); }
     }
     // 개인·가구 복지: AI 없이 공식 자료 그대로 '복지' 화면에 공개한다(사업자 목록·맞춤·알림에는 넣지 않음).
     let wc = 0, wu = 0, ws = 0, wx = 0;
     for (const item of personal) {
       const id = text(item["서비스ID"]);
-      const detail = details.get(id);
-      if (!id || !detail) { wx++; continue; }
+      const detail = { ...item, ...(details.get(id) ?? {}) };
+      if (!id) { wx++; continue; }
       const cond = conditions.get(id) ?? {};
       let b: Benefit;
-      try { b = mapWelfare(item, detail, cond, checkedAt); } catch { wx++; continue; }
+      try { b = mapWelfare(item, detail, cond, checkedAt); } catch (e) { wx++; note(e); continue; }
       if (excludedCategory(b)) { wx++; continue; }
       const fingerprint = hash({ list: item, detail, conditions: cond, welfare: 1 });
       const snap = await sameSnapshot(b.sourceId, fingerprint);
       if (snap.same) { await refreshOfficialCheck(b.sourceId, b.checkedAt, b.sourceUrl, false); ws++; continue; }
-      try { if ((await upsertWelfare(b, fingerprint)) === "created") wc++; else wu++; } catch { wx++; }
+      try { if ((await upsertWelfare(b, fingerprint)) === "created") wc++; else wu++; } catch (e) { wx++; note(e); }
     }
     // 정부24 목록에서 2주 넘게 안 보인 복지 서비스는 내린다(폐지·통합).
     if (personal.length) await pool.query(`UPDATE iroun_benefits SET data=jsonb_set(data,'{reviewStatus}','"비공개"'),updated_at=now()
       WHERE id LIKE 'gov24-%' AND data->>'audience'<>'사업' AND data->>'reviewStatus'='공개' AND (data->>'checkedAt')::timestamptz < now()-interval '14 days'`);
-    Object.assign(state, { welfareCreated: wc, welfareUpdated: wu, welfareUnchanged: ws, welfareInvalid: wx });
+    Object.assign(state, { welfareCreated: wc, welfareUpdated: wu, welfareUnchanged: ws, welfareInvalid: wx, firstError });
     Object.assign(state, { status: "검토대기", lastSuccess: new Date().toISOString(), lastSuccessDay: kstDay(), reason: "정부24 서비스 전체를 읽었습니다. 사업자 서비스 공개 여부는 AI 정리가 정하고, 개인·가구 복지는 복지 화면에 바로 공개합니다." });
     await storeFeedState("gov24:bulk", state);
     return state;

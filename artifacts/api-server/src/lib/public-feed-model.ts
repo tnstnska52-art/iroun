@@ -22,7 +22,9 @@ export function mapPublicBenefit(source:PublicFeed,list:Row,detail:Row,condition
   const gov=source==="gov24",local=source==="welfareLocal";
   const id=text(gov?list["서비스ID"]:list.servId),title=text(gov?list["서비스명"]:list.servNm);
   const agency=text(gov?detail["소관기관명"]??list["소관기관명"]:local?`${text(list.ctpvNm)} ${text(list.sggNm)} ${text(detail.bizChrDeptNm??list.bizChrDeptNm)}`:detail.jurMnofNm??list.jurMnofNm);
-  const raw=text(gov?list["상세조회URL"]:list.servDtlLink);
+  // 정부24 상세 주소가 비었거나 http·새 도메인으로 바뀌어도 서비스ID로 공식 상세 주소를 만든다.
+  let raw=text(gov?list["상세조회URL"]??detail["상세조회URL"]:list.servDtlLink).replace(/^http:\/\//,"https://");
+  if(gov&&id&&!officialUrl(raw))raw=`https://www.gov.kr/portal/rcvfvrSvc/dtlEx/${encodeURIComponent(id)}`;
   if(!id||!title||!agency||!officialUrl(raw))throw new Error("공식 식별자·기관·출처 누락 또는 허용되지 않는 원문");
   const target=text(gov?detail["지원대상"]:local?detail.sprtTrgtCn:detail.tgtrDtlCn);
   const criteria=text(gov?detail["선정기준"]:detail.slctCritCn);

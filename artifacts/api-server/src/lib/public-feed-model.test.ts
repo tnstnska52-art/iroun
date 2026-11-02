@@ -19,8 +19,9 @@ describe("신규 공식 공공서비스 파서",()=>{
  });
  it("문자열 나이와 미확인 조건을 추측하지 않음",()=>expect(mapPublicBenefit("gov24",list,detail,{JA0110:"성인"}).rules).toEqual([]));
  it("키나 가짜 금액을 데이터에 만들지 않음",()=>{const b=mapPublicBenefit("gov24",list,detail);expect(b.endsAt).toBe("");expect(b.budgetStatus).toBe("확인 필요");expect(b.calculation).toContain("실제 지급액·환급액이 아닙니다");});
- it("비공식 원문 거부",()=>expect(()=>mapPublicBenefit("gov24",{...list,"상세조회URL":"https://example.com"},detail)).toThrow());
- it("정부 사칭 호스트 거부",()=>expect(()=>mapPublicBenefit("gov24",{...list,"상세조회URL":"https://www.gov.kr.example.com"},detail)).toThrow());
+ it("비공식 원문 주소는 쓰지 않고 서비스ID로 공식 상세 주소를 만든다",()=>expect(mapPublicBenefit("gov24",{...list,"상세조회URL":"https://example.com"},detail).sourceUrl).toMatch(/^https:\/\/www\.gov\.kr\/portal\/rcvfvrSvc\/dtlEx\//));
+ it("정부 사칭 호스트는 쓰지 않는다",()=>expect(mapPublicBenefit("gov24",{...list,"상세조회URL":"https://www.gov.kr.example.com"},detail).sourceUrl).not.toContain("example.com"));
+ it("복지로 비공식 원문은 거부",()=>expect(()=>mapPublicBenefit("welfareCentral",{servId:"W1",servNm:"x",jurMnofNm:"보건복지부",servDtlLink:"https://example.com"},{})).toThrow());
  it("복지로 중앙 XML 정상 목록",()=>expect(parseWelfareXml("<wantedList><resultCode>0</resultCode><servList><servId>T</servId></servList></wantedList>").servList).toEqual({servId:"T"}));
  it("복지로 지자체 상세 XML",()=>expect(parseWelfareXml("<response><resultCode>00</resultCode><servId>T</servId></response>",true).servId).toBe("T"));
  it("XML 오류 코드를 성공으로 처리하지 않음",()=>expect(()=>parseWelfareXml("<response><resultCode>30</resultCode></response>")).toThrow());

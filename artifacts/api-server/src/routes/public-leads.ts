@@ -28,7 +28,7 @@ router.post("/public/check-lead", async (req, res) => {
 // 공고 수집 상태(운영 확인용). 출처별 마지막 성공·실패 이유·건수만 준다. 키·주소·고객 정보는 없다.
 router.get("/public/feed-health", async (_req, res) => {
   const pick = ["status", "reason", "lastAttempt", "lastSuccess", "lastSuccessDay", "calls", "services", "business", "welfare", "created", "updated", "unchanged", "excluded", "invalid", "staged",
-    "welfareCreated", "welfareUpdated", "welfareUnchanged", "welfareInvalid", "nextPage"];
+    "welfareCreated", "welfareUpdated", "welfareUnchanged", "welfareInvalid", "nextPage", "detailCount", "conditionCount", "listFields", "detailFields", "firstError"];
   const rows = (await pool.query("SELECT to_regclass('iroun_public_feed_state') AS t")).rows[0]?.t
     ? (await pool.query("SELECT source,data FROM iroun_public_feed_state ORDER BY source")).rows : [];
   res.set("Cache-Control", "no-store").json(rows.map((r) => ({ source: r.source, ...Object.fromEntries(pick.filter((k) => r.data?.[k] !== undefined).map((k) => [k, typeof r.data[k] === "string" ? String(r.data[k]).replace(/serviceKey=[^&\s]+/g, "serviceKey=***").slice(0, 300) : r.data[k]])) })));
