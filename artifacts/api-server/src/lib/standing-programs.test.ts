@@ -33,3 +33,10 @@ describe("상시 지원 제도(고용장려금·두루누리·소상공인 경�
     expect(result("standing-stability-voucher-2026", { revenue: "1억 원 미만", openedYear: 2026 })).toBe("대상 제외");
   });
 });
+describe("상시 지원 제도 확정형·선정형", () => {
+  it("요건형은 확정형, 공모형·승인형은 선정형으로 직접 정한다", () => {
+    expect(get("standing-durunuri").selection).toBe("확정형");
+    expect(get("standing-flexible-work").selection).toBe("선정형");
+    expect(all.every((b) => b.selection)).toBe(true);
+  });
+});
