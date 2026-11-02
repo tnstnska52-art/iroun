@@ -288,6 +288,15 @@ function route(method: string, path: string, query: URLSearchParams, body: Body,
     if (s !== null) { const q = s.trim().slice(0, 200).toLowerCase(); items = items.filter((b) => `${b.title} ${b.summary} ${b.category} ${b.agency} ${b.support}`.toLowerCase().includes(q)); }
     return items.map((b) => ({ ...b, selection: selectionType(b) }));
   }
+  if (M('GET', /^\/welfare$/)) {
+    // 미리보기: 개인·가구 공고로 복지 화면을 흉내 낸다(실제는 정부24 복지 수천 건).
+    const qv = (query.get('q') ?? '').toLowerCase(), field = query.get('field') ?? '';
+    const all = notices().filter((b) => b.audience !== '사업').filter((b) => !qv || `${b.title} ${b.summary}`.toLowerCase().includes(qv));
+    const fields: Record<string, number> = {}; for (const b of all) fields[b.category] = (fields[b.category] ?? 0) + 1;
+    const list = field ? all.filter((b) => b.category === field) : all;
+    return { total: list.length, page: 1, pageSize: 30, fields: Object.entries(fields).map(([name, count]) => ({ name, count })),
+      items: list.map((b) => ({ id: b.id, title: b.title, agency: b.agency, region: b.region, category: b.category, audience: b.audience, summary: b.summary.slice(0, 160), endsAt: b.endsAt, status: b.status, sourceUrl: b.sourceUrl, ages: b.rules.filter((r) => r.field === 'age').map((r) => r.label) })) };
+  }
   if ((x = M('GET', /^\/benefits\/([^/]+)$/))) { const b = visible(x[1]) as Benefit; return { ...b, selection: selectionType(b) }; }
   if (M('GET', /^\/membership$/)) return { configured: false, mode: 'disabled', products: { apple: '', google: '' }, message: '스토어 상품·월요금·구매 검증 연결 전입니다. 현재 구매할 수 없습니다.', entitlement: me ? account(me).entitlement : { active: false, subscriptionActive: false, grantActive: false } };
   if (M('POST', /^\/membership\/(restore|sync)$/)) throw fail('스토어 상품·검증 제공자·웹훅 설정이 필요합니다. 구매 및 복원 완료로 처리하지 않았습니다.', 503);

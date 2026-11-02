@@ -70,6 +70,18 @@ export default function Home() {
       </View>
     </>
   ) : null;
+  // 개인·가구 복지는 사업자 목록과 따로 본다.
+  const welfareBlock = (
+    <Pressable testID="home-welfare" accessibilityRole="button" accessibilityLabel="개인·가구 복지 지원금 보기" onPress={() => router.push('/welfare' as never)}
+      style={({ pressed }) => ({ backgroundColor: c.successSoft, borderRadius: c.radius + 4, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12, opacity: pressed ? 0.85 : 1 })}>
+      <Emoji char="🏠" size={28} motion="bounce" />
+      <View style={{ flex: 1, gap: 2 }}>
+        <T v="h3" color={c.success}>우리 가족 복지 지원금</T>
+        <T v="small" color={c.success}>어르신·출산·월세·장애 등 개인·가구 복지</T>
+      </View>
+      <Feather name="chevron-right" size={22} color={c.success} />
+    </Pressable>
+  );
   // 7일 안에 마감되는 것이 없어도 자리는 항상 보여준다(사라진 것처럼 보이지 않게).
   const closingBlock = (
     <>
@@ -115,6 +127,7 @@ export default function Home() {
           {missBlock}
           {nowBlock}
           {closingBlock}
+          {welfareBlock}
         </>
       ) : (
         <>
@@ -159,6 +172,7 @@ export default function Home() {
           ) : null}
 
           {closingBlock}
+          {welfareBlock}
           <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
             <Emoji char="✏️" size={15} motion="wiggle" />
             <Pressable testID="home-redo" accessibilityRole="button" onPress={() => router.push('/onboarding')} style={{ minHeight: 44, justifyContent: 'center' }}>

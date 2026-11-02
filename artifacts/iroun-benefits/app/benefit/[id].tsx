@@ -96,7 +96,9 @@ export default function BenefitDetail() {
   const dd = dday(b);
   // 가입 전에도 내 조건으로 찾은 위쪽 3건은 정리본 전체를 열어 준다.
   const myProfile = hasConditions(acc.me?.profile) ? acc.me!.profile : hasConditions(draft) ? draft : null;
-  const unlocked = acc.active || freeIds(all.data ?? [], myProfile).has(b.id);
+  // 개인·가구 복지(정부24 공개 정보)는 누구나 전체를 본다. 회사 신청 도움 대상도 아니다.
+  const welfare = b.audience !== '사업' && b.id.startsWith('gov24-');
+  const unlocked = acc.active || welfare || freeIds(all.data ?? [], myProfile).has(b.id);
   const expiredMember = acc.isSignedIn && !acc.active && !!svc.data?.trialUsed;
   const closed = dd.label === '마감';
   const period = b.startsAt || b.endsAt ? `${b.startsAt ? fmtDate(b.startsAt) : '시작일 확인 필요'} ~ ${b.endsAt ? fmtDate(b.endsAt) : b.status === '상시 조회' ? '상시' : '마감일 공고 없음'}` : b.status === '상시 조회' ? '상시 조회' : '기간 확인 필요';
@@ -184,7 +186,7 @@ export default function BenefitDetail() {
   // 고객이 할 일을 순서대로. 공고 자료에 있는 내용만으로 만들고, 없는 내용은 공식 원문 확인으로 안내한다.
   const conditions = [...b.rules.map((r) => r.label), ...b.checks];
   // 회사 신청 도움은 계약 고객만 요청할 수 있다.
-  const contract = !!acc.me?.entitlement.contractActive;
+  const contract = !!acc.me?.entitlement.contractActive && !welfare;
   const steps: { title: string; body: string }[] = closed ? [
     { title: '마감됐어요', body: '지금은 신청할 수 없어요' },
     { title: '다른 지원금 보기', body: '지원금 탭에서 확인하세요' },
@@ -219,7 +221,7 @@ export default function BenefitDetail() {
             <Btn style={{ flex: 1 }} kind="secondary" label="조건 불일치" icon="x" loading={choosing} onPress={startMismatch} testID="detail-mismatch" hint="내 정보가 사업 요건에 맞지 않을 때만 고를 수 있어요" />
           </View>
         ) : null}
-        {!closed && !acc.active ? <Btn kind="secondary" label={expiredMember ? '계속 이용하기' : '무료로 전체 보기'} onPress={() => router.push((expiredMember ? '/membership' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-join" /> : null}
+        {!closed && !acc.active && !welfare ? <Btn kind="secondary" label={expiredMember ? '계속 이용하기' : '무료로 전체 보기'} onPress={() => router.push((expiredMember ? '/membership' : acc.isSignedIn ? '/start-trial' : '/auth?mode=signup&next=/start-trial') as never)} testID="detail-join" /> : null}
         <Btn label="공식 신청 페이지" icon="external-link" onPress={() => Linking.openURL(b.sourceUrl)} testID="open-source" hint="브라우저에서 공식 페이지가 열립니다" />
       </>}
     >
@@ -383,6 +385,7 @@ export default function BenefitDetail() {
         {b.rules.map((r, i) => <T key={`rule${i}`}>• {r.label} ({r.scope === 'business' ? '사업장' : '개인·가구'})</T>)}
       </Box>
 
+{!welfare ? (
       <Box title="내 조건과 비교">
         {acc.active ? (
           recs.isLoading ? <Loading rows={1} /> : recs.error ? <ErrorState message={apiErrorMessage(recs.error)} onRetry={() => recs.refetch()} /> : myRecs.length === 0 ? (
@@ -409,6 +412,7 @@ export default function BenefitDetail() {
         )}
         <T v="small" color={c.mutedForeground}>최종 선정은 기관이 정해요</T>
       </Box>
+      ) : null}
 
         </>
       ) : null}

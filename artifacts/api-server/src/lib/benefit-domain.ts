@@ -141,6 +141,10 @@ export function selectionType(b: Pick<Benefit, "selection" | "kind" | "audience"
   if (/요건을? (갖추|충족)|신청하면 (지급|지원)|자격.{0,6}(충족|해당)하면|누구나|전원 지급|대상자 전원/.test(text)) return "확정형";
   return "선정형";
 }
+/** 정부24에서 받은 개인·가구 복지 서비스. 사업자 지원금 목록·맞춤·알림과 따로 '복지' 화면에서만 보여준다. */
+export function isWelfare(b: Pick<Benefit, "id" | "audience">) {
+  return b.audience !== "사업" && b.id.startsWith("gov24-");
+}
 export function publicBenefit(b: Benefit) {
   return b.reviewStatus === "공개" && !b.isTest && !excludedCategory(b) && officialUrl(b.sourceUrl) &&
     Number.isFinite(Date.parse(b.checkedAt)) && Date.parse(b.checkedAt) <= Date.now();
@@ -271,7 +275,7 @@ const PROVINCE_ALIASES = [
   ["전북","전라북도","전북특별자치도"],["전남","전라남도"],["경북","경상북도"],["경남","경상남도"],["제주","제주도","제주특별자치도"],
   ["전남광주","전남광주통합특별시","전남광주특별시"],
 ];
-function provinceKey(s:string) {return PROVINCE_ALIASES.find(a=>a.includes(s.trim()))?.[0];}
+export function provinceKey(s:string) {return PROVINCE_ALIASES.find(a=>a.includes(s.trim()))?.[0];}
 /** 전남·광주 통합특별시 공고는 전남과 광주 사업장 모두 해당한다. */
 function sameProvince(a?:string,b?:string){return !!a&&!!b&&(a===b||(b==="전남광주"&&(a==="전남"||a==="광주"))||(a==="전남광주"&&(b==="전남"||b==="광주")));}
 /**

@@ -3,7 +3,7 @@
 // ⑥ 안내·알림 발송·열람·버튼을 날짜·시간과 함께 기록하고 고객이 볼 수 있게 한다.
 import { randomUUID } from "node:crypto";
 import { pool } from "@workspace/db";
-import { matchBenefit, publicBenefit, selectionType, type Benefit, type Profile } from "./benefit-domain";
+import { isWelfare, matchBenefit, publicBenefit, selectionType, type Benefit, type Profile } from "./benefit-domain";
 import { finished } from "./company-domain";
 import { logger } from "./logger";
 
@@ -76,7 +76,7 @@ export async function runContractNotices(options: { now?: number; onlyUser?: str
   const all = options.notices
     ? await options.notices()
     : (await pool.query("SELECT data FROM iroun_benefits WHERE data->>'reviewStatus'='공개' AND data->>'isTest'='false'")).rows.map((r) => r.data as Benefit);
-  const open = all.filter((b) => publicBenefit(b) && !finished(b, now));
+  const open = all.filter((b) => publicBenefit(b) && !isWelfare(b) && !finished(b, now));
   let created = 0;
   for (const a of customers) {
     if (!a.preferences?.privacyConsent) continue;

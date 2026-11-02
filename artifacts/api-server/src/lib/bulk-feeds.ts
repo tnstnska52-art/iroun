@@ -11,7 +11,7 @@
 import { createHash } from "node:crypto";
 import { pool } from "@workspace/db";
 import { audit } from "./benefit-store";
-import { benefitSchema, excludedCategory, officialUrl, type Benefit } from "./benefit-domain";
+import { benefitSchema, excludedCategory, normalizeSourceKey, officialUrl, provinceKey, publicBenefit, type Benefit } from "./benefit-domain";
 import { refreshOfficialCheck, sameSnapshot, stableRecord, stageOfficialNotice } from "./official-ingestion";
 import { catalog, mapPublicBenefit, rows, text, type Row } from "./public-feed-model";
 import { storedFeedState, storeFeedState } from "./public-feeds";
@@ -42,11 +42,60 @@ function serviceKey(...names: string[]) {
 export const gov24BulkReady = () => process.env.IROUN_OFFICIAL_FEEDS_ENABLED === "true" && process.env.IROUN_GOV24_APPROVED === "true"
   && !!serviceKey(catalog.gov24.key, "DATA_GO_KR_SERVICE_KEY") && process.env.IROUN_GOV24_BULK !== "false";
 export const isBusinessService = (r: Row) => /소상공인|법인/.test(text(r["사용자구분"]));
+/** 개인·가구 복지도 함께 모은다(IROUN_WELFARE=false 이면 끔). 사업자 목록과 따로 '복지' 화면에 보인다. */
+export const welfareEnabled = () => process.env.IROUN_WELFARE !== "false";
+
+/** 정부24 서비스의 관할: 중앙부처·공공기관은 전국, 지자체는 '시·도 시군구'. */
+export function welfareRegion(list: Row, detail: Row): string {
+  const type = text(list["소관기관유형"] ?? detail["소관기관유형"]);
+  const agency = text(detail["소관기관명"] ?? list["소관기관명"]);
+  const parts = agency.split(/\s+/);
+  const province = provinceKey(parts[0] ?? "");
+  if (province) {
+    const district = parts[1] && /^[가-힣]{1,6}(시|군|구)$/.test(parts[1]) ? parts[1] : "";
+    return district ? `${province} ${district}` : province;
+  }
+  // 시·도 이름이 없는 기관(보건복지부·국민연금공단 등)은 전국 서비스다.
+  if (/중앙|공공기관|행정기관/.test(type) || !/(시|군|구|도)청?$/.test(parts[0] ?? "")) return "전국";
+  return "관할 확인 필요";
+}
+
+/** 정부24 개인·가구 서비스 → 복지 공고. 사람이 직접 숨긴 것은 다시 올리지 않는다. */
+export function mapWelfare(item: Row, detail: Row, cond: Row, checkedAt: string): Benefit {
+  const b = mapPublicBenefit("gov24", item, detail, cond, checkedAt);
+  const period = text(detail["신청기한"] ?? item["신청기한"]);
+  const always = /상시|연중|수시/.test(period) || !b.endsAt;
+  return benefitSchema.parse({
+    ...b,
+    audience: b.audience === "사업" ? "개인" : b.audience,
+    region: welfareRegion(item, detail),
+    category: (text(item["서비스분야"]) || b.category).slice(0, 60),
+    status: always ? "상시 조회" : b.status,
+    budgetStatus: "해당 없음",
+    reviewStatus: "공개",
+  });
+}
+
+async function upsertWelfare(b: Benefit, fingerprint: string) {
+  const key = normalizeSourceKey(b);
+  const c = await pool.connect();
+  try {
+    await c.query("BEGIN");
+    const prior = (await c.query("SELECT id,data FROM iroun_benefits WHERE source_key=$1 FOR UPDATE", [key])).rows[0];
+    const next: Benefit = { ...b, id: prior?.id ?? b.id, reviewStatus: prior?.data?.reviewStatus === "비공개" ? "비공개" : publicBenefit({ ...b, reviewStatus: "공개" }) ? "공개" : "검토대기" };
+    if (prior) await c.query("UPDATE iroun_benefits SET data=$2,updated_at=now() WHERE id=$1", [prior.id, JSON.stringify(next)]);
+    else await c.query("INSERT INTO iroun_benefits(id,source_key,data) VALUES($1,$2,$3) ON CONFLICT(source_key) DO NOTHING", [next.id, key, JSON.stringify(next)]);
+    await c.query("INSERT INTO iroun_feed_snapshots(source_id,content_hash,checked_at) VALUES($1,$2,$3) ON CONFLICT(source_id) DO UPDATE SET content_hash=EXCLUDED.content_hash,checked_at=EXCLUDED.checked_at", [b.sourceId, fingerprint, b.checkedAt]);
+    await c.query("COMMIT");
+    return prior ? "updated" : "created";
+  } catch (e) { await c.query("ROLLBACK"); throw e; } finally { c.release(); }
+}
 
 export async function runGov24Bulk(fetcher: typeof fetch = fetch, force = false) {
   if (!gov24BulkReady()) return { blocked: true, reason: "정부24 활용승인·인증키·수집 설정 필요" };
   const prior = await storedFeedState("gov24:bulk") as Record<string, unknown>;
-  if (!force && prior.lastSuccessDay === kstDay()) return { skipped: true, reason: "오늘 이미 전체 수집함" };
+  // 복지 수집을 처음 켠 날은 오늘 이미 읽었어도 한 번 더 읽는다.
+  if (!force && prior.lastSuccessDay === kstDay() && (!welfareEnabled() || prior.welfare !== undefined)) return { skipped: true, reason: "오늘 이미 전체 수집함" };
   const key = serviceKey(catalog.gov24.key, "DATA_GO_KR_SERVICE_KEY");
   const daily = Math.max(1, Number(process.env.IROUN_GOV24_DAILY_LIMIT) || 1000);
   const lock = await pool.connect();
@@ -77,6 +126,8 @@ export async function runGov24Bulk(fetcher: typeof fetch = fetch, force = false)
     state.services = list.length;
     const business = list.filter(isBusinessService);
     state.business = business.length;
+    const personal = welfareEnabled() ? list.filter((r) => !isBusinessService(r)) : [];
+    state.welfare = personal.length;
     if (!business.length) throw new Error("정부24 사업자 서비스 목록이 비었습니다.");
     const details = new Map((await all("serviceDetail", 500)).map((d) => [text(d["서비스ID"]), d]));
     const conditions = new Map((await all("supportConditions", 1000)).map((d) => [text(d["서비스ID"]), d]));
@@ -100,7 +151,26 @@ export async function runGov24Bulk(fetcher: typeof fetch = fetch, force = false)
         if (result.reused) state.updated = Number(state.updated) + 1; else state.created = Number(state.created) + 1;
       } catch { state.invalid = Number(state.invalid) + 1; }
     }
-    Object.assign(state, { status: "검토대기", lastSuccess: new Date().toISOString(), lastSuccessDay: kstDay(), reason: "정부24 사업자 대상 서비스 전체를 읽었습니다. 공개 여부는 AI 정리가 정합니다." });
+    // 개인·가구 복지: AI 없이 공식 자료 그대로 '복지' 화면에 공개한다(사업자 목록·맞춤·알림에는 넣지 않음).
+    let wc = 0, wu = 0, ws = 0, wx = 0;
+    for (const item of personal) {
+      const id = text(item["서비스ID"]);
+      const detail = details.get(id);
+      if (!id || !detail) { wx++; continue; }
+      const cond = conditions.get(id) ?? {};
+      let b: Benefit;
+      try { b = mapWelfare(item, detail, cond, checkedAt); } catch { wx++; continue; }
+      if (excludedCategory(b)) { wx++; continue; }
+      const fingerprint = hash({ list: item, detail, conditions: cond, welfare: 1 });
+      const snap = await sameSnapshot(b.sourceId, fingerprint);
+      if (snap.same) { await refreshOfficialCheck(b.sourceId, b.checkedAt, b.sourceUrl, false); ws++; continue; }
+      try { if ((await upsertWelfare(b, fingerprint)) === "created") wc++; else wu++; } catch { wx++; }
+    }
+    // 정부24 목록에서 2주 넘게 안 보인 복지 서비스는 내린다(폐지·통합).
+    if (personal.length) await pool.query(`UPDATE iroun_benefits SET data=jsonb_set(data,'{reviewStatus}','"비공개"'),updated_at=now()
+      WHERE id LIKE 'gov24-%' AND data->>'audience'<>'사업' AND data->>'reviewStatus'='공개' AND (data->>'checkedAt')::timestamptz < now()-interval '14 days'`);
+    Object.assign(state, { welfareCreated: wc, welfareUpdated: wu, welfareUnchanged: ws, welfareInvalid: wx });
+    Object.assign(state, { status: "검토대기", lastSuccess: new Date().toISOString(), lastSuccessDay: kstDay(), reason: "정부24 서비스 전체를 읽었습니다. 사업자 서비스 공개 여부는 AI 정리가 정하고, 개인·가구 복지는 복지 화면에 바로 공개합니다." });
     await storeFeedState("gov24:bulk", state);
     return state;
   } catch (e) {

@@ -7,7 +7,7 @@ import { gzipSync } from "node:zlib";
 import { z } from "zod";
 import { account, audit, connections } from "../lib/benefit-store";
 import { ACTIVITY, logActivity } from "../lib/contract-notices";
-import { benefitSchema, excludedCategory, matchBenefit, normalizeSourceKey, officialUrl, preferencesSchema, profileSchema, publicBenefit, selectionType, trackingSchema, type Benefit } from "../lib/benefit-domain";
+import { benefitSchema, excludedCategory, isWelfare, matchBenefit, provinceKey, normalizeSourceKey, officialUrl, preferencesSchema, profileSchema, publicBenefit, selectionType, trackingSchema, type Benefit } from "../lib/benefit-domain";
 import { billingConfig,syncCustomer,validWebhookAuthorization } from "../lib/store-provider";
 import { registerDevice } from "../lib/push-delivery";
 import { bizinfoStatus,runBizinfoFeed } from "../lib/official-feed";
@@ -54,7 +54,8 @@ benefitsRouter.get("/benefits", async(req,res)=>{
     if(gzipOk){res.set("Content-Encoding","gzip").send(listCache.gz);}else res.send(listCache.json);
     return;
   }
-  let items = (await allBenefits()).filter(publicBenefit).filter(b=>recentEnough(b));
+  // 개인·가구 복지(수천 건)는 /welfare 로 따로 준다. 사업자 목록을 무겁게 하지 않는다.
+  let items = (await allBenefits()).filter(publicBenefit).filter(b=>!isWelfare(b)).filter(b=>recentEnough(b));
   for (const key of ["kind","audience","region","status"] as const) {
     const value = req.query[key];
     if (typeof value === "string" && value && value !== "전체") items=items.filter(b=>b[key]===value || (key==="region" && b.region==="전국"));
@@ -65,6 +66,44 @@ benefitsRouter.get("/benefits", async(req,res)=>{
   listCache={at:Date.now(),key,json,gz};
   res.set("Content-Type","application/json; charset=utf-8").set("Vary","Accept-Encoding");
   if(gzipOk){res.set("Content-Encoding","gzip").send(gz);}else res.send(json);
+});
+/**
+ * 개인·가구 복지(정부24). 거주지·나이·분야·검색어로 걸러 한 쪽(30건)씩 준다.
+ * 중앙부처·공공기관 서비스(전국)는 어느 지역이든 보여 주고, 지자체 서비스는 그 지역만 보여 준다.
+ */
+let welfareCache:{at:number,items:Benefit[]}|undefined;
+benefitsRouter.get("/welfare", async(req,res)=>{
+  if(!welfareCache||process.env.NODE_ENV==="test"||Date.now()-welfareCache.at>60000){
+    welfareCache={at:Date.now(),items:(await pool.query("SELECT data FROM iroun_benefits WHERE id LIKE 'gov24-%' AND data->>'audience'<>'사업' AND data->>'reviewStatus'='공개'")).rows.map(r=>r.data as Benefit).filter(publicBenefit).filter(isWelfare)};
+  }
+  const q=(k:string)=>typeof req.query[k]==="string"?String(req.query[k]).trim().slice(0,100):"";
+  const province=q("province"),district=q("district"),field=q("field"),search=q("q").toLowerCase();
+  const birthYear=Number(q("birthYear"));const page=Math.max(1,Math.min(500,Number(q("page"))||1));
+  const now=new Date();
+  const myProvince=provinceKey(province);
+  const byPlace=welfareCache.items.filter(b=>{
+    if(!myProvince||b.region==="전국"||b.region==="관할 확인 필요")return true;
+    const [p,d]=b.region.split(" ");
+    if(provinceKey(p??"")!==myProvince)return false;
+    return !d||!district||d===district;
+  }).filter(b=>{
+    if(!Number.isInteger(birthYear)||birthYear<1900)return true;
+    const age=now.getFullYear()-birthYear;
+    return b.rules.filter(r=>r.field==="age").every(r=>r.operator==="gte"?age>=Number(r.value):r.operator==="lte"?age<=Number(r.value):true);
+  }).filter(b=>!search||`${b.title} ${b.summary} ${b.support} ${b.category}`.toLowerCase().includes(search));
+  const fields:Record<string,number>={};
+  for(const b of byPlace)for(const f of b.category.split(/[,|]/).map(x=>x.trim()).filter(Boolean))fields[f]=(fields[f]??0)+1;
+  const list=field?byPlace.filter(b=>b.category.split(/[,|]/).map(x=>x.trim()).includes(field)):byPlace;
+  // 내 지역(지자체) 서비스를 먼저, 그다음 전국. 같은 묶음 안에서는 마감이 가까운 순.
+  const local=(b:Benefit)=>b.region!=="전국"&&b.region!=="관할 확인 필요"?0:1;
+  const end=(b:Benefit)=>{const t=Date.parse(b.endsAt);return Number.isFinite(t)?t:Infinity;};
+  list.sort((x,y)=>local(x)-local(y)||end(x)-end(y)||x.title.localeCompare(y.title,"ko"));
+  const size=30;
+  res.set("Cache-Control","public, max-age=60").json({
+    total:list.length,page,pageSize:size,fields:Object.entries(fields).sort((a,b)=>b[1]-a[1]).map(([name,count])=>({name,count})),
+    items:list.slice((page-1)*size,page*size).map(b=>({id:b.id,title:b.title,agency:b.agency,region:b.region,category:b.category,audience:b.audience,
+      summary:b.summary.slice(0,160),endsAt:b.endsAt,status:b.status,sourceUrl:b.sourceUrl,ages:b.rules.filter(r=>r.field==="age").map(r=>r.label)})),
+  });
 });
 benefitsRouter.get("/benefits/:id", async(req,res)=>{const b=await visibleBenefit(String(req.params.id));res.json({...b,selection:selectionType(b)});});
 benefitsRouter.get("/membership", async(req,res)=>{
@@ -90,7 +129,7 @@ benefitsRouter.put("/profile",authenticated,async(req,res)=>{
 benefitsRouter.get("/recommendations",authenticated,async(req,res)=>{
   const a=await account(userId(req));
   if(!a.entitlement.active) throw fail("맞춤 결과는 유효한 구독 또는 관리자 무상 이용권이 필요합니다.",403);
-  const output=(await allBenefits()).filter(publicBenefit).flatMap(b=>matchBenefit(b,a.profile));
+  const output=(await allBenefits()).filter(publicBenefit).filter(b=>!isWelfare(b)).flatMap(b=>matchBenefit(b,a.profile));
   res.set("Cache-Control","private, no-store").json(output);
 });
 benefitsRouter.get("/tracking",authenticated,async(req,res)=>{
@@ -216,7 +255,8 @@ benefitsRouter.get("/admin/dashboard",async(_req,res)=>{
     }
   }));
 
-  res.json({benefits:await allBenefits(),users:customers,
+  const everything=await allBenefits();
+  res.json({benefits:everything.filter(b=>!isWelfare(b)),welfareCount:everything.filter(isWelfare).length,users:customers,
     audit:(await pool.query("SELECT * FROM iroun_audit ORDER BY id DESC LIMIT 300")).rows,
     deletions:(await pool.query("SELECT * FROM iroun_deletions ORDER BY created_at DESC LIMIT 100")).rows,
     connections:[...connections.filter(c=>!["정부24","기업마당"].includes(c.name)),await bizinfoStatus(),...await publicFeedStatus(),...await bulkFeedStatus()]});

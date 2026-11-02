@@ -23,6 +23,8 @@ const pref={largeText:true,notifications:true,privacyConsent:true,personalizedAl
 const headers=(id:string)=>({"x-test-identity":id});
 const data={saved:true,stage:"신청 준비",checkedDocuments:[],deadlineReminder:true};
 const draftId=`qa-notice-${suffix}`,closingId=`qa-closing-${suffix}`;
+const welfareIds=[`gov24-qa-w1-${suffix}`,`gov24-qa-w2-${suffix}`,`gov24-qa-w3-${suffix}`];
+const welfare=(id:string,over:Record<string,unknown>)=>({id,sourceId:`gov24:${id}`,title:"시험 복지",kind:"지원금",audience:"개인",category:"생활안정",region:"전국",agency:"보건복지부",sourceUrl:`https://www.gov.kr/portal/rcvfvrSvc/dtlEx/${id}`,summary:"시험",support:"시험",calculation:"",checks:[],documents:[],startsAt:"",endsAt:"",checkedAt:"2026-01-01T00:00:00Z",budgetStatus:"해당 없음",status:"상시 조회",reviewStatus:"공개",isTest:false,rules:[],...over});
 beforeAll(async()=>{
   for(const id of [a,b,admin]) await pool.query("INSERT INTO iroun_accounts(id,role) VALUES($1,$2)",[id,id===admin?"admin":"customer"]);
 });
@@ -31,7 +33,7 @@ afterAll(async()=>{
   await pool.query("DELETE FROM iroun_audit WHERE actor=ANY($1::text[]) OR subject=ANY($1::text[])",[[a,b,admin]]);
   await pool.query("DELETE FROM iroun_deletions WHERE user_id=ANY($1::text[])",[[a,b,admin]]);
   await pool.query("DELETE FROM iroun_accounts WHERE id=ANY($1::text[])",[[a,b,admin]]);
-  await pool.query("DELETE FROM iroun_benefits WHERE id=ANY($1::text[])",[[draftId,closingId]]);
+  await pool.query("DELETE FROM iroun_benefits WHERE id=ANY($1::text[])",[[draftId,closingId,...welfareIds]]);
   await pool.end();
 });
 describe("실제 PostgreSQL 기반 API (인증 제공자만 테스트 대체)",()=>{
@@ -161,3 +163,31 @@ describe("실제 PostgreSQL 기반 API (인증 제공자만 테스트 대체)",(
     expect((await pool.query("SELECT profile FROM iroun_accounts WHERE id=$1",[a])).rows[0].profile.personal).toEqual({});
   });
 });
+describe("개인·가구 복지(/welfare)",()=>{
+  beforeAll(async()=>{
+    const rows=[welfare(welfareIds[0]!,{title:`어르신 기초연금 ${suffix}`,rules:[{scope:"personal",field:"age",operator:"gte",value:65,label:"만 65세 이상"}]}),
+      welfare(welfareIds[1]!,{title:`종로구 출산축하금 ${suffix}`,region:"서울 종로구",agency:"서울특별시 종로구",category:"임신·출산"}),
+      welfare(welfareIds[2]!,{title:`부산 청년 월세 ${suffix}`,region:"부산",agency:"부산광역시",category:"주거·자립"})];
+    for(const r of rows)await pool.query("INSERT INTO iroun_benefits(id,source_key,data) VALUES($1,$1,$2) ON CONFLICT DO NOTHING",[r.id,JSON.stringify(r)]);
+  });
+  const mine=(body:{items:{id:string}[]})=>body.items.map(x=>x.id).filter(id=>welfareIds.includes(id));
+  it("사업자 공고 목록에는 복지가 섞이지 않는다",async()=>{
+    const r=await request(app).get("/api/benefits");
+    expect(r.body.some((x:{id:string})=>welfareIds.includes(x.id))).toBe(false);
+  });
+  it("거주지·나이·분야·검색어로 걸러 준다",async()=>{
+    const seoul=await request(app).get(`/api/welfare?province=서울&district=종로구&q=${encodeURIComponent(suffix)}`);
+    expect(seoul.status).toBe(200);
+    expect(mine(seoul.body).sort()).toEqual([welfareIds[0],welfareIds[1]].sort());
+    expect(seoul.body.items[0].id).toBe(welfareIds[1]); // 내 지역 먼저
+    const young=await request(app).get(`/api/welfare?province=서울&district=종로구&birthYear=1995&q=${encodeURIComponent(suffix)}`);
+    expect(mine(young.body)).toEqual([welfareIds[1]]);
+    const field=await request(app).get(`/api/welfare?province=부산&field=${encodeURIComponent("주거·자립")}&q=${encodeURIComponent(suffix)}`);
+    expect(mine(field.body)).toEqual([welfareIds[2]]);
+    expect(field.body.fields.some((f:{name:string})=>f.name==="주거·자립")).toBe(true);
+  });
+  it("복지 상세는 기존 공고 상세로 열린다",async()=>{
+    expect((await request(app).get(`/api/benefits/${welfareIds[0]}`)).body.title).toContain("기초연금");
+  });
+});
+

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { findDuplicates, isBusinessService, mapKstartup, normTitle } from "./bulk-feeds";
-import { benefitSchema, type Benefit } from "./benefit-domain";
+import { findDuplicates, isBusinessService, mapKstartup, mapWelfare, normTitle, welfareRegion } from "./bulk-feeds";
+import { benefitSchema, isWelfare, type Benefit } from "./benefit-domain";
 
 const base = (over: Partial<Benefit>): Benefit => benefitSchema.parse({
   id: "bizinfo-PBLN_1", sourceId: "PBLN_1", title: "제목", kind: "지원금", audience: "사업", category: "경영", region: "전국",
@@ -68,5 +68,25 @@ describe("중복 정리", () => {
     const a = base({ id: "bizinfo-PBLN_1", title: "2022년 12월 최초지정 혁신제품 지정기간 연장 공고", agency: "산업통상부" });
     const b = base({ id: "bizinfo-PBLN_2", sourceId: "PBLN_2", title: "2023년 12월 최초지정 혁신제품 지정기간 연장 공고", agency: "산업통상부" });
     expect(findDuplicates([a, b]).size).toBe(0);
+  });
+});
+
+describe("정부24 개인·가구 복지", () => {
+  const list = { "서비스ID": "WII0000012345", "서비스명": "기초연금 지급", "서비스목적요약": "어르신 생활 안정", "서비스분야": "생활안정", "사용자구분": "개인", "소관기관명": "보건복지부", "소관기관유형": "중앙행정기관", "상세조회URL": "https://www.gov.kr/portal/rcvfvrSvc/dtlEx/WII0000012345" };
+  const detail = { "서비스ID": "WII0000012345", "소관기관명": "보건복지부", "지원대상": "만 65세 이상", "선정기준": "소득인정액 기준", "지원내용": "월 최대 34만원", "신청기한": "상시신청" };
+  it("중앙부처 서비스는 전국·상시·바로 공개, 나이 조건을 옮긴다", () => {
+    const b = mapWelfare(list, detail, { JA0110: 65 }, "2026-10-20T00:00:00Z");
+    expect(b).toMatchObject({ id: "gov24-WII0000012345", audience: "개인", region: "전국", status: "상시 조회", reviewStatus: "공개", category: "생활안정" });
+    expect(b.rules).toEqual([expect.objectContaining({ field: "age", operator: "gte", value: 65 })]);
+    expect(isWelfare(b)).toBe(true);
+  });
+  it("지자체 서비스는 시·도와 시·군·구를 관할로 쓴다", () => {
+    expect(welfareRegion({ "소관기관유형": "지방자치단체" }, { "소관기관명": "서울특별시 종로구" })).toBe("서울 종로구");
+    expect(welfareRegion({ "소관기관유형": "지방자치단체" }, { "소관기관명": "경기도" })).toBe("경기");
+    expect(welfareRegion({ "소관기관유형": "공공기관" }, { "소관기관명": "국민연금공단" })).toBe("전국");
+  });
+  it("사업자 공고는 복지로 보지 않는다", () => {
+    expect(isWelfare(base({ id: "gov24-X", audience: "사업" }))).toBe(false);
+    expect(isWelfare(base({ id: "bizinfo-X", audience: "개인" }))).toBe(false);
   });
 });

@@ -3012,3 +3012,11 @@ export const getMyActivity = (options?: Parameters<typeof customFetch>[1]) => cu
 export const chooseMismatch = (body: { benefitId: string; businessId: string }, options?: Parameters<typeof customFetch>[1]) => customFetch<{ message: string; exclusions: string[] }>('/api/service/choices', jsonPost({ ...body, choice: '조건 불일치' }, options));
 export const recordBenefitView = (benefitId: string, options?: Parameters<typeof customFetch>[1]) => customFetch<{ recorded: boolean }>('/api/service/activity/view', jsonPost({ benefitId }, options));
 export const getCustomerActivity = (userId: string) => customFetch<ActivityPayload>(`/api/office/customers/${encodeURIComponent(userId)}/activity`, { method: 'GET' });
+
+/** 개인·가구 복지(정부24) — 손으로 추가한 호출 */
+export interface WelfareItem { id: string; title: string; agency: string; region: string; category: string; audience: string; summary: string; endsAt: string; status: string; sourceUrl: string; ages: string[] }
+export interface WelfarePage { total: number; page: number; pageSize: number; fields: { name: string; count: number }[]; items: WelfareItem[] }
+export const listWelfare = (params: { province?: string; district?: string; birthYear?: number; field?: string; q?: string; page?: number }, options?: Parameters<typeof customFetch>[1]) => {
+  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== '' && v !== null).map(([k, v]) => [k, String(v)])).toString();
+  return customFetch<WelfarePage>(`/api/welfare${qs ? `?${qs}` : ''}`, { ...options, method: 'GET' });
+};

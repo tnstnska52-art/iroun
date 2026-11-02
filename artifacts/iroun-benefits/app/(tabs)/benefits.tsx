@@ -66,6 +66,11 @@ export default function Grants() {
 
   return (
     <Page tab title="지원금">
+      <Pressable testID="grants-welfare" accessibilityRole="button" accessibilityLabel="개인·가구 복지 지원금 보기" onPress={() => router.push('/welfare' as never)}
+        style={({ pressed }) => ({ backgroundColor: c.successSoft, borderRadius: 12, paddingHorizontal: 14, minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: 8, opacity: pressed ? 0.85 : 1 })}>
+        <T v="label" color={c.success} style={{ flex: 1 }}>🏠 우리 가족 복지 지원금 보기</T>
+        <T v="label" color={c.success}>›</T>
+      </Pressable>
       <View accessibilityRole="tablist" style={{ flexDirection: 'row', backgroundColor: '#E5E8EB', borderRadius: 12, padding: 4 }}>
         {([['now', '받을 수 있는', now.items.length], ['missed', '놓친', past.items.length]] as const).map(([k, l, n]) => {
           const on = tab === k;

@@ -8,7 +8,7 @@ import {account,audit} from "../lib/benefit-store";
 import {customerPushStatus} from "../lib/push-customer-status";
 import {type Benefit,matchBenefit,publicBenefit,noticeTime} from "../lib/benefit-domain";
 import {ACTIVITY,ALERT_TITLE,daysLeft,logActivity,runContractNotices} from "../lib/contract-notices";
-import {selectionType} from "../lib/benefit-domain";
+import {isWelfare,selectionType} from "../lib/benefit-domain";
 import {CONSENT_VERSION,consentTexts,finished,historicalMatch,noticeVersion,validPhone,validKakao} from "../lib/company-domain";
 
 const fail=(message:string,status=400,detail?:unknown)=>Object.assign(new Error(message),{status,detail});
@@ -45,7 +45,7 @@ const updateRequest=z.object({assignedTo:z.string().max(100).nullable().optional
 export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;identity?:(id:string)=>Promise<string>;person?:(id:string)=>Promise<{name?:string;phone?:string}>}={}){
  const router=Router();
  const noticeRuns=new Map<string,number>();
- const notices=options.notices??(async()=> (await pool.query("SELECT data FROM iroun_benefits")).rows.map(r=>r.data as Benefit).filter(publicBenefit));
+ const notices=options.notices??(async()=> (await pool.query("SELECT data FROM iroun_benefits")).rows.map(r=>r.data as Benefit).filter(publicBenefit).filter(b=>!isWelfare(b)));
  const identity=options.identity??(async(id:string)=>{
   const u=await clerkClient.users.getUser(id);
   // 휴대폰 인증 가입이 기본이다. 예전 이메일 가입 계정은 기존 방식(이메일) 그대로 중복을 확인한다.
