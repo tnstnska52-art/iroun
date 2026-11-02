@@ -4,7 +4,7 @@ import { pool } from "@workspace/db";
 import { migrationSql } from "./migration";
 import { logger } from "./logger";
 
-export const MIGRATIONS = ["001-base.sql", "002-prepared-services.sql", "003-company-services.sql", "004-fund-leads.sql", "005-documents.sql", "006-crm-contracts.sql"];
+export const MIGRATIONS = ["001-base.sql", "002-prepared-services.sql", "003-company-services.sql", "004-fund-leads.sql", "005-documents.sql", "006-crm-contracts.sql", "007-contract-notices.sql"];
 
 export async function runMigrations() {
   const c = await pool.connect();

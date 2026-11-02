@@ -6,7 +6,8 @@ import { randomUUID } from "node:crypto";
 import { gzipSync } from "node:zlib";
 import { z } from "zod";
 import { account, audit, connections } from "../lib/benefit-store";
-import { benefitSchema, excludedCategory, matchBenefit, normalizeSourceKey, officialUrl, preferencesSchema, profileSchema, publicBenefit, trackingSchema, type Benefit } from "../lib/benefit-domain";
+import { ACTIVITY, logActivity } from "../lib/contract-notices";
+import { benefitSchema, excludedCategory, matchBenefit, normalizeSourceKey, officialUrl, preferencesSchema, profileSchema, publicBenefit, selectionType, trackingSchema, type Benefit } from "../lib/benefit-domain";
 import { billingConfig,syncCustomer,validWebhookAuthorization } from "../lib/store-provider";
 import { registerDevice } from "../lib/push-delivery";
 import { bizinfoStatus,runBizinfoFeed } from "../lib/official-feed";
@@ -38,7 +39,7 @@ async function allBenefits() {return (await pool.query("SELECT data FROM iroun_b
 async function visibleBenefit(id: string) { const b=(await allBenefits()).find(b=>b.id===id && publicBenefit(b)); if(!b) throw fail("공개된 혜택을 찾을 수 없습니다.",404); return b; }
 
 /** 공개 목록: 운영자용 자동 정리 기록은 빼고, 작년 1월 이전에 끝난 공고는 보내지 않는다(앱이 매번 받는 양을 줄임). */
-export function publicListItem(b:Benefit):Benefit{ const {extraction:_x,...rest}=b as Benefit&{extraction?:unknown}; return rest as Benefit; }
+export function publicListItem(b:Benefit):Benefit{ const {extraction:_x,...rest}=b as Benefit&{extraction?:unknown}; return {...rest,selection:selectionType(b)} as Benefit; }
 export function recentEnough(b:Benefit,now=Date.now()){
   const lastYearStart=Date.parse(`${new Date(now+9*3600000).getUTCFullYear()-1}-01-01T00:00:00+09:00`);
   const end=b.endsAt?Date.parse(b.endsAt):NaN;
@@ -65,7 +66,7 @@ benefitsRouter.get("/benefits", async(req,res)=>{
   res.set("Content-Type","application/json; charset=utf-8").set("Vary","Accept-Encoding");
   if(gzipOk){res.set("Content-Encoding","gzip").send(gz);}else res.send(json);
 });
-benefitsRouter.get("/benefits/:id", async(req,res)=>res.json(await visibleBenefit(String(req.params.id))));
+benefitsRouter.get("/benefits/:id", async(req,res)=>{const b=await visibleBenefit(String(req.params.id));res.json({...b,selection:selectionType(b)});});
 benefitsRouter.get("/membership", async(req,res)=>{
   const auth=getAuth(req);
   const access=auth.userId ? (await account(auth.userId)).entitlement : {active:false,subscriptionActive:false,grantActive:false};
@@ -82,6 +83,8 @@ benefitsRouter.put("/profile",authenticated,async(req,res)=>{
   if(!a.preferences.privacyConsent) throw fail("먼저 개인정보 수집·이용에 동의해 주세요.");
   const profile=profileSchema.parse(req.body);
   await pool.query("UPDATE iroun_accounts SET profile=$2 WHERE id=$1",[id,JSON.stringify(profile)]);
+  // 계약 고객의 정보 수정 시각을 남긴다(정보를 고친 뒤 다시 판단받은 근거, 계약서 제6조 ⑤·제7조).
+  if(a.entitlement.contractActive) await logActivity(id,ACTIVITY.profile,null,{businesses:profile.businesses.length}).catch(()=>undefined);
   res.json(profile);
 });
 benefitsRouter.get("/recommendations",authenticated,async(req,res)=>{

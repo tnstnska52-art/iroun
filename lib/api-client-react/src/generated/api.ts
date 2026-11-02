@@ -3003,3 +3003,12 @@ export const deleteMyDocument = (id: string, options?: Parameters<typeof customF
 export const fetchMyDocument = (id: string) => customFetch<Blob>(`/api/service/documents/${encodeURIComponent(id)}/file`, { method: 'GET', responseType: 'blob' });
 export const listCustomerDocuments = (userId: string) => customFetch<{ documents: DocMeta[] }>(`/api/office/customers/${encodeURIComponent(userId)}/documents`, { method: 'GET' });
 export const fetchOfficeDocument = (id: string) => customFetch<Blob>(`/api/office/documents/${encodeURIComponent(id)}/file`, { method: 'GET', responseType: 'blob' });
+
+/** 계약서 제6조 — 고객 선택·기록. 손으로 추가한 호출 */
+export interface ActivityItem { id: string; kind: string; benefitId: string | null; businessId: string; data: Record<string, unknown> & { title?: string; alert?: string; selection?: string; daysLeft?: number | null; under7Days?: boolean; exclusions?: string[] }; createdAt: string }
+export interface ChoiceRow { benefitId: string; businessId: string; choice: '신청할게요' | '조건 불일치'; createdAt: string }
+export interface ActivityPayload { items: ActivityItem[]; choices: ChoiceRow[] }
+export const getMyActivity = (options?: Parameters<typeof customFetch>[1]) => customFetch<ActivityPayload>('/api/service/activity', { ...options, method: 'GET' });
+export const chooseMismatch = (body: { benefitId: string; businessId: string }, options?: Parameters<typeof customFetch>[1]) => customFetch<{ message: string; exclusions: string[] }>('/api/service/choices', jsonPost({ ...body, choice: '조건 불일치' }, options));
+export const recordBenefitView = (benefitId: string, options?: Parameters<typeof customFetch>[1]) => customFetch<{ recorded: boolean }>('/api/service/activity/view', jsonPost({ benefitId }, options));
+export const getCustomerActivity = (userId: string) => customFetch<ActivityPayload>(`/api/office/customers/${encodeURIComponent(userId)}/activity`, { method: 'GET' });

@@ -30,7 +30,7 @@ export function BenefitCard({ b, extra }: { b: Benefit; extra?: React.ReactNode 
     <Pressable
       testID={`benefit-${b.id}`}
       accessibilityRole="button"
-      accessibilityLabel={`${b.title}. ${b.agency}. ${dd.label}. 자세히 보기`}
+      accessibilityLabel={`${b.title}. ${b.agency}. ${b.selection ? `${b.selection}. ` : ''}${dd.label}. 자세히 보기`}
       onPress={() => router.push({ pathname: '/benefit/[id]', params: { id: b.id } })}
       style={({ pressed }) => ({ backgroundColor: c.card, borderRadius: c.radius, paddingHorizontal: 14, paddingVertical: 14, gap: 8, opacity: pressed ? 0.85 : 1 })}
     >
@@ -41,7 +41,7 @@ export function BenefitCard({ b, extra }: { b: Benefit; extra?: React.ReactNode 
         <View style={{ flex: 1, gap: 2 }}>
           <T v="h3" numberOfLines={1}>{b.title}</T>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <T v="small" color={c.mutedForeground} numberOfLines={1} style={{ flexShrink: 1 }}>{b.agency} · {b.audience === '사업' ? '사업자' : b.audience === '가구' ? '가구' : '누구나'}</T>
+            <T v="small" color={c.mutedForeground} numberOfLines={1} style={{ flexShrink: 1 }}>{b.agency} · {b.audience === '사업' ? '사업자' : b.audience === '가구' ? '가구' : '누구나'}{b.selection ? ` · ${b.selection}` : ''}</T>
             <T v="small" color={dd.urgent ? c.destructive : c.primary} style={{ fontWeight: '700', flexShrink: 0 }}>{dd.label}</T>
           </View>
         </View>

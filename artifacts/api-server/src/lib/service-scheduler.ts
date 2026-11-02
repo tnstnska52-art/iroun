@@ -5,6 +5,7 @@ import {catalog} from "./public-feed-model";
 import {runPublicFeed,publicFeedScheduleReady,storedFeedState} from "./public-feeds";
 import {crmSyncReady,startCrmSync} from "./crm-contracts";
 import {pool} from "@workspace/db";
+import {runContractNotices} from "./contract-notices";
 import {checkLeadReady,flushCheckLeads} from "./check-leads";
 import {aiReady,runAiStructuring} from "./ai-structure";
 import {runBizinfoArchive} from "./bizinfo-archive";
@@ -31,6 +32,8 @@ export async function purgeExpired(client:Pick<typeof pool,"query">=pool){
     ["iroun_fund_leads","updated_at < now() - interval '1 year'"],
     ["iroun_trial_ledger","started_at < now() - interval '1 year'"],
     ["iroun_audit","created_at < now() - interval '5 years'"],
+    // 계약서 제18조 ③: 안내·선택 기록은 정산·환불 기한까지 보관(개인정보처리방침 계약 기록 5년).
+    ["iroun_activity","created_at < now() - interval '5 years'"],
   ];
   let removed=0;
   for(const [t,w] of jobs){
@@ -67,6 +70,10 @@ export function startServiceScheduler(){
     const purge=()=>{void purgeExpired().catch(()=>logger.warn("보유기간 지난 기록 정리 실패"));};
     setTimeout(purge,60000).unref();
     timers.push(setInterval(purge,24*3600000));
+    // 계약 고객 맞춤 알림(새 사업·마감 7일 전·재알림): 1시간마다.
+    const notify=()=>{void runContractNotices().catch(()=>logger.warn("계약 고객 알림 만들기 실패"));};
+    setTimeout(notify,90000).unref();
+    timers.push(setInterval(notify,3600000));
   }
   // 회사 전산 패키지 계약 수신: 공동 키(CRM_APP_INBOUND_SECRET)가 있을 때만 60초마다.
   const stopCrm=crmSyncReady()?startCrmSync():()=>{};

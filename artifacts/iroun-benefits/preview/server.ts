@@ -3,7 +3,7 @@
  * 공고 판정은 실제 서버와 같은 함수(matchBenefit, publicBenefit)를 그대로 사용한다.
  * 운영 빌드에는 포함되지 않는다(EXPO_PUBLIC_PREVIEW=1일 때만 metro가 연결).
  */
-import { matchBenefit, publicBenefit, noticeTime, profileSchema, preferencesSchema, trackingSchema, type Benefit, type Profile } from '../../api-server/src/lib/benefit-domain';
+import { matchBenefit, publicBenefit, selectionType, noticeTime, profileSchema, preferencesSchema, trackingSchema, type Benefit, type Profile } from '../../api-server/src/lib/benefit-domain';
 import { extractNotice } from '../../api-server/src/lib/notice-extract';
 import official from './official-benefits.json';
 
@@ -176,7 +176,7 @@ interface Inquiry { id: string; user_id: string; title: string; body: string; st
 let tracking = new Map<string, Record<string, unknown>>(); // `${uid}|${benefitId}`
 let requests: Req[] = [];
 let inquiries: Inquiry[] = [];
-let inbox: { id: string; user_id: string; benefit_id: string; read_at: string | null; created_at: string }[] = [];
+let inbox: { id: string; user_id: string; benefit_id: string; read_at: string | null; created_at: string; kind?: string }[] = [];
 let staff = new Map<string, { user_id: string; name: string; phone: string; kakao: string; enabled: boolean }>();
 let company = { phone: '', kakao: '', website: '' };
 let auditLog: Record<string, unknown>[] = [];
@@ -194,10 +194,17 @@ function seedRequest(userId: string, benefitId: string, state: string, assigned:
 }
 type Doc = { id: string; user_id: string; name: string; filename: string; mime: string; size: number; created_at: string; blob: Blob };
 let docs: Doc[] = [];
+// 계약서 제6조 기록(미리보기). 서버의 iroun_activity · iroun_choices 와 같은 모양.
+type Act = { id: string; user_id: string; kind: string; benefitId: string | null; businessId: string; data: Record<string, unknown>; createdAt: string };
+let acts: Act[] = [];
+let choices: { user_id: string; benefitId: string; businessId: string; choice: string; createdAt: string }[] = [];
+const leftDays = (b: Benefit) => { if (!b.endsAt) return null; const t = /^\d{4}-\d{2}-\d{2}$/.test(b.endsAt) ? Date.parse(`${b.endsAt}T23:59:59.999+09:00`) : Date.parse(b.endsAt); return Number.isFinite(t) ? Math.max(0, Math.ceil((t - Date.now()) / DAY)) : null; };
+const logAct = (user_id: string, kind: string, benefitId: string | null, data: Record<string, unknown> = {}, businessId = '') => { acts.unshift({ id: String(acts.length + 1), user_id, kind, benefitId, businessId, data, createdAt: new Date().toISOString() }); };
+const choose = (user_id: string, benefitId: string, businessId: string, choice: string) => { choices = choices.filter((c) => !(c.user_id === user_id && c.benefitId === benefitId && c.businessId === businessId)); choices.push({ user_id, benefitId, businessId, choice, createdAt: new Date().toISOString() }); };
 const docKeyOf = (x: string) => x.normalize('NFKC').replace(/[\s·,()\-_/]/g, '').toLowerCase();
 export function resetPreview() {
   seq = 1; seedUsers();
-  docs = [];
+  docs = []; acts = []; choices = [];
   tracking = new Map(); requests = []; inquiries = []; inbox = []; auditLog = []; ownerCodes = new Map();
   staff = new Map([['demo-staff', { user_id: 'demo-staff', name: '김서연 매니저', phone: '031-555-0100', kakao: 'https://pf.kakao.com/_example/chat', enabled: true }]]);
   company = { phone: '1588-0000', kakao: 'https://pf.kakao.com/_example/chat', website: '' };
@@ -279,9 +286,9 @@ function route(method: string, path: string, query: URLSearchParams, body: Body,
     }
     const s = query.get('search');
     if (s !== null) { const q = s.trim().slice(0, 200).toLowerCase(); items = items.filter((b) => `${b.title} ${b.summary} ${b.category} ${b.agency} ${b.support}`.toLowerCase().includes(q)); }
-    return items;
+    return items.map((b) => ({ ...b, selection: selectionType(b) }));
   }
-  if ((x = M('GET', /^\/benefits\/([^/]+)$/))) return visible(x[1]);
+  if ((x = M('GET', /^\/benefits\/([^/]+)$/))) { const b = visible(x[1]) as Benefit; return { ...b, selection: selectionType(b) }; }
   if (M('GET', /^\/membership$/)) return { configured: false, mode: 'disabled', products: { apple: '', google: '' }, message: '스토어 상품·월요금·구매 검증 연결 전입니다. 현재 구매할 수 없습니다.', entitlement: me ? account(me).entitlement : { active: false, subscriptionActive: false, grantActive: false } };
   if (M('POST', /^\/membership\/(restore|sync)$/)) throw fail('스토어 상품·검증 제공자·웹훅 설정이 필요합니다. 구매 및 복원 완료로 처리하지 않았습니다.', 503);
 
@@ -303,7 +310,7 @@ function route(method: string, path: string, query: URLSearchParams, body: Body,
   if (M('GET', /^\/me$/)) return account(id);
   if (M('PUT', /^\/profile$/)) {
     if (!account(id).preferences.privacyConsent) throw fail('먼저 개인정보 수집·이용에 동의해 주세요.');
-    u.profile = profileSchema.parse(body); return u.profile;
+    u.profile = profileSchema.parse(body); if (account(id).entitlement.contractActive) logAct(id, '내 정보 수정', null, { businesses: u.profile.businesses.length }); return u.profile;
   }
   if (M('GET', /^\/recommendations$/)) {
     const a = account(id); if (!a.entitlement.active) throw fail('맞춤 결과는 유효한 구독 또는 관리자 무상 이용권이 필요합니다.', 403);
@@ -345,12 +352,25 @@ function route(method: string, path: string, query: URLSearchParams, body: Body,
     const companyUpdates = mine.map((r) => ({ id: `company:${r.id}`, requestId: r.id, title: r.state === '회사 접수' ? '회사에 요청이 접수됐어요' : '접수 상태·서류 안내가 변경됐어요', state: r.state, updatedAt: r.updated_at, read: u.readNotices.has(`${r.id}:${noticeHash(r)}`) }));
     const alerts = active && a.preferences.notifications && a.preferences.personalizedAlerts;
     const open = new Map(notices().filter((b) => !finished(b)).map((b) => [b.id, b]));
+    // 계약 고객: 조건에 맞는 사업을 처음 안내하고 앱 알림함에 넣는다(서버 runContractNotices 의 간단판).
+    if (a.entitlement.contractActive) for (const b of open.values()) {
+      if (inbox.some((r) => r.user_id === id && r.benefit_id === b.id && r.kind === '새 사업')) continue;
+      if (!matchBenefit(b, a.profile).some((m) => m.result !== '대상 제외')) continue;
+      inbox.push({ id: newId('ibx'), user_id: id, benefit_id: b.id, kind: '새 사업', read_at: null, created_at: new Date().toISOString() });
+      const left = leftDays(b);
+      logAct(id, '맞춤 사업 안내', b.id, { title: b.title, selection: selectionType(b), daysLeft: left, under7Days: left !== null && left < 7 });
+      logAct(id, '앱 알림 보냄', b.id, { title: b.title, alert: '새 사업', selection: selectionType(b), daysLeft: left, channel: '앱 알림함' });
+    }
+    const contractTitle: Record<string, string> = { '새 사업': '새 맞춤 사업을 안내해 드려요', '마감 7일 전': '마감 7일 전이에요', '마감 재알림': '아직 고르지 않은 사업이 곧 마감돼요' };
     return {
       account: a, membership: a.entitlement.contractActive ? '계약회원' : a.entitlement.trialActive ? '3일 체험회원' : active ? '기존 이용권 회원' : '무료회원',
       pushDelivery: alerts ? { enabled: false, state: 'none', message: '아직 확인할 전송 기록이 없습니다.' } : { enabled: false, state: 'unavailable', message: '알림 동의와 유효 이용권이 있을 때 전송 상태를 확인할 수 있습니다.' },
       companyUpdates, consents: [...u.consents].reverse(), consentVersion: CONSENT_VERSION, consentTexts, trialUsed: !!u.trial, requests: reqs,
       inquiries: inquiries.filter((q) => q.user_id === id).sort((p1, p2) => p2.created_at.localeCompare(p1.created_at)),
-      inbox: alerts ? inbox.filter((r) => r.user_id === id && open.has(r.benefit_id)).sort((p1, p2) => p2.created_at.localeCompare(p1.created_at)).map((r) => ({ ...r, title: '새 혜택 안내를 확인해 주세요.' })) : [],
+      inbox: alerts || a.entitlement.contractActive ? inbox.filter((r) => r.user_id === id && open.has(r.benefit_id) && (a.entitlement.contractActive ? r.kind : !r.kind || r.kind === '새 혜택')).sort((p1, p2) => p2.created_at.localeCompare(p1.created_at)).map((r) => {
+        const b = open.get(r.benefit_id)!;
+        return r.kind && r.kind !== '새 혜택' ? { ...r, title: contractTitle[r.kind] ?? '새 혜택 안내를 확인해 주세요.', benefitTitle: b.title, selection: selectionType(b), daysLeft: leftDays(b) } : { ...r, title: '새 혜택 안내를 확인해 주세요.' };
+      }) : [],
       company, limitations: ['체험은 인증 이메일·계정당 1회입니다. 다른 이메일을 쓰는 동일인 본인확인은 미연동입니다.', '실제 푸시·스토어 판매·전국 자동수집은 미연결입니다.'],
     };
   }
@@ -392,10 +412,29 @@ function route(method: string, path: string, query: URLSearchParams, body: Body,
       if (prior.kind === '자격 확인' && kind === '신청 지원') { Object.assign(prior, { kind, state: '회사 접수', snapshot, customer_tasks: tasks, updated_at: new Date().toISOString() }); return { id: prior.id, message: '조건을 다시 확인하여 기존 문의를 회사 신청 지원 요청으로 전환했습니다. 기관 신청 완료는 아닙니다.' }; }
       return { id: prior.id, message: '이미 회사에 접수한 요청입니다. 기존 접수 내역을 확인해 주세요.' };
     }
+    choose(id, b.id, businessId, '신청할게요'); logAct(id, '신청할게요', b.id, { title: b.title, selection: selectionType(b), result: decision.result, kind }, businessId);
     const rid = newId('req'), at = new Date().toISOString();
     requests.push({ id: rid, user_id: id, benefit_id: b.id, business_id: businessId, kind, state: '회사 접수', assigned_to: null, snapshot, customer_tasks: tasks, staff_tasks: [...STAFF_TASKS], completed_tasks: [], internal_note: '', created_at: at, updated_at: at });
     audit(id, 'request.create', rid, { kind });
     return { id: rid, message: '회사에 신청 지원 요청을 저장했습니다. 정부기관에 신청된 것은 아닙니다.' };
+  }
+  if (M('GET', /^\/service\/activity$/)) return { items: acts.filter((x) => x.user_id === id), choices: choices.filter((x) => x.user_id === id) };
+  if (M('POST', /^\/service\/activity\/view$/)) {
+    const a = account(id), b = notices().find((n) => n.id === String(body.benefitId ?? ''));
+    if (!a.entitlement.contractActive || !b) return { recorded: false };
+    if (acts.some((x) => x.user_id === id && x.benefitId === b.id && x.kind === '공고 열어 봄' && Date.now() - Date.parse(x.createdAt) < DAY)) return { recorded: false };
+    logAct(id, '공고 열어 봄', b.id, { title: b.title }); return { recorded: true };
+  }
+  if (M('POST', /^\/service\/choices$/)) {
+    const a = account(id), b = notices().find((n) => n.id === String(body.benefitId ?? '')), businessId = String(body.businessId ?? '');
+    if (!b) throw fail('공개된 공식 공고를 찾을 수 없습니다.', 404);
+    if (!a.entitlement.contractActive) throw fail('계약 고객만 고를 수 있습니다.', 403);
+    if (finished(b)) throw fail('마감된 공고는 고를 수 없습니다.', 409);
+    const decision = matchBenefit(b, a.profile, new Date()).find((m) => m.businessId === businessId);
+    if (!decision) throw fail('현재 등록된 사업장을 선택해 주세요.', 409);
+    if (decision.result !== '대상 제외') throw fail('등록하신 정보로는 이 사업 조건에 맞아요. 정보가 실제와 다르면 내 정보를 고친 뒤 다시 눌러 주세요.', 409, decision);
+    choose(id, b.id, businessId, '조건 불일치'); logAct(id, '조건 불일치', b.id, { title: b.title, selection: selectionType(b), exclusions: decision.exclusions }, businessId);
+    return { message: '[조건 불일치]로 기록했어요.', exclusions: decision.exclusions };
   }
   if (M('POST', /^\/service\/inquiries$/)) {
     const title = String(body.title ?? '').trim(), text = String(body.body ?? '').trim(), key = String(body.requestKey ?? '');
@@ -410,9 +449,12 @@ function route(method: string, path: string, query: URLSearchParams, body: Body,
       const r = requests.find((q) => q.id === x![1].slice(8) && q.user_id === id); if (!r) throw fail('내 접수 알림을 찾을 수 없습니다.', 404);
       u.readNotices.add(`${r.id}:${noticeHash(r)}`); return { message: '접수 알림을 확인했어요.' };
     }
-    const a = account(id); if (!a.entitlement.active || !a.preferences.notifications || !a.preferences.personalizedAlerts) throw fail('현재 맞춤 알림을 이용할 수 없습니다.', 403);
+    const a = account(id);
     const row = inbox.find((r) => r.id === x![1] && r.user_id === id); if (!row) throw fail('알림을 찾을 수 없습니다.', 404);
-    row.read_at = new Date().toISOString();
+    const contractAlert = !!row.kind && row.kind !== '새 혜택' && a.entitlement.contractActive;
+    if (!contractAlert && (!a.entitlement.active || !a.preferences.notifications || !a.preferences.personalizedAlerts)) throw fail('현재 맞춤 알림을 이용할 수 없습니다.', 403);
+    if (contractAlert && !row.read_at) logAct(id, '알림 열어 봄', row.benefit_id, { alert: row.kind, title: notices().find((n) => n.id === row.benefit_id)?.title });
+    row.read_at = row.read_at ?? new Date().toISOString();
     const b = notices().find((n) => n.id === row.benefit_id); if (!b || finished(b)) throw fail('공고가 마감되거나 비공개로 변경되었습니다.', 409);
     return { benefitId: b.id };
   }

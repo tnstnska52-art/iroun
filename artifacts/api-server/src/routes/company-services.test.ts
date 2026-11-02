@@ -10,7 +10,8 @@ import {eraseAccount} from "./benefits";
 import {account} from "../lib/benefit-store";
 import {deliverDeadlines,registerDevice,expoTransport} from "../lib/push-delivery";
 import {CONSENT_VERSION,finished,historicalMatch,validPhone,validKakao} from "../lib/company-domain";
-import {type Benefit} from "../lib/benefit-domain";
+import {type Benefit,selectionType} from "../lib/benefit-domain";
+import {runContractNotices} from "../lib/contract-notices";
 const suffix=randomUUID(),owner=`qa-co-${suffix}`,other=`qa-other-co-${suffix}`,admin=`qa-admin-co-${suffix}`,s1=`qa-staff1-co-${suffix}`,s2=`qa-staff2-co-${suffix}`;
 const ids=[owner,other,admin,s1,s2],email=`${suffix}@example.test`,bId=`qa-company-notice-${suffix}`,oldId=`qa-company-past-${suffix}`;
 const secret="unit-company-identity-placeholder";
@@ -193,7 +194,12 @@ describe("신규 회사 접수·담당자·문의·알림",()=>{
  it("관리자 답변·처리상태 실제 저장",async()=>{const q=await post("/service/inquiries",{title:"시험",body:"문의",requestKey:"qa-reply-123"});expect((await post(`/office/inquiries/${q.body.id}/reply`,{body:"확인 후 안내합니다.",state:"답변 완료"},admin)).status).toBe(200);expect((await get("/service/state")).body.inquiries[0].replies).toHaveLength(1);});
  it("다른 직원은 문의답변 불가",async()=>{await assigned();const q=await post("/service/inquiries",{title:"시험",body:"문의",requestKey:"qa-reply-123"});expect((await post(`/office/inquiries/${q.body.id}/reply`,{body:"시험",state:"확인 중"},s2)).status).toBe(403);});
  it("앱내 알림중복 방지·만료후 숨김·구링크차단",async()=>{await gift();const a=(await get("/service/state")).body.inbox;expect(a).toHaveLength(1);expect((await get("/service/state")).body.inbox).toHaveLength(1);await revokeAll();expect((await get("/service/state")).body.inbox).toHaveLength(0);expect((await post(`/service/inbox/${a[0].id}/read`,{})).status).toBe(403);});
- it("알림거절과 공고마감은 알림함 제외",async()=>{await gift();await pool.query("UPDATE iroun_accounts SET preferences=preferences||'{\"notifications\":false}' WHERE id=$1",[owner]);expect((await get("/service/state")).body.inbox).toHaveLength(0);});
+ it("알림거절과 공고마감은 알림함 제외",async()=>{await gift();await pool.query("UPDATE iroun_accounts SET preferences=preferences||'{\"notifications\":false}' WHERE id=$1",[owner]);
+  // 계약 고객은 알림을 꺼도 계약서 제6조 알림(새 사업)은 앱 알림함에 남는다. 일반 '새 혜택' 알림은 빠진다.
+  const inbox=(await get("/service/state")).body.inbox;expect(inbox.every((x:any)=>x.kind!=="새 혜택")).toBe(true);
+  await revokeAll();await pool.query("INSERT INTO iroun_grants(user_id,expires_at,reason,granted_by) VALUES($1,now()+interval '1 day','시험용',$2) ON CONFLICT(user_id) DO UPDATE SET expires_at=excluded.expires_at,revoked_at=NULL",[owner,admin]);
+  expect((await get("/service/state")).body.inbox).toHaveLength(0);
+  b.endsAt="2026-01-02";await signed();expect((await get("/service/state")).body.inbox).toHaveLength(0);});
  it("푸시 전송 실패 상태는 본인만 보고 동의 철회 후 숨김",async()=>{
   await gift(owner);await gift(other);
   await pool.query("INSERT INTO iroun_push_jobs(id,user_id,benefit_id,deadline,status) VALUES($1,$2,$3,$4,'provider_error')",[randomUUID(),owner,bId,"qa-status-isolation"]);
@@ -220,4 +226,82 @@ describe("신규 회사 접수·담당자·문의·알림",()=>{
   expect((await get("/service/state")).body.companyUpdates[0].read).toBe(false);
  });
  it("탈퇴는 계약·접수·동의·문의·알림 개인정보 삭제",async()=>{await trial();await apply("자격 확인");await post("/service/inquiries",{title:"시험",body:"문의",requestKey:"qa-delete-123"});await eraseAccount(owner,`qa-del-${suffix}`,admin);for(const table of ["iroun_trials","iroun_contracts","iroun_consents","iroun_service_requests","iroun_inquiries","iroun_inbox"]){expect((await pool.query(`SELECT count(*)::int AS n FROM ${table} WHERE user_id=$1`,[owner])).rows[0].n).toBe(0);}expect((await get("/service/state")).status).toBe(410);});
+});
+
+describe("계약서 제6조: 확정형·선정형, 버튼, 알림, 기록",()=>{
+ const end=Date.parse("2099-06-30T23:59:59.999+09:00"),DAY=86400000;
+ const kinds=async(user=owner)=>(await pool.query("SELECT kind FROM iroun_inbox WHERE user_id=$1 ORDER BY created_at",[user])).rows.map(r=>r.kind);
+ const acts=async(user=owner)=>(await get("/service/activity",user)).body.items.map((x:any)=>x.kind);
+ it("확정형·선정형 구분: 직원 지정이 우선, 심사 표현은 선정형, 개인 급여·환급금은 확정형",()=>{
+  expect(selectionType({...base,summary:"서류 심사 후 선정"})).toBe("선정형");
+  expect(selectionType({...base,kind:"환급금"})).toBe("확정형");
+  expect(selectionType({...base,audience:"가구"})).toBe("확정형");
+  expect(selectionType({...base,summary:"서류 심사 후 선정",selection:"확정형"})).toBe("확정형");
+  expect(selectionType(base)).toBe("선정형");
+ });
+ it("새 사업 안내 → 앱 알림 → 열람이 시각과 함께 기록되고 같은 알림은 한 번만",async()=>{
+  await gift();
+  const s1r=(await get("/service/state")).body.inbox;expect(s1r).toHaveLength(1);
+  expect(s1r[0]).toMatchObject({kind:"새 사업",benefitTitle:base.title,selection:"선정형"});
+  expect((await get("/service/state")).body.inbox).toHaveLength(1);
+  expect(await acts()).toEqual(["앱 알림 보냄","맞춤 사업 안내"]);
+  expect((await post(`/service/inbox/${s1r[0].id}/read`,{})).status).toBe(200);
+  await post(`/service/inbox/${s1r[0].id}/read`,{});
+  const items=(await get("/service/activity")).body.items;
+  expect(items.filter((x:any)=>x.kind==="알림 열어 봄")).toHaveLength(1);
+  expect(items.every((x:any)=>Number.isFinite(Date.parse(x.createdAt)))).toBe(true);
+  expect(items.find((x:any)=>x.kind==="맞춤 사업 안내").data).toMatchObject({title:base.title,documents:["사업자등록증"],under7Days:false});
+ });
+ it("마감 7일 전 알림과 미선택 재알림, 고른 고객은 재알림 없음",async()=>{
+  await gift();await gift(other);b.endsAt="2099-06-30";
+  const run=(now:number)=>runContractNotices({now,notices:async()=>[b]});
+  await run(end-10*DAY);await run(end-9*DAY);
+  expect(await kinds()).toEqual(["새 사업"]);
+  await pool.query("INSERT INTO iroun_choices(user_id,benefit_id,business_id,choice) VALUES($1,$2,'biz','신청할게요')",[other,bId]);
+  await run(end-6*DAY);expect(await kinds()).toEqual(["새 사업","마감 7일 전"]);
+  await run(end-2*DAY);await run(end-1*DAY);
+  expect(await kinds()).toEqual(["새 사업","마감 7일 전","마감 재알림"]);
+  expect(await kinds(other)).toEqual(["새 사업","마감 7일 전"]);
+ });
+ it("마감 7일 안에 처음 안내한 사업은 7일 전 알림을 따로 보내지 않고 제15조 제외로 기록",async()=>{
+  await gift();b.endsAt="2099-06-30";
+  await runContractNotices({now:end-5*DAY,onlyUser:owner,notices:async()=>[b]});
+  await runContractNotices({now:end-4*DAY,onlyUser:owner,notices:async()=>[b]});
+  expect(await kinds()).toEqual(["새 사업"]);
+  const notice=(await get("/service/activity")).body.items.find((x:any)=>x.kind==="맞춤 사업 안내");
+  expect(notice.data.under7Days).toBe(true);
+ });
+ it("[조건 불일치]는 요건에 맞으면 막히고, 정보를 고친 뒤 다시 판단받으면 기록",async()=>{
+  await gift();
+  const no=await post("/service/choices",{benefitId:bId,businessId:"biz",choice:"조건 불일치"});
+  expect(no.status).toBe(409);expect(no.body.error).toContain("조건에 맞아요");
+  await pool.query("UPDATE iroun_accounts SET profile=$2 WHERE id=$1",[owner,JSON.stringify({...profile,businesses:[{...profile.businesses[0],industry:"제조업"}]})]);
+  const yes=await post("/service/choices",{benefitId:bId,businessId:"biz",choice:"조건 불일치"});
+  expect(yes.status).toBe(200);
+  const r=(await get("/service/activity")).body;
+  expect(r.choices).toMatchObject([{benefitId:bId,businessId:"biz",choice:"조건 불일치"}]);
+  expect(r.items[0]).toMatchObject({kind:"조건 불일치",benefitId:bId});
+ });
+ it("[신청할게요]는 서류를 다 올린 신청 요청만 기록",async()=>{
+  await gift();await pool.query("DELETE FROM iroun_documents WHERE user_id=$1",[owner]);
+  expect((await apply()).status).toBe(409);
+  expect((await get("/service/activity")).body.choices).toHaveLength(0);
+  await filed();expect((await apply()).status).toBe(200);
+  const r=(await get("/service/activity")).body;
+  expect(r.choices).toMatchObject([{choice:"신청할게요"}]);
+  expect(r.items.some((x:any)=>x.kind==="신청할게요")).toBe(true);
+ });
+ it("계약 고객이 아니면 버튼을 고를 수 없고 열람 기록도 남지 않음",async()=>{
+  await pool.query("INSERT INTO iroun_grants(user_id,expires_at,reason,granted_by) VALUES($1,now()+interval '1 day','시험용',$2)",[owner,admin]);
+  expect((await post("/service/choices",{benefitId:bId,businessId:"biz",choice:"조건 불일치"})).status).toBe(403);
+  expect((await post("/service/activity/view",{benefitId:bId})).body.recorded).toBe(false);
+ });
+ it("공고 열람은 하루 한 번, 기록은 본인·관리자만",async()=>{
+  await gift();
+  expect((await post("/service/activity/view",{benefitId:bId})).body.recorded).toBe(true);
+  expect((await post("/service/activity/view",{benefitId:bId})).body.recorded).toBe(false);
+  expect((await get("/service/activity",other)).body.items).toHaveLength(0);
+  expect((await get(`/office/customers/${owner}/activity`,admin)).body.items.some((x:any)=>x.kind==="공고 열어 봄")).toBe(true);
+  await employee();expect((await get(`/office/customers/${owner}/activity`,s1)).status).toBe(403);
+ });
 });

@@ -19,7 +19,9 @@ export interface SvcInquiry {
   id: string; title: string; body: string; state: string;
   replies: { body: string; at: string; author?: string }[];
 }
-export interface SvcInboxItem { id: string; benefit_id: string; title: string; read_at: string | null; created_at: string }
+/** 계약서 제6조 내 기록(안내·알림·버튼) 조회 키 */
+export const ACTIVITY_KEY = ['my-activity'];
+export interface SvcInboxItem { id: string; benefit_id: string; title: string; read_at: string | null; created_at: string; kind?: string; benefitTitle?: string; selection?: string; daysLeft?: number | null }
 export interface SvcConsent { kind: string; version: string; content?: string; accepted: boolean; recorded_at: string }
 export interface CompanyInfo { phone?: string | null; kakao?: string | null; website?: string | null }
 export interface ServiceState {

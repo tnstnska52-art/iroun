@@ -7,6 +7,8 @@ import {pool} from "@workspace/db";
 import {account,audit} from "../lib/benefit-store";
 import {customerPushStatus} from "../lib/push-customer-status";
 import {type Benefit,matchBenefit,publicBenefit,noticeTime} from "../lib/benefit-domain";
+import {ACTIVITY,ALERT_TITLE,daysLeft,logActivity,runContractNotices} from "../lib/contract-notices";
+import {selectionType} from "../lib/benefit-domain";
 import {CONSENT_VERSION,consentTexts,finished,historicalMatch,noticeVersion,validPhone,validKakao} from "../lib/company-domain";
 
 const fail=(message:string,status=400,detail?:unknown)=>Object.assign(new Error(message),{status,detail});
@@ -37,10 +39,12 @@ const companySettings=contacts.extend({website:z.string().max(400).refine(s=>{
 const staffInput=contacts.extend({userId:z.string().min(1).max(100),name:z.string().min(1).max(80),enabled:z.boolean()}).strict();
 const contractInput=z.object({id:z.string().max(100).optional(),accountCode:z.string().min(12).max(80).optional(),userId:z.string().max(100).optional(),startsAt:iso,endsAt:iso,reason:z.string().min(5).max(500),evidence:z.string().min(5).max(500),revoke:z.boolean().optional()}).strict().refine(s=>Date.parse(s.endsAt)>Date.parse(s.startsAt),"종료일은 시작일 뒤여야 합니다.");
 const inquiryInput=z.object({title:z.string().min(1).max(100),body:z.string().min(1).max(3000),requestKey:z.string().min(8).max(100)}).strict();
+const choiceInput=z.object({benefitId:z.string().min(1).max(80),businessId:z.string().max(80).default(""),choice:z.literal("조건 불일치")}).strict();
 const requestInput=z.object({benefitId:z.string().min(1).max(80),businessId:z.string().max(80).default(""),kind:z.enum(["신청 지원","자격 확인"]),confirmed:z.boolean()}).strict();
 const updateRequest=z.object({assignedTo:z.string().max(100).nullable().optional(),state:z.enum(["회사 접수","자격 확인","자료 준비","공식 신청 안내","고객 확인","회사 지원 종료"]),internalNote:z.string().max(3000).optional(),customerTasks:z.array(z.string().max(300)).max(60),staffTasks:z.array(z.string().max(300)).max(60),completedTasks:z.array(z.string().max(300)).max(120)}).strict();
 export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;identity?:(id:string)=>Promise<string>;person?:(id:string)=>Promise<{name?:string;phone?:string}>}={}){
  const router=Router();
+ const noticeRuns=new Map<string,number>();
  const notices=options.notices??(async()=> (await pool.query("SELECT data FROM iroun_benefits")).rows.map(r=>r.data as Benefit).filter(publicBenefit));
  const identity=options.identity??(async(id:string)=>{
   const u=await clerkClient.users.getUser(id);
@@ -105,7 +109,13 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
    const companyUpdates=requestRecords.map(r=>({id:`company:${r.id}`,requestId:r.id,
     title:r.state==="회사 접수"?"회사에 요청이 접수됐어요":"접수 상태·서류 안내가 변경됐어요",
     state:r.state,updatedAt:r.updated_at,read:seen.has(`${r.id}:${hash(JSON.stringify([r.state,r.assigned_to,r.customer_tasks,r.completed_tasks]))}`)}));
-  if(a.entitlement.active&&a.preferences.notifications&&a.preferences.personalizedAlerts){
+  // 계약 고객: 계약서 제6조 알림(새 사업·마감 7일 전·재알림)을 먼저 만든다. 실패해도 화면은 연다.
+  // 앱이 5초마다 다시 읽으므로 한 고객당 10분에 한 번만 만든다(1시간마다 서버가 따로 만든다).
+  if(a.entitlement.contractActive&&(process.env.NODE_ENV==="test"||Date.now()-(noticeRuns.get(a.id)??0)>600000)){
+   noticeRuns.set(a.id,Date.now());
+   await runContractNotices({onlyUser:a.id,notices:options.notices?notices:undefined}).catch(()=>undefined);
+  }
+  if(!a.entitlement.contractActive&&a.entitlement.active&&a.preferences.notifications&&a.preferences.personalizedAlerts){
    const bs=await notices();
    for(const b of bs.filter(b=>!finished(b,Date.parse(a.serverNow)))){
      if(!options.notices&&!(await pool.query("SELECT id FROM iroun_benefits WHERE id=$1 AND updated_at>now()-interval '7 days' AND data->>'reviewStatus'='공개' AND data->>'isTest'='false'",[b.id])).rowCount)continue;
@@ -115,9 +125,12 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
    }
   }
   const bs=new Map((await notices()).map(b=>[b.id,b]));
-  const inbox=a.entitlement.active&&a.preferences.notifications&&a.preferences.personalizedAlerts?
-   (await pool.query("SELECT id,benefit_id,read_at,created_at FROM iroun_inbox WHERE user_id=$1 ORDER BY created_at DESC",[a.id])).rows
-    .filter(r=>bs.has(r.benefit_id)&&!finished(bs.get(r.benefit_id)!,Date.parse(a.serverNow))).map(r=>({...r,title:"새 혜택 안내를 확인해 주세요."})):[];
+  // 계약 고객은 알림 설정과 관계없이 계약 알림을 앱 알림함에서 본다(계약서 제6조 ③④).
+  const contractInbox=a.entitlement.contractActive;
+  const inbox=contractInbox||(a.entitlement.active&&a.preferences.notifications&&a.preferences.personalizedAlerts)?
+   (await pool.query(`SELECT id,benefit_id,kind,read_at,created_at FROM iroun_inbox WHERE user_id=$1 ${contractInbox?"":"AND kind='새 혜택'"} ORDER BY created_at DESC LIMIT 300`,[a.id])).rows
+    .filter(r=>bs.has(r.benefit_id)&&!finished(bs.get(r.benefit_id)!,Date.parse(a.serverNow))).map(r=>{const b=bs.get(r.benefit_id)!;return{...r,title:ALERT_TITLE[r.kind]??"새 혜택 안내를 확인해 주세요.",
+     ...(r.kind!=="새 혜택"?{benefitTitle:b.title,selection:selectionType(b),daysLeft:daysLeft(b,Date.parse(a.serverNow))}:{})};}):[];
   const {rows:[ledger]}=await pool.query("SELECT user_id FROM iroun_trials WHERE user_id=$1",[a.id]);
   const finalActive=await hasAccess(pool,a.id);
   const pushDelivery=await customerPushStatus(a.id,finalActive&&a.preferences.notifications&&a.preferences.personalizedAlerts);
@@ -181,6 +194,9 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
    const lacking=await missingDocuments(a.id,b.documents,c);
    if(lacking.length)throw fail("필요한 서류를 먼저 등록해 주세요.",409,{result:"서류 필요",missingDocuments:lacking});
    const snapshot={decision,profileUpdatedBasis:"접수 시 입력정보 기준",title:b.title,sourceUrl:b.sourceUrl,sourceId:b.sourceId,checkedAt:b.checkedAt,endsAt:b.endsAt,documents:b.documents,checks:b.checks,warning:"회사 접수이며 기관 신청·승인·지급 완료가 아닙니다."};
+   // [신청할게요]: 필요 서류를 모두 올린 신청 요청만 기록한다(계약서 제6조 ⑤).
+   await c.query("INSERT INTO iroun_choices(user_id,benefit_id,business_id,choice) VALUES($1,$2,$3,'신청할게요') ON CONFLICT(user_id,benefit_id,business_id) DO UPDATE SET choice=excluded.choice,created_at=now()",[a.id,b.id,input.businessId]);
+   await logActivity(a.id,ACTIVITY.apply,b.id,{title:b.title,selection:selectionType(b),result:decision.result,documents:b.documents,kind:input.kind},input.businessId,c);
    const prior=(await c.query("SELECT id,kind FROM iroun_service_requests WHERE user_id=$1 AND benefit_id=$2 AND business_id=$3",[a.id,b.id,input.businessId])).rows[0];
    if(prior){
     if(prior.kind==="자격 확인"&&input.kind==="신청 지원"){
@@ -199,6 +215,41 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
   });
   res.json(result);
  });
+ // [조건 불일치]: 등록 정보가 사업 요건에 맞지 않을 때만 고를 수 있다(계약서 제6조 ⑤).
+ // 요건에 맞는 것으로 나오면 막고, 정보를 사실대로 고친 뒤 다시 판단받게 한다.
+ router.post("/service/choices",async(req,res)=>{
+  const input=choiceInput.parse(req.body);const b=(await notices()).find(b=>b.id===input.benefitId);
+  if(!b)throw fail("공개된 공식 공고를 찾을 수 없습니다.",404);
+  const result=await transaction(async c=>{
+   const a=await lockOwner(c,uid(req));
+   if(!(await c.query("SELECT 1 FROM iroun_contracts WHERE user_id=$1 AND revoked_at IS NULL AND starts_at<=now() AND ends_at>now()",[a.id])).rowCount)throw fail("계약 고객만 고를 수 있습니다.",403);
+   const {rows:[clock]}=await c.query("SELECT now() AS now");const now=clock.now as Date;
+   if(finished(b,now.getTime()))throw fail("마감된 공고는 고를 수 없습니다.",409);
+   const decision=matchBenefit(b,a.profile,now).find(m=>m.businessId===input.businessId);
+   if(!decision)throw fail("현재 등록된 사업장을 선택해 주세요.",409);
+   if(decision.result!=="대상 제외")throw fail("등록하신 정보로는 이 사업 조건에 맞아요. 정보가 실제와 다르면 내 정보를 고친 뒤 다시 눌러 주세요.",409,{result:decision.result,reasons:decision.reasons,unknowns:decision.unknowns});
+   await c.query("INSERT INTO iroun_choices(user_id,benefit_id,business_id,choice) VALUES($1,$2,$3,$4) ON CONFLICT(user_id,benefit_id,business_id) DO UPDATE SET choice=excluded.choice,created_at=now()",[a.id,b.id,input.businessId,input.choice]);
+   await logActivity(a.id,ACTIVITY.mismatch,b.id,{title:b.title,selection:selectionType(b),exclusions:decision.exclusions},input.businessId,c);
+   return {message:"[조건 불일치]로 기록했어요.",exclusions:decision.exclusions};
+  });
+  res.json(result);
+ });
+ // 내 기록(계약서 제6조 ⑥): 안내·알림 발송·열람·버튼을 날짜·시간과 함께 보여준다.
+ const activityRows=async(id:string)=>({
+  items:(await pool.query("SELECT id,kind,benefit_id AS \"benefitId\",business_id AS \"businessId\",data,created_at AS \"createdAt\" FROM iroun_activity WHERE user_id=$1 ORDER BY created_at DESC,id DESC LIMIT 2000",[id])).rows,
+  choices:(await pool.query("SELECT benefit_id AS \"benefitId\",business_id AS \"businessId\",choice,created_at AS \"createdAt\" FROM iroun_choices WHERE user_id=$1",[id])).rows,
+ });
+ router.get("/service/activity",async(req,res)=>{res.json(await activityRows(uid(req)));});
+ // 계약 고객이 공고 화면을 연 기록. 같은 공고는 하루에 한 번만 남긴다.
+ router.post("/service/activity/view",async(req,res)=>{
+  const input=z.object({benefitId:z.string().min(1).max(80)}).strict().parse(req.body);
+  const a=await account(uid(req));
+  if(!a.entitlement.contractActive){res.json({recorded:false});return;}
+  const b=(await notices()).find(b=>b.id===input.benefitId);if(!b){res.json({recorded:false});return;}
+  const dup=await pool.query("SELECT 1 FROM iroun_activity WHERE user_id=$1 AND benefit_id=$2 AND kind=$3 AND created_at>now()-interval '1 day'",[a.id,b.id,ACTIVITY.view]);
+  if(!dup.rowCount)await logActivity(a.id,ACTIVITY.view,b.id,{title:b.title,daysLeft:daysLeft(b,Date.parse(a.serverNow))});
+  res.json({recorded:!dup.rowCount});
+ });
  router.post("/service/inquiries",async(req,res)=>{
   const input=inquiryInput.parse(req.body);const id=randomUUID();
   const {rows:[r]}=await pool.query("INSERT INTO iroun_inquiries(id,user_id,title,body,request_key) VALUES($1,$2,$3,$4,$5) ON CONFLICT(user_id,request_key) DO UPDATE SET request_key=excluded.request_key RETURNING id",[id,uid(req),input.title,input.body,input.requestKey]);
@@ -216,10 +267,15 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
    });
    res.json({message:"접수 알림을 확인했어요."});return;
   }
-  const a=await account(uid(req));if(!a.entitlement.active||!a.preferences.notifications||!a.preferences.personalizedAlerts)throw fail("현재 맞춤 알림을 이용할 수 없습니다.",403);
-  const r=await pool.query("UPDATE iroun_inbox SET read_at=now() WHERE id=$1 AND user_id=$2 RETURNING benefit_id",[req.params.id,a.id]);
-  if(!r.rowCount)throw fail("알림을 찾을 수 없습니다.",404);
+  const a=await account(uid(req));
+  const {rows:[row]}=await pool.query("SELECT kind,read_at FROM iroun_inbox WHERE id=$1 AND user_id=$2",[req.params.id,a.id]);
+  if(!row)throw fail("알림을 찾을 수 없습니다.",404);
+  const contractAlert=row.kind!=="새 혜택"&&a.entitlement.contractActive;
+  if(!contractAlert&&(!a.entitlement.active||!a.preferences.notifications||!a.preferences.personalizedAlerts))throw fail("현재 맞춤 알림을 이용할 수 없습니다.",403);
+  const r=await pool.query("UPDATE iroun_inbox SET read_at=coalesce(read_at,now()) WHERE id=$1 AND user_id=$2 RETURNING benefit_id",[req.params.id,a.id]);
+  // 처음 열어 본 시각만 기록한다(계약서 제6조 ⑥).
   const b=(await notices()).find(b=>b.id===r.rows[0].benefit_id);
+  if(contractAlert&&!row.read_at)await logActivity(a.id,ACTIVITY.read,r.rows[0].benefit_id,{alert:row.kind,title:b?.title});
   if(!b||finished(b,Date.parse(a.serverNow)))throw fail("공고가 마감되거나 비공개로 변경되었습니다.",409);
   if(!(await hasAccess(pool,a.id)))throw fail("맞춤 이용권이 종료되었습니다.",403);
   res.json({benefitId:b.id});
@@ -240,6 +296,11 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
   const year=Number(req.query.year??new Date().getFullYear());
   if(!Number.isInteger(year)||year<2000||year>2100)throw fail("조회 연도를 확인해 주세요.");
   res.json({items:await matches(id,req.query.period==="past"?"past":"current",year,true)});
+ });
+ router.get("/office/customers/:id/activity",async(req,res)=>{
+  const a=await officeAccess(req);const id=String(req.params.id);
+  if(a.role!=="admin"&&!(await pool.query("SELECT id FROM iroun_service_requests WHERE user_id=$1 AND assigned_to=$2",[id,a.id])).rowCount)throw fail("배정된 고객만 확인할 수 있습니다.",403);
+  res.json(await activityRows(id));
  });
  router.post("/office/contracts",async(req,res)=>{
   const a=await officeAccess(req);if(a.role!=="admin")throw fail("관리자만 계약을 관리할 수 있습니다.",403);

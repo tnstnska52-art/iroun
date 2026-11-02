@@ -80,7 +80,7 @@ export function ServiceLinks({ current }: { current: string }) {
   const router = useRouter();
   const items: [string, string, string][] = [
     ['/access', '이용 상태·동의', 'svc-go-access'], ['/matches', '맞춤 공고', 'svc-go-matches'],
-    ['/company-progress', '회사 진행', 'svc-go-progress'], ['/inquiries', '문의·건의', 'svc-go-inquiries'], ['/inbox', '알림함', 'svc-go-inbox'],
+    ['/company-progress', '회사 진행', 'svc-go-progress'], ['/inquiries', '문의·건의', 'svc-go-inquiries'], ['/inbox', '알림함', 'svc-go-inbox'], ['/activity', '내 기록', 'svc-go-activity-link'],
   ];
   return (
     <View style={{ gap: 10 }}>

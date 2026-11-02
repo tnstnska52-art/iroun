@@ -87,11 +87,14 @@ function Body() {
           <Card key={n.id}>
             <Badge label={n.read_at ? '읽음' : '새 알림'} tone={n.read_at ? 'muted' : 'ok'} />
             <T v="h3">{n.title}</T>
+            {n.benefitTitle ? <T testID={`svc-inbox-benefit-${n.id}`}>{n.benefitTitle}</T> : null}
+            {n.benefitTitle ? <T v="small" color={c.mutedForeground}>{[n.selection, n.daysLeft != null ? (n.daysLeft === 0 ? '오늘 마감' : `마감까지 ${n.daysLeft}일`) : '마감일 공고 없음'].filter(Boolean).join(' · ')}</T> : null}
             <T v="small" color={c.mutedForeground}>{kst(n.created_at)}</T>
             <Btn label="공고 열기" icon="chevron-right" testID={`svc-inbox-open-${n.id}`} loading={busy === n.id} onPress={() => open(n.id)} />
           </Card>
         ))}
       </Section>
+      {acc.me.entitlement.contractActive ? <Btn kind="secondary" icon="list" label="내 기록 보기 (안내·알림·선택)" testID="svc-go-activity" onPress={() => router.push('/activity' as never)} /> : null}
       <Section title="알림 설정">
         <Card>
           <Toggle testID="svc-pref-notifications" label="앱 안 알림 받기" desc="알림함에 받겠다는 뜻을 저장합니다." value={prefs.notifications} disabled={busy === 'pref'} onChange={(v) => setPref({ notifications: v })} />

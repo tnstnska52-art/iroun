@@ -46,6 +46,22 @@ paths:
       operationId: readServiceInbox
       parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
       responses: { '200': { description: 권한 재확인 후 알림 열기, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /service/choices:
+    post:
+      operationId: chooseMismatch
+      description: "[조건 불일치] 기록(계약서 제6조 ⑤). 등록 정보가 요건에 맞으면 409"
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceActionInput' } } } }
+      responses: { '200': { description: 기록함, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /service/activity:
+    get:
+      operationId: getMyActivity
+      description: 안내·알림 발송·열람·버튼 기록(계약서 제6조 ⑥)
+      responses: { '200': { description: 내 기록, content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
+  /service/activity/view:
+    post:
+      operationId: recordBenefitView
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceActionInput' } } } }
+      responses: { '200': { description: 공고 열람 기록(하루 1회), content: { application/json: { schema: { $ref: '#/components/schemas/ServicePayload' } } } } }
   /office/state:
     get:
       operationId: getOfficeState
@@ -429,6 +445,7 @@ components:
         calculation: { type: string }
         maxAmount: { type: integer, description: 공고 원문에 적힌 최대 지원금액(원). 원문에 없으면 생략 }
         difficulty: { type: integer, minimum: 1, maximum: 5, description: 신청 난이도 1(쉬움)~5(어려움). 생략하면 서류·조건 수로 계산 }
+        selection: { type: string, enum: [확정형, 선정형], description: "계약서 제2조 구분. 저장 시 비우면 공고 문장으로 추정" }
         extraction: { type: object, description: 자동 정리 기록(운영자 검토용). confidence·evidence·missing·cautions·at, additionalProperties: true }
         checks: { type: array, items: { type: string } }
         documents: { type: array, items: { type: string } }

@@ -160,6 +160,8 @@ export interface Benefit {
   maxAmount?: number;
   /** 신청 난이도 1(쉬움)~5(어려움). 생략하면 서류·조건 수로 계산 */
   difficulty?: number;
+  /** 계약서 제2조: 확정형(요건을 갖춰 신청하면 지급) · 선정형(심사·추천·경쟁). 공개 목록·상세는 서버가 채워 준다. */
+  selection?: '확정형' | '선정형';
   /** 자동 정리 기록. 운영자 검토용 */
   extraction?: BenefitExtraction;
 }

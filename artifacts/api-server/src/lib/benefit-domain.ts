@@ -89,6 +89,8 @@ export const benefitSchema = z.object({
   duplicateOf: z.string().max(80).optional(),
   // 원문에 '사업자 누구나'처럼 자격 제한이 없다고 확인된 공고. 조건표가 비어도 '세부 자격 확인 필요'로 보지 않는다.
   openToAll: z.boolean().optional(),
+  // 계약서 제2조: 확정형(요건을 갖춰 신청하면 지급) · 선정형(심사·추천·경쟁으로 뽑음). 직원이 정하면 이 값을 쓰고, 비우면 공고 문장으로 추정한다.
+  selection: z.enum(["확정형", "선정형"]).optional(),
   // 공식 원문이 바뀌어 AI 가 다시 읽어야 하는 공고. 다시 읽으면 지운다.
   stale: z.boolean().optional(),
   // 자동 정리 기록: 원문 어느 문장에서 무엇을 읽었는지. 운영자 검토용이며 고객 판단에는 쓰지 않는다.
@@ -121,6 +123,23 @@ export function officialUrl(value: string) {
     return u.protocol === "https:" && !u.username && !u.password &&
       (u.hostname.endsWith(".go.kr") || ["gov.kr", "www.gov.kr", "bizinfo.go.kr", "www.bizinfo.go.kr", "sbiz24.kr", "www.sbiz24.kr", "nhis.or.kr", "www.nhis.or.kr", "nps.or.kr", "www.nps.or.kr"].includes(u.hostname));
   } catch { return false; }
+}
+// 심사·추천·경쟁으로 뽑는다는 표현. 하나라도 있으면 선정형으로 본다.
+const SELECTIVE = /선정|선발|심사|평가|추천|경쟁|공모|면접|발표|우선순위|예산 범위 내|선착순/;
+// 개인·가구 급여는 '선정기준(액)'처럼 요건을 뜻하는 말에도 '선정'이 들어가므로 뽑는 절차를 뜻하는 말만 본다.
+const SELECTIVE_STRONG = /선발|공모|경쟁|면접|추천|선착순|추첨/;
+// "선정은 보장하지 않습니다", "최종 선정은 기관이 정해요" 같은 안내 문장은 판단에서 뺀다.
+const DISCLAIMER = /[^.。\n]*(보장하지 않|보장되지 않|보장할 수 없|기관이 (정|결정|판단|합니다)|기관에서 (정|결정))[^.。\n]*/g;
+/** 확정형·선정형 구분(계약서 제2조). 직원이 정한 값이 우선이고, 애매한 사업자 공고는 선정형으로 둔다. */
+export function selectionType(b: Pick<Benefit, "selection" | "kind" | "audience" | "title" | "summary" | "support" | "checks" | "calculation">): "확정형" | "선정형" {
+  if (b.selection) return b.selection;
+  if (b.kind === "환급금") return "확정형";
+  const text = [b.title, b.summary, b.support, b.calculation, ...b.checks].join("\n").replace(DISCLAIMER, " ");
+  // 개인·가구 복지 급여(아동수당·근로장려금 등)는 요건을 갖춰 신청하면 받는다.
+  if (b.audience !== "사업") return SELECTIVE_STRONG.test(text) ? "선정형" : "확정형";
+  if (SELECTIVE.test(text)) return "선정형";
+  if (/요건을? (갖추|충족)|신청하면 (지급|지원)|자격.{0,6}(충족|해당)하면|누구나|전원 지급|대상자 전원/.test(text)) return "확정형";
+  return "선정형";
 }
 export function publicBenefit(b: Benefit) {
   return b.reviewStatus === "공개" && !b.isTest && !excludedCategory(b) && officialUrl(b.sourceUrl) &&

@@ -149,6 +149,7 @@ function BenefitForm({ initial, isNew, onDone }: { initial: Benefit; isNew: bool
       <Field label="마감일 (YYYY-MM-DD)" value={b.endsAt} onChangeText={(v) => set('endsAt', v)} autoCapitalize="none" />
       <Select label="종류" value={b.kind} options={vals(BenefitKind)} onChange={(v) => set('kind', v as Benefit['kind'])} />
       <Select label="대상" value={b.audience} options={vals(BenefitAudience)} onChange={(v) => set('audience', v as Benefit['audience'])} />
+      <Select label="확정형·선정형 (계약서 제2조)" value={b.selection ?? '자동'} options={['자동', '확정형', '선정형']} optionLabels={{ 자동: '자동 (공고 문장으로 판단)', 확정형: '확정형 · 요건 갖춰 신청하면 지급', 선정형: '선정형 · 심사·추천·경쟁으로 선발' }} onChange={(v) => set('selection', (v === '자동' ? undefined : v) as Benefit['selection'])} />
       <Select label="진행 상태 (마감 = 종료)" value={b.status} options={vals(BenefitStatus)} onChange={(v) => set('status', v as Benefit['status'])} />
       <Select label="예산 상태" value={b.budgetStatus} options={vals(BenefitBudgetStatus)} onChange={(v) => set('budgetStatus', v as Benefit['budgetStatus'])} />
       <Select label="공개 상태 (검토대기 / 공개 / 비공개)" value={b.reviewStatus} options={vals(BenefitReviewStatus)} onChange={(v) => set('reviewStatus', v as Benefit['reviewStatus'])} />
