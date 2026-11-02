@@ -46,9 +46,12 @@ export function daysLeft(b: Pick<Benefit, "endsAt">, now: number) {
   return Number.isFinite(end) ? Math.max(0, Math.ceil((end - now) / DAY)) : null;
 }
 
-/** 이 고객에게 안내할(등록 조건에 맞는) 사업장 판정. '대상 제외'만 뺀다(제6조 ②). */
+/**
+ * 이 고객에게 안내할 사업장 판정(제6조 ②: 등록 조건에 맞는 사업만 안내).
+ * 확인할 점이 남은 '추가 확인 필요'까지 알리면 거의 모든 공고가 알림으로 가므로 '조건 일치'만 안내한다.
+ */
 export function guidedBusinesses(b: Benefit, profile: Profile, now: number) {
-  return matchBenefit(b, profile, new Date(now)).filter((m) => m.result !== "대상 제외");
+  return matchBenefit(b, profile, new Date(now)).filter((m) => m.result === "조건 일치");
 }
 
 export async function activeContractCustomers(client: Query = pool, onlyUser?: string) {
