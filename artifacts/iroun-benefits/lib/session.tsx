@@ -66,6 +66,8 @@ export function AuthBridge({onMounted}:{onMounted?:()=>void}={}) {
   const { setLargeText } = useSettings();
   const syncedFor = useRef<string | null>(null);
   const wasActive = useRef(false);
+  const wasContractActive = useRef(false);
+  const contractActive = acc.active && acc.me?.entitlement.contractActive === true;
   useEffect(() => {
     // 계정에 저장된 큰 글씨 설정을 복원한다(재설치 후 포함).
     if (acc.me && syncedFor.current !== acc.me.id) {
@@ -82,6 +84,13 @@ export function AuthBridge({onMounted}:{onMounted?:()=>void}={}) {
     }
     wasActive.current = acc.active;
   }, [acc.active, qc]);
+  useEffect(() => {
+    // 계약 시작·만료 시 공고 목록/상세/알림도 새 권한으로 다시 받는다.
+    if (wasContractActive.current !== contractActive) {
+      void qc.resetQueries({ predicate: q => /^\/api\/(benefits|welfare|tracking|recommendations|service\/)/.test(String(q.queryKey[0])) });
+    }
+    wasContractActive.current = contractActive;
+  }, [contractActive, qc]);
   return null;
 }
 

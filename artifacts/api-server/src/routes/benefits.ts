@@ -17,6 +17,7 @@ import {aiJob,aiReady,runAiStructuring} from "../lib/ai-structure";
 import {bulkFeedStatus,hideDuplicates,runGov24Bulk,runKstartup} from "../lib/bulk-feeds";
 import {collectAll} from "../lib/service-scheduler";
 import {claimPendingCrm,ensureCrmTables,crmSyncReady} from "../lib/crm-contracts";
+import { visibleToCustomer } from "../lib/benefit-visibility";
 
 type AuthedRequest = Request & { customerId?: string };
 export const benefitsRouter = Router();
@@ -36,7 +37,16 @@ const administrator = async (req: Request, _res: Response, next: NextFunction) =
   try {if ((await account(userId(req))).role !== "admin") throw fail("관리자만 이용할 수 있습니다.",403); next();} catch(e) {next(e);}
 };
 async function allBenefits() {return (await pool.query("SELECT data FROM iroun_benefits ORDER BY updated_at DESC")).rows.map(r=>r.data as Benefit);}
-async function visibleBenefit(id: string) { const b=(await allBenefits()).find(b=>b.id===id && publicBenefit(b)); if(!b) throw fail("공개된 혜택을 찾을 수 없습니다.",404); return b; }
+async function viewerAccess(req: Request) {
+  const id = getAuth(req).userId;
+  return id ? (await account(id)).entitlement : undefined;
+}
+async function visibleBenefit(id: string, req: Request) {
+  const access = await viewerAccess(req);
+  const b = (await allBenefits()).find(b => b.id === id && publicBenefit(b) && visibleToCustomer(b, access));
+  if (!b) throw fail("공개된 혜택을 찾을 수 없습니다.", 404);
+  return b;
+}
 
 /** 공개 목록: 운영자용 자동 정리 기록은 빼고, 작년 1월 이전에 끝난 공고는 보내지 않는다(앱이 매번 받는 양을 줄임). */
 export function publicListItem(b:Benefit):Benefit{ const {extraction:_x,...rest}=b as Benefit&{extraction?:unknown}; return {...rest,selection:selectionType(b)} as Benefit; }
@@ -47,7 +57,10 @@ export function recentEnough(b:Benefit,now=Date.now()){
 }
 let listCache:{at:number,key:string,json:string,gz:Buffer}|undefined;
 benefitsRouter.get("/benefits", async(req,res)=>{
-  const key=JSON.stringify(req.query);
+  const access = await viewerAccess(req);
+  const contract = access?.active === true && access.contractActive === true;
+  const key=JSON.stringify([contract, req.query]);
+  res.set("Cache-Control", "private, no-store");
   const gzipOk=/\bgzip\b/.test(String(req.headers["accept-encoding"]??""));
   if(process.env.NODE_ENV!=="test"&&listCache&&listCache.key===key&&Date.now()-listCache.at<60000){
     res.set("Content-Type","application/json; charset=utf-8").set("Vary","Accept-Encoding");
@@ -55,7 +68,7 @@ benefitsRouter.get("/benefits", async(req,res)=>{
     return;
   }
   // 개인·가구 복지(수천 건)는 /welfare 로 따로 준다. 사업자 목록을 무겁게 하지 않는다.
-  let items = (await allBenefits()).filter(publicBenefit).filter(b=>!isWelfare(b)).filter(b=>recentEnough(b));
+  let items = (await allBenefits()).filter(publicBenefit).filter(b=>visibleToCustomer(b, access)).filter(b=>!isWelfare(b)).filter(b=>recentEnough(b));
   for (const key of ["kind","audience","region","status"] as const) {
     const value = req.query[key];
     if (typeof value === "string" && value && value !== "전체") items=items.filter(b=>b[key]===value || (key==="region" && b.region==="전국"));
@@ -73,6 +86,7 @@ benefitsRouter.get("/benefits", async(req,res)=>{
  */
 let welfareCache:{at:number,items:Benefit[]}|undefined;
 benefitsRouter.get("/welfare", async(req,res)=>{
+  const access = await viewerAccess(req);
   if(!welfareCache||process.env.NODE_ENV==="test"||Date.now()-welfareCache.at>60000){
     welfareCache={at:Date.now(),items:(await pool.query("SELECT data FROM iroun_benefits WHERE id LIKE 'gov24-%' AND data->>'audience'<>'사업' AND data->>'reviewStatus'='공개'")).rows.map(r=>r.data as Benefit).filter(publicBenefit).filter(isWelfare)};
   }
@@ -81,7 +95,7 @@ benefitsRouter.get("/welfare", async(req,res)=>{
   const birthYear=Number(q("birthYear"));const page=Math.max(1,Math.min(500,Number(q("page"))||1));
   const now=new Date();
   const myProvince=provinceKey(province);
-  const byPlace=welfareCache.items.filter(b=>{
+  const byPlace=welfareCache.items.filter(b=>visibleToCustomer(b, access)).filter(b=>{
     if(!myProvince||b.region==="전국"||b.region==="관할 확인 필요")return true;
     const [p,d]=b.region.split(" ");
     if(provinceKey(p??"")!==myProvince)return false;
@@ -99,13 +113,13 @@ benefitsRouter.get("/welfare", async(req,res)=>{
   const end=(b:Benefit)=>{const t=Date.parse(b.endsAt);return Number.isFinite(t)?t:Infinity;};
   list.sort((x,y)=>local(x)-local(y)||end(x)-end(y)||x.title.localeCompare(y.title,"ko"));
   const size=30;
-  res.set("Cache-Control","public, max-age=60").json({
+  res.set("Cache-Control","private, no-store").json({
     total:list.length,page,pageSize:size,fields:Object.entries(fields).sort((a,b)=>b[1]-a[1]).map(([name,count])=>({name,count})),
     items:list.slice((page-1)*size,page*size).map(b=>({id:b.id,title:b.title,agency:b.agency,region:b.region,category:b.category,audience:b.audience,
       summary:b.summary.slice(0,160),endsAt:b.endsAt,status:b.status,sourceUrl:b.sourceUrl,ages:b.rules.filter(r=>r.field==="age").map(r=>r.label)})),
   });
 });
-benefitsRouter.get("/benefits/:id", async(req,res)=>{const b=await visibleBenefit(String(req.params.id));res.json({...b,selection:selectionType(b)});});
+benefitsRouter.get("/benefits/:id", async(req,res)=>{const b=await visibleBenefit(String(req.params.id), req);res.set("Cache-Control", "private, no-store").json({...b,selection:selectionType(b)});});
 benefitsRouter.get("/membership", async(req,res)=>{
   const auth=getAuth(req);
   const access=auth.userId ? (await account(auth.userId)).entitlement : {active:false,subscriptionActive:false,grantActive:false};
@@ -129,15 +143,17 @@ benefitsRouter.put("/profile",authenticated,async(req,res)=>{
 benefitsRouter.get("/recommendations",authenticated,async(req,res)=>{
   const a=await account(userId(req));
   if(!a.entitlement.active) throw fail("맞춤 결과는 유효한 구독 또는 관리자 무상 이용권이 필요합니다.",403);
-  const output=(await allBenefits()).filter(publicBenefit).filter(b=>!isWelfare(b)).flatMap(b=>matchBenefit(b,a.profile));
+  const output=(await allBenefits()).filter(publicBenefit).filter(b=>visibleToCustomer(b,a.entitlement)).filter(b=>!isWelfare(b)).flatMap(b=>matchBenefit(b,a.profile));
   res.set("Cache-Control","private, no-store").json(output);
 });
 benefitsRouter.get("/tracking",authenticated,async(req,res)=>{
   const {rows}=await pool.query("SELECT data FROM iroun_tracking WHERE user_id=$1",[userId(req)]);
-  res.json(rows.map(r=>r.data));
+  const access = await viewerAccess(req);
+  const hidden = new Set((await allBenefits()).filter(b=>!visibleToCustomer(b,access)).map(b=>b.id));
+  res.json(rows.map(r=>r.data).filter(data=>!hidden.has(data.benefitId)));
 });
 benefitsRouter.put("/tracking/:benefitId",authenticated,async(req,res)=>{
-  const id=userId(req), b=await visibleBenefit(String(req.params.benefitId)), input=trackingSchema.parse(req.body), a=await account(id);
+  const id=userId(req), b=await visibleBenefit(String(req.params.benefitId), req), input=trackingSchema.parse(req.body), a=await account(id);
   if(input.deadlineReminder && !a.preferences.notifications) throw fail("먼저 알림 수신에 동의해 주세요.");
   if(input.checkedDocuments.some(d=>!b.documents.includes(d))) throw fail("공고의 준비서류만 체크할 수 있습니다.");
   const data={...input,benefitId:b.id,updatedAt:new Date().toISOString(),verification:"고객이 직접 기록한 상태입니다. 기관 접수·선정·지급이 확인된 정보가 아닙니다."};

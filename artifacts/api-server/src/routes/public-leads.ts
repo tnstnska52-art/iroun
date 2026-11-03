@@ -3,6 +3,7 @@ import { pool } from "@workspace/db";
 import { checkLeadInput, checkLeadStatus, enqueueCheckLead } from "../lib/check-leads";
 import { checkList, type CheckPart } from "../lib/check-benefits";
 import { isWelfare, publicBenefit, type Benefit } from "../lib/benefit-domain";
+import { trustedCatalogRequest } from "../lib/catalog-auth";
 
 // 홈페이지 지원금 무료 조회에서 고객이 '무료로 전체 보기'를 누르면 받는 창구. 로그인 없이 받으므로
 // 우리 홈페이지 주소에서 온 요청만, IP 당 10분에 10번까지만(가입 1번 + 도움 요청 여러 번) 받는다. 받은 내용은 전산으로만 넘긴다.
@@ -37,8 +38,10 @@ router.get("/public/feed-health", async (_req, res) => {
 const loadPublic = async () => (await pool.query("SELECT data FROM iroun_benefits ORDER BY updated_at DESC")).rows.map((r) => r.data as Benefit).filter(publicBenefit).filter((b) => !isWelfare(b)) as unknown as Record<string, unknown>[];
 router.get("/public/check-benefits", async (req, res) => {
   const part: CheckPart = req.query.part === "past" ? "past" : req.query.part === "all" ? "all" : "open";
-  const v = await checkList(part, loadPublic);
-  res.set({ "Cache-Control": "public, max-age=300, stale-while-revalidate=86400", ETag: v.etag, Vary: "Accept-Encoding", "X-Count": String(v.count) });
+  const contractCatalog = trustedCatalogRequest({ timestamp: req.get("X-Timestamp") ?? "", signature: req.get("X-Signature") ?? "", method: req.method, path: req.originalUrl, origin: req.get("Origin") });
+  if (req.get("X-Signature") && !contractCatalog) { res.status(401).set("Cache-Control", "no-store").json({ error: "공고 조회 인증에 실패했습니다." }); return; }
+  const v = await checkList(part, loadPublic, contractCatalog);
+  res.set({ "Cache-Control": contractCatalog ? "private, no-store" : "public, max-age=300, stale-while-revalidate=86400", ETag: v.etag, Vary: "Accept-Encoding, X-Signature, X-Timestamp", "X-Count": String(v.count) });
   if (req.headers["if-none-match"] === v.etag) { res.status(304).end(); return; }
   res.type("application/json; charset=utf-8");
   if (/\bgzip\b/.test(String(req.headers["accept-encoding"] ?? ""))) { res.set("Content-Encoding", "gzip").send(v.gz); return; }

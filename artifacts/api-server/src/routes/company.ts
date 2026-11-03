@@ -9,6 +9,7 @@ import {customerPushStatus} from "../lib/push-customer-status";
 import {type Benefit,matchBenefit,publicBenefit,noticeTime} from "../lib/benefit-domain";
 import {ACTIVITY,ALERT_TITLE,daysLeft,logActivity,runContractNotices} from "../lib/contract-notices";
 import {isWelfare,selectionType} from "../lib/benefit-domain";
+import {visibleToCustomer} from "../lib/benefit-visibility";
 import {CONSENT_VERSION,consentTexts,finished,historicalMatch,noticeVersion,validPhone,validKakao} from "../lib/company-domain";
 
 const fail=(message:string,status=400,detail?:unknown)=>Object.assign(new Error(message),{status,detail});
@@ -78,7 +79,7 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
   const a=await account(id);if(!a.entitlement.active&&!office)throw fail("맞춤 확인은 유효 이용권이 필요합니다.",403);
   if(office&&!a.preferences.privacyConsent)throw fail("고객의 서비스 개인정보 동의를 확인해 주세요.",403);
   const now=Date.parse(a.serverNow);
-  const output=(await notices()).filter(b=>period==="past"?finished(b,now):!finished(b,now)).filter(b=>{
+  const output=(await notices()).filter(b=>visibleToCustomer(b,a.entitlement)).filter(b=>period==="past"?finished(b,now):!finished(b,now)).filter(b=>{
    if(period!=="past")return true;
    const ended=noticeTime(b.endsAt,"end");const t=Number.isFinite(ended)?ended:Date.parse(b.checkedAt);
    return Number.isFinite(t)&&new Date(t+9*3600000).getUTCFullYear()===year;
@@ -117,14 +118,14 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
   }
   if(!a.entitlement.contractActive&&a.entitlement.active&&a.preferences.notifications&&a.preferences.personalizedAlerts){
    const bs=await notices();
-   for(const b of bs.filter(b=>!finished(b,Date.parse(a.serverNow)))){
+   for(const b of bs.filter(b=>visibleToCustomer(b,a.entitlement)).filter(b=>!finished(b,Date.parse(a.serverNow)))){
      if(!options.notices&&!(await pool.query("SELECT id FROM iroun_benefits WHERE id=$1 AND updated_at>now()-interval '7 days' AND data->>'reviewStatus'='공개' AND data->>'isTest'='false'",[b.id])).rowCount)continue;
     if(!matchBenefit(b,a.profile,new Date(a.serverNow)).some(m=>m.result!=="대상 제외"))continue;
     // Durable dedup. Content is generic; no money/reasons/household data.
     await pool.query("INSERT INTO iroun_inbox(id,user_id,benefit_id,version_hash) VALUES($1,$2,$3,$4) ON CONFLICT(user_id,benefit_id,version_hash) DO NOTHING",[randomUUID(),a.id,b.id,noticeVersion(b)]);
    }
   }
-  const bs=new Map((await notices()).map(b=>[b.id,b]));
+  const bs=new Map((await notices()).filter(b=>visibleToCustomer(b,a.entitlement)).map(b=>[b.id,b]));
   // 계약 고객은 알림 설정과 관계없이 계약 알림을 앱 알림함에서 본다(계약서 제6조 ③④).
   const contractInbox=a.entitlement.contractActive;
   const inbox=contractInbox||(a.entitlement.active&&a.preferences.notifications&&a.preferences.personalizedAlerts)?
@@ -268,13 +269,14 @@ export function createCompanyRouter(options:{notices?:()=>Promise<Benefit[]>;ide
    res.json({message:"접수 알림을 확인했어요."});return;
   }
   const a=await account(uid(req));
-  const {rows:[row]}=await pool.query("SELECT kind,read_at FROM iroun_inbox WHERE id=$1 AND user_id=$2",[req.params.id,a.id]);
+  const {rows:[row]}=await pool.query("SELECT kind,read_at,benefit_id FROM iroun_inbox WHERE id=$1 AND user_id=$2",[req.params.id,a.id]);
   if(!row)throw fail("알림을 찾을 수 없습니다.",404);
+  const b=(await notices()).find(b=>b.id===row.benefit_id && visibleToCustomer(b,a.entitlement));
+  if(!b)throw fail("알림을 찾을 수 없습니다.",404);
   const contractAlert=row.kind!=="새 혜택"&&a.entitlement.contractActive;
   if(!contractAlert&&(!a.entitlement.active||!a.preferences.notifications||!a.preferences.personalizedAlerts))throw fail("현재 맞춤 알림을 이용할 수 없습니다.",403);
   const r=await pool.query("UPDATE iroun_inbox SET read_at=coalesce(read_at,now()) WHERE id=$1 AND user_id=$2 RETURNING benefit_id",[req.params.id,a.id]);
   // 처음 열어 본 시각만 기록한다(계약서 제6조 ⑥).
-  const b=(await notices()).find(b=>b.id===r.rows[0].benefit_id);
   if(contractAlert&&!row.read_at)await logActivity(a.id,ACTIVITY.read,r.rows[0].benefit_id,{alert:row.kind,title:b?.title});
   if(!b||finished(b,Date.parse(a.serverNow)))throw fail("공고가 마감되거나 비공개로 변경되었습니다.",409);
   if(!(await hasAccess(pool,a.id)))throw fail("맞춤 이용권이 종료되었습니다.",403);

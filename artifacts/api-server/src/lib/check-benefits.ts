@@ -4,6 +4,7 @@
 // 만든 결과는 5분 동안 메모리에 두고 같이 쓴다(공고는 1시간마다 수집되므로 충분히 새롭다).
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
+import { visibleToCustomer } from "./benefit-visibility";
 
 export type CheckPart = "open" | "past" | "all";
 /** 홈페이지 화면이 쓰지 않는 무거운 필드(AI 추출 원문·계산 근거·내부 상태) */
@@ -25,13 +26,14 @@ export function partOf(b: { status?: unknown; endsAt?: unknown }, now = new Date
   return y !== null && y >= now.getFullYear() - 1 ? "past" : null;
 }
 
-export function buildCheckList(items: Record<string, unknown>[], part: CheckPart, now = new Date()) {
-  return items.filter((b) => { const p = partOf(b, now); return p !== null && (part === "all" || p === part); }).map(slimBenefit);
+export function buildCheckList(items: Record<string, unknown>[], part: CheckPart, now = new Date(), contractCatalog = false) {
+  return items.filter((b) => contractCatalog || visibleToCustomer(b))
+    .filter((b) => { const p = partOf(b, now); return p !== null && (part === "all" || p === part); }).map(slimBenefit);
 }
 
 type Packed = { at: number; etag: string; json: Buffer; gz: Buffer; count: number };
-const cache = new Map<CheckPart, Packed>();
-const building = new Map<CheckPart, Promise<Packed>>();
+const cache = new Map<string, Packed>();
+const building = new Map<string, Promise<Packed>>();
 export const CHECK_CACHE_MS = 5 * 60 * 1000;
 
 export function pack(list: unknown[]): Packed {
@@ -40,13 +42,14 @@ export function pack(list: unknown[]): Packed {
 }
 
 /** 5분 캐시. 만료돼도 새로 만드는 동안 직전 결과를 바로 준다(첫 요청만 기다린다). */
-export async function checkList(part: CheckPart, load: () => Promise<Record<string, unknown>[]>) {
-  const hit = cache.get(part);
+export async function checkList(part: CheckPart, load: () => Promise<Record<string, unknown>[]>, contractCatalog = false) {
+  const key = `${contractCatalog ? "contract" : "public"}:${part}`;
+  const hit = cache.get(key);
   const refresh = () => {
-    let p = building.get(part);
+    let p = building.get(key);
     if (!p) {
-      p = load().then((items) => { const v = pack(buildCheckList(items, part)); cache.set(part, v); return v; }).finally(() => building.delete(part));
-      building.set(part, p);
+      p = load().then((items) => { const v = pack(buildCheckList(items, part, new Date(), contractCatalog)); cache.set(key, v); return v; }).finally(() => building.delete(key));
+      building.set(key, p);
     }
     return p;
   };

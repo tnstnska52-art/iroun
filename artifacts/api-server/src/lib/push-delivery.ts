@@ -2,6 +2,7 @@ import { createHash,createCipheriv,createDecipheriv,randomBytes,randomUUID } fro
 import { pool } from "@workspace/db";
 import { entitlement,publicBenefit,matchBenefit,type Benefit } from "./benefit-domain";
 import { pushTestScope } from "./push-test-scope";
+import { visibleToCustomer } from "./benefit-visibility";
 
 const hash=(v:string)=>createHash("sha256").update(v).digest("hex");
 function key(){if(!process.env.SESSION_SECRET) throw new Error("기기 토큰 암호화 설정이 필요합니다.");return createHash("sha256").update(process.env.SESSION_SECRET).digest();}
@@ -67,13 +68,14 @@ export async function deliverDeadlines(transport:PushTransport=expoTransport,onl
       const s=(await client.query("SELECT * FROM iroun_subscriptions WHERE user_id=$1",[row.user_id])).rows[0];
       const g=(await client.query("SELECT * FROM iroun_grants WHERE user_id=$1",[row.user_id])).rows[0];
       const pending=(await client.query("SELECT id FROM iroun_deletions WHERE user_id=$1 AND status<>'삭제 완료'",[row.user_id])).rowCount;
-      const extra=(await client.query("SELECT EXISTS(SELECT 1 FROM iroun_trials WHERE user_id=$1 AND started_at<=$2 AND ends_at>$2) OR EXISTS(SELECT 1 FROM iroun_contracts WHERE user_id=$1 AND revoked_at IS NULL AND starts_at<=$2 AND ends_at>$2) AS active",[row.user_id,new Date(now)])).rows[0];
+      const extra=(await client.query("SELECT EXISTS(SELECT 1 FROM iroun_trials WHERE user_id=$1 AND started_at<=$2 AND ends_at>$2) AS trial_active, EXISTS(SELECT 1 FROM iroun_contracts WHERE user_id=$1 AND revoked_at IS NULL AND starts_at<=$2 AND ends_at>$2) AS contract_active",[row.user_id,new Date(now)])).rows[0];
       const consent=(await client.query("SELECT accepted FROM iroun_consents WHERE user_id=$1 AND kind='service' ORDER BY id DESC LIMIT 1",[row.user_id])).rows[0];
       const allowed=a&&!a.deleted_at&&!pending&&a.preferences.notifications&&consent?.accepted!==false&&
-        (entitlement(s&&{expiresAt:s.expires_at.toISOString(),state:s.state},g&&{expiresAt:g.expires_at.toISOString(),revoked:!!g.revoked_at},now).active||extra?.active);
+        (entitlement(s&&{expiresAt:s.expires_at.toISOString(),state:s.state},g&&{expiresAt:g.expires_at.toISOString(),revoked:!!g.revoked_at},now).active||extra?.trial_active||extra?.contract_active);
       if(!allowed){await client.query("COMMIT");continue;}
       const current=(await client.query("SELECT data FROM iroun_benefits WHERE id=$1 FOR SHARE",[b.id])).rows[0]?.data as Benefit|undefined;
       if(!current||!eligible(current)||current.endsAt!==b.endsAt||current.status==="마감"||current.budgetStatus==="소진"){await client.query("COMMIT");continue;}
+      if(!visibleToCustomer(current,{active:!!allowed,contractActive:extra?.contract_active})){await client.query("COMMIT");continue;}
       if(kind==="deadline"){
         const tracking=(await client.query("SELECT data FROM iroun_tracking WHERE user_id=$1 AND benefit_id=$2",[row.user_id,b.id])).rows[0]?.data;
         if(!tracking?.deadlineReminder){await client.query("COMMIT");continue;}
