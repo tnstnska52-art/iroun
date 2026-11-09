@@ -48,6 +48,8 @@ export function toCrmLead(x: CheckLeadInput, now = new Date()) {
     openedYear: x.openedYear ?? null, employeeBand: x.employeeBand ?? "", entity: x.entity ?? "", revNow: x.revNow ?? "", revLast: x.revLast ?? "",
     loans: x.loans.filter((l) => l.kind !== "없음").map((l) => ({ kind: l.kind, amount: AMOUNT_MID[l.amountBand ?? ""] ?? 0, rate: RATE_MID[l.rateBand ?? ""] ?? 0, amountBand: l.amountBand ?? "", rateBand: l.rateBand ?? "" })),
     supportThisYear: man(x.supportThisYear), supportLastYear: man(x.supportLastYear), sureCount: x.sureCount ?? null,
+    // 광고성 정보 수신 응답. 도움 요청은 항상 false로 만들어지므로 기존 동의를 덮지 않게 보내지 않는다. 대기열 재전송에도 시각이 바뀌지 않도록 여기서 정한다.
+    ...(!x.helpRequest && x.marketing !== undefined ? { marketing: x.marketing, ...(x.marketing ? { marketingConsentAt: now.toISOString() } : {}) } : {}),
     ...(x.questionnaireVersion ? { questionnaireVersion: x.questionnaireVersion } : {}),
     ...(x.revenueYear !== undefined ? { revenueYear: x.revenueYear } : {}),
     ...(x.creditBand ? { creditBand: x.creditBand } : {}),
