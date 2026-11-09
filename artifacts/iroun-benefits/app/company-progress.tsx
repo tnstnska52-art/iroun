@@ -5,7 +5,7 @@ import { Badge, Btn, Card, Empty, Loading, Notice, Page, Section, T } from '@/co
 import { Pending, AuthGate, ContactButtons, NotGovernment, QueryProblem, ServiceLinks } from '@/components/service-ui';
 import { useColors } from '@/hooks/useColors';
 import { kst, useServiceStateView } from '@/lib/service';
-import { StepBar, stepOf } from '@/components/ApplyProgress';
+import { isOngoing, StepBar, stepOf } from '@/components/ApplyProgress';
 
 function Body() {
   const c = useColors();
@@ -15,10 +15,10 @@ function Body() {
   if (isLoading || !data) return <Pending onRetry={() => refetch()} />;
   return (
     <>
-      <Notice tone="info" title="회사 진행 상태입니다">여기 상태는 회사 안의 진행입니다. 정부·지자체 신청이 끝났다는 뜻이 아닙니다.</Notice>
+      <Notice tone="info" title="회사가 돕는 진행이에요">{'기관의 선정·지급 결과는\n따로 알려 드려요'}</Notice>
       {data.requests.length === 0 ? (
         <Empty icon="clipboard" title="회사에 보낸 요청이 없어요" body="맞춤 공고에서 신청 지원이나 자격 확인을 요청할 수 있어요." action={<Btn label="맞춤 공고 보기" onPress={() => router.push('/matches')} testID="svc-progress-matches" />} />
-      ) : data.requests.map((r) => (
+      ) : [...data.requests].sort((a, b) => Number(!isOngoing(a)) - Number(!isOngoing(b))).map((r) => (
         <Card key={r.id} style={{ gap: 10 }}>
           <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
             <Badge label={r.state} tone="info" /><Badge label={r.kind} tone="muted" />
@@ -49,7 +49,7 @@ function Body() {
 
 export default function CompanyProgress() {
   return (
-    <Page back title="회사 진행" subtitle="회사가 도와드리는 진행 상황이에요.">
+    <Page back title="진행 중인 신청" subtitle="회사가 도와드리는 진행 상황이에요.">
       <NotGovernment />
       <AuthGate next="/company-progress"><Body /></AuthGate>
     </Page>

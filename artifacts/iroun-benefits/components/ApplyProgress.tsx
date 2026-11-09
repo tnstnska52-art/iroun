@@ -65,7 +65,7 @@ function RequestCard({ r }: { r: SvcRequest }) {
   );
 }
 
-/** 내 정보 맨 위: 지금 진행 중인 신청 */
+/** 내 정보 맨 위: 진행 중인 신청 건수만 보여 주고, 누르면 목록으로 들어간다(신청이 많아도 화면이 길어지지 않게). */
 export function OngoingApplications() {
   const c = useColors();
   const router = useRouter();
@@ -73,19 +73,21 @@ export function OngoingApplications() {
   if (isLoading || !data) return <Loading rows={1} />;
   const ongoing = data.requests.filter(isOngoing);
   const done = data.requests.length - ongoing.length;
-  if (ongoing.length === 0) {
-    return (
-      <Card tone="soft" style={{ gap: 6 }}>
-        <T>진행 중인 신청이 없어요</T>
-        <T v="small" color={c.mutedForeground}>{'[신청할게요]를 누르면\n여기서 진행을 볼 수 있어요'}</T>
-        {done > 0 ? <Btn kind="ghost" label={`끝난 신청 ${done}건 보기`} onPress={() => router.push('/company-progress')} testID="apply-done" /> : null}
-      </Card>
-    );
-  }
+  const todo = ongoing.reduce((n, r) => n + r.customerTasks.length, 0);
   return (
-    <View style={{ gap: 10 }}>
-      {ongoing.map((r) => <RequestCard key={r.id} r={r} />)}
-      {done > 0 ? <Btn kind="ghost" label={`끝난 신청 ${done}건 보기`} onPress={() => router.push('/company-progress')} testID="apply-done" /> : null}
-    </View>
+    <Pressable onPress={() => router.push('/company-progress')} accessibilityRole="button" testID="nav-applications">
+      <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+        <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: c.primarySoft, alignItems: 'center', justifyContent: 'center' }}>
+          <Feather name="clipboard" size={20} color={c.primary} />
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <T v="h3">{ongoing.length ? `진행 중 ${ongoing.length}건` : '진행 중인 신청 없음'}</T>
+          {todo > 0 ? <T v="small" color={c.warning}>내가 할 일 {todo}가지</T>
+            : done > 0 ? <T v="small" color={c.mutedForeground}>끝난 신청 {done}건</T>
+            : <T v="small" color={c.mutedForeground}>눌러서 진행 단계 보기</T>}
+        </View>
+        <Feather name="chevron-right" size={22} color={c.mutedForeground} />
+      </Card>
+    </Pressable>
   );
 }
