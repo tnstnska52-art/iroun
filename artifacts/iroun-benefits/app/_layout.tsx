@@ -79,14 +79,12 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
-    // 휴대폰 앱에서는 Pretendard를 파일로 싣는다(웹 미리보기는 따로 불러온다).
-    ...(Platform.OS !== 'web' ? {
-      'Pretendard-Regular': require('../assets/fonts/Pretendard-Regular.otf'),
-      'Pretendard-Medium': require('../assets/fonts/Pretendard-Medium.otf'),
-      'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
-      'Pretendard-Bold': require('../assets/fonts/Pretendard-Bold.otf'),
-      'Pretendard-ExtraBold': require('../assets/fonts/Pretendard-ExtraBold.otf'),
-    } : {}),
+    // 앱·웹 모두 Pretendard 를 파일로 싣는다(화면마다 글꼴이 달라 보이지 않게).
+    'Pretendard-Regular': require('../assets/fonts/Pretendard-Regular.otf'),
+    'Pretendard-Medium': require('../assets/fonts/Pretendard-Medium.otf'),
+    'Pretendard-SemiBold': require('../assets/fonts/Pretendard-SemiBold.otf'),
+    'Pretendard-Bold': require('../assets/fonts/Pretendard-Bold.otf'),
+    'Pretendard-ExtraBold': require('../assets/fonts/Pretendard-ExtraBold.otf'),
   });
 
   useEffect(() => {

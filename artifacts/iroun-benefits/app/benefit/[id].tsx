@@ -21,6 +21,7 @@ import { confirmAsk } from '@/lib/confirm';
 import { errStatus } from '@/lib/util';
 import { Collapsible, dday } from '@/components/BenefitCard';
 import { InfoAdd, nextQuestion } from '@/components/InfoAdd';
+import { ShortText } from '@/components/ShortText';
 import { DocList, useMyDocuments } from '@/components/DocList';
 
 export default function BenefitDetail() {
@@ -194,7 +195,7 @@ export default function BenefitDetail() {
     { title: '대상 확인', body: conditions.length ? `${conditions.slice(0, 2).join('\n')}${conditions.length > 2 ? `\n외 ${conditions.length - 2}가지` : ''}` : '공식 페이지에서 확인' },
     { title: '서류 준비', body: b.documents.length ? b.documents.join('\n') : '공식 페이지에서 확인' },
     { title: b.endsAt ? `${fmtDate(b.endsAt)}까지 신청` : '신청하기', body: `아래 '공식 신청 페이지' 버튼${b.budgetStatus === '확인 필요' ? '\n예산이 먼저 끝날 수 있어요' : ''}` },
-    ...(contract ? [{ title: '[신청할게요] 또는 [조건 불일치]', body: '서류를 다 올리고 [신청할게요]를 누르면 회사가 신청을 도와요\n내 정보가 요건에 안 맞으면 [조건 불일치]' }] : []),
+    ...(contract ? [{ title: '[신청할게요] 누르기', body: '서류를 모두 가져오면 누를 수 있어요\n회사가 신청을 도와요\n조건이 안 맞으면 [조건 불일치]' }] : []),
     { title: '결과 확인', body: `${b.agency}에서 알려줘요` },
   ];
 
@@ -324,12 +325,12 @@ export default function BenefitDetail() {
 
       {b.summary ? (
         <Box title="어떤 지원인가요?">
-          <T testID="detail-summary">{b.summary}</T>
+          <ShortText testID="detail-summary" text={b.summary} />
         </Box>
       ) : null}
 
       <Box title="지원내용">
-        <T>{b.support || '공식 페이지에서 확인'}</T>
+        <ShortText text={b.support || '공식 페이지에서 확인'} />
         <T v="small" color={c.mutedForeground}>금액은 기관이 정해요</T>
       </Box>
 
@@ -342,8 +343,8 @@ export default function BenefitDetail() {
               <T v="small" color="#fff" style={{ fontWeight: '800' }}>{i + 1}</T>
             </View>
             <View style={{ flex: 1, gap: 2 }}>
-              <T v="label">{st.title}</T>
-              <T v="small" color={c.mutedForeground}>{st.body}</T>
+              <ShortText v="label" text={st.title} />
+              <ShortText v="small" color={c.mutedForeground} text={st.body} />
             </View>
           </View>
         ))}
@@ -373,7 +374,7 @@ export default function BenefitDetail() {
       <Box title="필요 서류">
         {b.documents.length === 0 ? <T>공식 페이지에서 확인</T> : (
           <>
-            {contract ? <T v="small" color={myDocs.missing(b.documents).length ? c.mutedForeground : c.success} testID="docs-status">{myDocs.missing(b.documents).length ? `${b.documents.length}가지 중 ${b.documents.length - myDocs.missing(b.documents).length}가지 등록 · 모두 올리면 회사에 요청할 수 있어요` : '모두 등록했어요 · 회사에 요청할 수 있어요'}</T> : null}
+            {contract ? <T v="small" color={myDocs.missing(b.documents).length ? c.mutedForeground : c.success} testID="docs-status">{myDocs.missing(b.documents).length ? `${b.documents.length}가지 중 ${b.documents.length - myDocs.missing(b.documents).length}가지 가져왔어요\n모두 가져오면 신청할 수 있어요` : '모두 가져왔어요\n[신청할게요]를 누를 수 있어요'}</T> : null}
             <DocList names={b.documents} canUpload={contract} />
           </>
         )}

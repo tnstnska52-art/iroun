@@ -14,8 +14,8 @@ import { account, audit } from "../lib/benefit-store";
 const fail = (message: string, status = 400) => Object.assign(new Error(message), { status });
 export const DOC_MAX_BYTES = 10 * 1024 * 1024;
 const TYPES = ["application/pdf", "image/jpeg", "image/png", "image/heic", "image/webp"];
-/** 서류 이름 비교: 띄어쓰기와 기호 차이는 무시한다. */
-export const docKey = (s: string) => s.normalize("NFKC").replace(/[\s·,()\-_/]/g, "").toLowerCase();
+import { docKey, docMatchKey } from "../lib/doc-kinds";
+export { docKey };
 
 let ready: Promise<unknown> | undefined;
 export const ensureDocuments = () => (ready ??= pool.query(migrationSql("005-documents.sql")));
@@ -23,8 +23,9 @@ export const ensureDocuments = () => (ready ??= pool.query(migrationSql("005-doc
 export async function missingDocuments(userId: string, documents: string[], client: Pick<typeof pool, "query"> = pool) {
   if (!documents.length) return [];
   await ensureDocuments();
-  const have = new Set((await client.query("SELECT name FROM iroun_documents WHERE user_id=$1", [userId])).rows.map((r) => docKey(r.name as string)));
-  return documents.filter((d) => !have.has(docKey(d)));
+  const have = new Set((await client.query("SELECT name FROM iroun_documents WHERE user_id=$1", [userId])).rows.map((r) => docMatchKey(r.name as string)));
+  // 같은 종류의 서류(사업자등록증 / 사업자등록증명원 등)는 내 서류함에 하나만 있으면 된다.
+  return documents.filter((d) => !have.has(docMatchKey(d)));
 }
 
 const me = (req: Request) => { const id = getAuth(req).userId; if (!id) throw fail("로그인 후 이용해 주세요.", 401); return id; };

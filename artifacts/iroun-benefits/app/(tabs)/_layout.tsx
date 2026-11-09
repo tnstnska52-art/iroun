@@ -92,7 +92,7 @@ function ClassicTabLayout() {
         tabBarInactiveTintColor: '#8B95A1',
         tabBarActiveTintColor: colors.foreground,
         headerShown: false,
-        tabBarLabelStyle: { fontSize: 13, fontWeight: '700', ...(isWeb ? { fontFamily: 'Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif' } : {}) },
+        tabBarLabelStyle: { fontSize: 13, fontFamily: isWeb ? 'Pretendard-Bold, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif' : 'Pretendard-Bold', fontWeight: 'normal' },
         tabBarStyle: {
           backgroundColor: colors.card,
           borderTopWidth: 1,

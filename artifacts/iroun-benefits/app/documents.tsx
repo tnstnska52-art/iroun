@@ -4,7 +4,8 @@ import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { deleteMyDocument, fetchMyDocument } from '@workspace/api-client-react';
 import { Disclaimer, Loading, Page, T } from '@/components/ui';
-import { DOCS_KEY, useMyDocuments } from '@/components/DocList';
+import { DOCS_KEY, DocShelf, useMyDocuments } from '@/components/DocList';
+import { DOC_KINDS } from '../../api-server/src/lib/doc-kinds';
 import { useColors } from '@/hooks/useColors';
 import { useAccount } from '@/lib/session';
 import { apiErrorMessage } from '@/lib/text';
@@ -28,10 +29,10 @@ export default function Documents() {
   const remove = async (id: string) => { try { await deleteMyDocument(id); await qc.invalidateQueries({ queryKey: DOCS_KEY }); } catch (e) { setMsg(apiErrorMessage(e)); } };
   return (
     <Page back title="내 서류함">
-      <T v="small" color={c.mutedForeground}>한 번 올린 서류는 다른 지원금에도 그대로 쓰여요</T>
+      <T v="small" color={c.mutedForeground}>여기 담아 둔 서류는{'\n'}신청할 때 바로 가져와요</T>
       {!contract ? <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, padding: 20 }}><T color={c.mutedForeground}>서류 등록은 계약 고객만 할 수 있어요</T></View>
         : loading ? <Loading rows={2} />
-        : docs.length === 0 ? <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, padding: 20 }}><T color={c.mutedForeground}>아직 올린 서류가 없어요{'\n'}지원금 화면의 "필요 서류"에서 올릴 수 있어요</T></View>
+        : docs.length === 0 ? <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, padding: 20 }}><T color={c.mutedForeground}>아직 담아 둔 서류가 없어요{'\n'}아래에서 자주 쓰는 서류를{'\n'}미리 담아 두세요</T></View>
         : (
           <View style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
             {docs.map((d, i) => (
@@ -49,6 +50,15 @@ export default function Documents() {
           </View>
         )}
       {msg ? <T v="small" color={c.mutedForeground}>{msg}</T> : null}
+      {contract ? (
+        <>
+          <T v="h3" style={{ marginTop: 8 }}>자주 쓰는 서류 담아 두기</T>
+          <T v="small" color={c.mutedForeground}>미리 담아 두면{'\n'}신청이 훨씬 빨라져요</T>
+          <View testID="doc-shelf" style={{ backgroundColor: c.card, borderRadius: c.radius + 4, paddingHorizontal: 16 }}>
+            <DocShelf names={DOC_KINDS.map((k) => k.label).filter((n) => !docs.some((d) => d.name === n))} />
+          </View>
+        </>
+      ) : null}
       <Disclaimer />
     </Page>
   );

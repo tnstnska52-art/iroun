@@ -20,7 +20,7 @@ export function TopIcons() {
         <Feather name="bell" size={24} color={c.foreground} />
         {count > 0 ? (
           <View style={{ position: 'absolute', top: 3, right: 0, minWidth: 20, height: 20, paddingHorizontal: 5, borderRadius: 10, backgroundColor: c.destructive, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: c.background }}>
-            <Text style={{ color: '#FFFFFF', fontSize: 11, lineHeight: 14, fontWeight: '800', ...(Platform.OS === 'web' ? { fontFamily: 'Pretendard, sans-serif' } : { fontFamily: 'Pretendard-ExtraBold', fontWeight: 'normal' as const }) }}>{count > 99 ? '99+' : count}</Text>
+            <Text style={{ color: '#FFFFFF', fontSize: 11, lineHeight: 14, fontFamily: Platform.OS === 'web' ? 'Pretendard-ExtraBold, sans-serif' : 'Pretendard-ExtraBold', fontWeight: 'normal' as const }}>{count > 99 ? '99+' : count}</Text>
           </View>
         ) : null}
       </Pressable>

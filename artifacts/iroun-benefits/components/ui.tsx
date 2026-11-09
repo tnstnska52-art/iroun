@@ -13,17 +13,18 @@ import { useSettings } from '@/lib/settings';
 import { DISCLAIMER } from '@/lib/text';
 import { KeyboardAwareScrollViewCompat } from './KeyboardAwareScrollViewCompat';
 
-/** 웹에서는 Pretendard를 쓴다. 기기 앱에서는 글꼴 파일을 넣기 전까지 기본 글꼴로 보인다. */
-export const FONT = Platform.OS === 'web' ? ({ fontFamily: 'Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif' } as const) : {};
+/** 모든 화면 글꼴은 Pretendard 하나(앱·웹 모두 글꼴 파일을 싣는다). 굵기는 nativeFont 가 파일을 골라 맞춘다. */
+export const FONT = {} as const;
+/** 웹에서 글꼴 파일이 오기 전 잠깐 쓸 대신 글꼴 */
+const WEB_FALLBACK = ', "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif';
 type Variant = 'hero' | 'title' | 'h2' | 'h3' | 'body' | 'small' | 'label';
-/** 휴대폰 앱: 굵기마다 글꼴 파일이 따로 있어서 굵기에 맞는 파일을 고른다. 웹은 그대로 둔다. */
+/** 굵기마다 글꼴 파일이 따로 있어서 굵기에 맞는 Pretendard 파일을 고른다(앱·웹 같은 글꼴). */
 export function nativeFont(style: StyleProp<TextStyle>): StyleProp<TextStyle> {
-  if (Platform.OS === 'web') return style;
   const flat = StyleSheet.flatten(style) ?? {};
   if (flat.fontFamily) return flat;
   const w = flat.fontWeight === 'bold' ? 700 : flat.fontWeight === 'normal' || flat.fontWeight === undefined ? 400 : Number(flat.fontWeight) || 400;
   const face = w >= 800 ? 'ExtraBold' : w >= 700 ? 'Bold' : w >= 600 ? 'SemiBold' : w >= 500 ? 'Medium' : 'Regular';
-  return { ...flat, fontFamily: `Pretendard-${face}`, fontWeight: 'normal' };
+  return { ...flat, fontFamily: Platform.OS === 'web' ? `Pretendard-${face}${WEB_FALLBACK}` : `Pretendard-${face}`, fontWeight: 'normal' };
 }
 const SIZES: Record<Variant, { s: number; w: TextStyle['fontWeight']; l: number }> = {
   hero: { s: 30, w: '800', l: 40 },

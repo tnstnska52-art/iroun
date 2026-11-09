@@ -45,6 +45,10 @@ describe("서류함", () => {
     expect(await missingDocuments(owner, ["사업자 등록증명", "소상공인확인서"])).toEqual(["소상공인확인서"]);
     expect(await missingDocuments(owner, [])).toEqual([]);
   });
+  it("같은 종류의 서류는 이름이 달라도 내 서류함에서 가져온다(사업자등록증 ↔ 사업자등록증명원)", async () => {
+    expect(await missingDocuments(owner, ["사업자등록증 사본", "사업자 등록증명원"])).toEqual([]);
+    expect(await missingDocuments(owner, ["주민등록등본"])).toEqual(["주민등록등본"]);
+  });
   it("남의 서류는 보거나 지울 수 없고, 관리자는 볼 수 있으며 열람이 기록된다", async () => {
     const id = (await request(app()).get("/service/documents").set("x-test-user", owner)).body.documents[0].id;
     expect((await request(app()).get(`/service/documents/${id}/file`).set("x-test-user", other)).status).toBe(404);
