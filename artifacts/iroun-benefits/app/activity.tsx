@@ -79,7 +79,6 @@ function Body() {
   const all = q.data?.items ?? [];
   return (
     <>
-      <Notice tone="info" title="계약서 제6조에 따른 기록이에요">회사가 맞춤 사업을 안내하고 알림을 보낸 시각, 내가 알림·공고를 열어 본 시각, 내가 누른 버튼이 모두 남아요. 정산·환불 때 이 기록을 기준으로 봐요.</Notice>
       {!contract && all.length === 0 ? <Notice tone="warn">계약 고객이 되면 기록이 쌓여요.</Notice> : null}
       <Card style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
         {([['안내받은 사업', counts.notice], ['신청할게요', counts.apply], ['조건 불일치', counts.mismatch]] as const).map(([l, n]) => (

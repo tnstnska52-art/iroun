@@ -5,6 +5,7 @@ import { Badge, Btn, Card, Empty, Loading, Notice, Page, Section, T } from '@/co
 import { Pending, AuthGate, ContactButtons, NotGovernment, QueryProblem, ServiceLinks } from '@/components/service-ui';
 import { useColors } from '@/hooks/useColors';
 import { kst, useServiceStateView } from '@/lib/service';
+import { StepBar, stepOf } from '@/components/ApplyProgress';
 
 function Body() {
   const c = useColors();
@@ -23,6 +24,7 @@ function Body() {
             <Badge label={r.state} tone="info" /><Badge label={r.kind} tone="muted" />
           </View>
           <T v="h3">{r.benefitTitle ?? r.snapshot?.title ?? '접수한 공고'}</T>
+          <StepBar step={Math.min(stepOf(r.state), 4)} />
           <T v="small" color={c.mutedForeground}>접수번호 {r.id} · {kst(r.createdAt)}</T>
           <T v="small" color={c.mutedForeground}>마지막 변경 {kst(r.updatedAt ?? r.createdAt)}</T>
           {!acc.active ? <T v="small" color={c.warning}>새 맞춤 판정은 잠겨 있어요. 이미 접수한 기록과 담당자 연락은 계속 확인할 수 있어요.</T> : null}
