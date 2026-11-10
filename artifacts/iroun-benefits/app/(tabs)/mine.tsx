@@ -11,6 +11,7 @@ import { Badge, Btn, Card, Chip, Disclaimer, Empty, ErrorState, ListRow, Loading
 import { STAGES, USER_RECORD_NOTICE, apiErrorMessage } from '@/lib/text';
 import { fmtDate } from '@/lib/util';
 import { kst, useServiceStateView } from '@/lib/service';
+import { CustomerPortalCard } from '@/components/CustomerPortalCard';
 
 type Tab = 'saved' | 'progress' | 'company';
 
@@ -43,10 +44,11 @@ export default function MyBenefits() {
     ]);
   };
 
-  if (!acc.isLoaded) return <Page tab title="내혜택"><Loading /></Page>;
+  if (!acc.isLoaded) return <Page tab title="내혜택"><CustomerPortalCard /><Loading /></Page>;
   if (!acc.isSignedIn) {
     return (
       <Page tab title="내혜택" subtitle="저장한 공고, 신청 기록, 회사 요청을 한곳에서 봅니다.">
+        <CustomerPortalCard />
         <Empty icon="lock" title="로그인하면 볼 수 있어요" body="저장과 기록은 내 계정에만 보관됩니다." action={<>
           <Btn label="로그인 또는 가입" onPress={() => router.push('/auth')} testID="progress-login" />
           <Btn kind="secondary" label="전체혜택 둘러보기" onPress={() => router.push('/benefits')} />
@@ -65,6 +67,7 @@ export default function MyBenefits() {
 
   return (
     <Page tab title="내혜택" subtitle="내가 저장하고 기록한 것만 보여드립니다.">
+      <CustomerPortalCard />
       <View accessibilityRole="tablist" style={{ flexDirection: 'row', backgroundColor: c.secondary, borderRadius: c.radius, padding: 4, gap: 4 }}>
         {([['saved', '저장', saved.length], ['progress', '신청 기록', all.length], ['company', '회사 요청', svc.data ? requests.length : null]] as const).map(([k, l, n]) => (
           <View key={k} style={{ flex: 1 }}>
@@ -136,3 +139,4 @@ export default function MyBenefits() {
     </Page>
   );
 }
+
