@@ -18,6 +18,7 @@ import { remaining, useServiceStateView } from '@/lib/service';
 import { industryGate } from '@/lib/fit';
 import { FREE_COUNT, HEADLINE_STAT, IS_PREVIEW, STORE_SHOTS, customerMoney, customerOrder, estimate, hasConditions, missed, strictMode, useDraftProfile, won } from '@/lib/estimate';
 import { difficulty } from '@/lib/difficulty';
+import { CustomerPortalCard } from '@/components/CustomerPortalCard';
 
 export default function Home() {
   const c = useColors();
@@ -99,6 +100,7 @@ export default function Home() {
         <Image source={require('../../assets/images/logo-small.png')} accessibilityIgnoresInvertColors style={{ width: 32, height: 32, borderRadius: 9, marginRight: 8 }} />
         <T v="h2" style={{ flex: 1, fontWeight: '800' }}>이로운사람들</T>
       </>}>
+      <CustomerPortalCard />
 
       {benefits.isLoading ? <Loading rows={2} /> : benefits.error ? <ErrorState message={apiErrorMessage(benefits.error)} onRetry={() => benefits.refetch()} /> : !est ? (
         <>
@@ -187,3 +189,4 @@ export default function Home() {
     </Page>
   );
 }
+

@@ -13,6 +13,7 @@ import { Btn, Card, Disclaimer, ErrorState, ListRow, Loading, Notice, Page, Sect
 import { apiErrorMessage } from '@/lib/text';
 import { OngoingApplications } from '@/components/ApplyProgress';
 import { registerNativeNotifications } from '@/lib/native-notifications';
+import { CustomerPortalCard } from '@/components/CustomerPortalCard';
 
 export default function Account() { return <AccountView settings={false} />; }
 
@@ -56,6 +57,7 @@ export function AccountView({ settings }: { settings: boolean }) {
 
   return (
     <Page back title={settings ? '환경설정' : '내 정보'}>
+      {!settings ? <CustomerPortalCard /> : null}
       {!acc.isLoaded || (acc.isSignedIn && acc.loading) ? <Loading rows={2} /> : !acc.isSignedIn ? (
         <Card tone="soft">
           <T v="h3">가입하면 전체 지원금을 볼 수 있어요</T>
@@ -137,3 +139,4 @@ export function AccountView({ settings }: { settings: boolean }) {
     </Page>
   );
 }
+
