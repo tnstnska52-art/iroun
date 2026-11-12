@@ -2,7 +2,15 @@
 
 회사에서 발급한 아이디와 비밀번호로 이용하는 고객 창구는 https://go.irowoon.com/package-conditions 입니다. 지원사업 신청, 서류 교체, 회사와의 대화는 이 창구의 CRM 자료를 사용합니다.
 
-## 2026-11-12 변경: 앱 안의 '내 계약' 탭
+## 2026-11-12 결정: 앱 전체 = 고객 창구 (계약 고객 전용 앱)
+
+대표 결정으로 설치 앱은 켜자마자 고객 창구(https://go.irowoon.com/package-conditions)를 **앱 화면 전체**로 엽니다. 하단 탭·지원금 찾기·Clerk 로그인은 이 모드에서 쓰지 않습니다.
+- 모드 스위치: `lib/app-mode.ts`. 기본 `portal`. `EXPO_PUBLIC_APP_MODE=benefits`로 빌드하면 예전 지원금 앱(탭 구조)으로 돌아갑니다. 미리보기(`EXPO_PUBLIC_PREVIEW=1`)는 예전 앱입니다. 예전 코드는 지우지 않았습니다.
+- 화면: `components/PortalView.tsx`(WebView). 아래 '내 계약' 탭 설명의 동작(쿠키 로그인 유지, 외부 주소 넘기기, 파일 올리기·내려받기, 뒤로가기, 실패 시 다시 열기)을 그대로 씁니다.
+- 알림(`lib/portal-push.ts`): 처음 켤 때 알림 허용을 묻고, 허용하면 Expo 알림 주소를 창구에 `window.IROUN_APP = { app:'iroun', bridge:1, platform, pushToken }`와 `iroun-app` 이벤트로 알립니다. 알림의 `data.url`(회사 창구 https 주소만)을 누르면 그 화면을 엽니다. 알림 발송과 계정 연결은 **전산(CRM) 쪽 작업**입니다.
+- 웹에서 이 모드는 창구 주소로 바로 이동합니다.
+
+## 2026-11-12 변경: 앱 안의 '내 계약' 탭 (benefits 모드)
 
 설치 앱의 하단 탭에 **내 계약**을 두고(환급금 탭 자리, 환급금은 홈의 '환급금 전체 보기'로 이동), 고객 창구를 **앱 화면 안(WebView)** 에서 엽니다.
 - 회사 고객 창구(*.irowoon.com, https)만 앱 안에서 열고, 기관 사이트·전화·카카오 등 다른 주소는 휴대폰 브라우저·앱으로 넘깁니다.

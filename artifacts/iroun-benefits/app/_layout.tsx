@@ -22,6 +22,10 @@ import { View,Text,ActivityIndicator,Platform } from 'react-native';
 import { SettingsProvider } from '@/lib/settings';
 import { AuthBridge, PERSONAL_KEYS } from '@/lib/session';
 import { T } from '@/components/ui';
+import { PORTAL_ONLY } from '@/lib/app-mode';
+import { CUSTOMER_PORTAL_URL } from '@/lib/customer-portal';
+import { PortalView } from '@/components/PortalView';
+import { usePortalPush } from '@/lib/portal-push';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -95,6 +99,9 @@ export default function RootLayout() {
 
   if (!fontsLoaded && !fontError) return <Startup />;
 
+  // 고객 창구 앱: 앱 전체가 회사 고객 창구다(로그인·신청·서류·대화·받은 금액 모두 창구에서).
+  if (PORTAL_ONLY) return <PortalApp />;
+
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
@@ -121,6 +128,22 @@ export default function RootLayout() {
             </KeyboardProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
+  );
+}
+function PortalApp() {
+  const push = usePortalPush();
+  useEffect(() => {
+    // 웹에서는 창구 주소로 바로 옮긴다(다른 화면 안에 넣을 수 없게 막혀 있다).
+    if (Platform.OS === 'web' && typeof window !== 'undefined') window.location.replace(CUSTOMER_PORTAL_URL);
+  }, []);
+  if (Platform.OS === 'web') return <Startup />;
+  return (
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <StatusBar style="dark" />
+        <PortalView pushToken={push.token} openUrl={push.openUrl} />
       </ErrorBoundary>
     </SafeAreaProvider>
   );

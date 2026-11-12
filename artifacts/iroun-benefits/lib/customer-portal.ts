@@ -52,7 +52,7 @@ export function staysInApp(url: string): boolean {
  * 앱은 받은 파일을 휴대폰 공유 창(저장·열기)으로 보여 준다.
  */
 export const DOWNLOAD_BRIDGE_JS = `(function(){
-  if (window.__irounBridge) return; window.__irounBridge = true; window.IROUN_APP = true;
+  if (window.__irounBridge) return; window.__irounBridge = true;
   var send = function(o){ try { window.ReactNativeWebView.postMessage(JSON.stringify(o)); } catch (e) {} };
   var orig = HTMLAnchorElement.prototype.click;
   HTMLAnchorElement.prototype.click = function(){
@@ -74,4 +74,19 @@ export const DOWNLOAD_BRIDGE_JS = `(function(){
 export function safeFileName(name: string): string {
   const n = (name || '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').replace(/^\.+/, '').trim().slice(0, 120);
   return n || 'file';
+}
+
+/** Expo 알림 주소 모양만 넘긴다(다른 값은 버린다). */
+export function validPushToken(t: string | null | undefined): string | null {
+  return typeof t === 'string' && /^ExponentPushToken\[[A-Za-z0-9_-]{10,}\]$/.test(t) ? t : null;
+}
+
+/**
+ * 창구 화면에 '앱에서 열렸다'는 정보와 이 휴대폰의 알림 주소를 알려 준다.
+ * 창구는 window.IROUN_APP 를 읽거나 'iroun-app' 이벤트를 받아, 로그인한 계정에 알림 주소를 연결한다.
+ * 비밀값(로그인 정보·세션)은 들어 있지 않다.
+ */
+export function appInfoJs(platform: string, pushToken: string | null): string {
+  const info = JSON.stringify({ app: 'iroun', bridge: 1, platform: platform === 'ios' ? 'ios' : 'android', pushToken: validPushToken(pushToken) });
+  return `(function(){window.IROUN_APP=${info};try{window.dispatchEvent(new CustomEvent('iroun-app',{detail:window.IROUN_APP}));}catch(e){}})(); true;`;
 }

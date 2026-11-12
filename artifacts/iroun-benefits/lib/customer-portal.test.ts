@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CUSTOMER_PORTAL_URL, DOWNLOAD_BRIDGE_JS, createCustomerPortalLauncher, safeFileName, staysInApp } from './customer-portal.ts';
+import { CUSTOMER_PORTAL_URL, DOWNLOAD_BRIDGE_JS, appInfoJs, createCustomerPortalLauncher, safeFileName, staysInApp, validPushToken } from './customer-portal.ts';
 
 const url = 'https://go.irowoon.com/package-conditions';
 function setup(platform = 'ios', type = 'cancel') {
@@ -92,4 +92,15 @@ test('download bridge only intercepts blob/data downloads and file names are saf
   assert.equal(safeFileName('../../사업자등록증.pdf'), '_.._사업자등록증.pdf'.replace(/^\.+/, ''));
   assert.equal(safeFileName('a/b:c.pdf'), 'a_b_c.pdf');
   assert.equal(safeFileName(''), 'file');
+});
+
+test('app info passes only a well-formed push token and no secrets', () => {
+  const ok = 'ExponentPushToken[abcDEF123_-xyz]';
+  assert.equal(validPushToken(ok), ok);
+  assert.equal(validPushToken('ExponentPushToken[");alert(1)//]'), null);
+  assert.equal(validPushToken(''), null);
+  const js = appInfoJs('ios', ok);
+  assert.match(js, /"pushToken":"ExponentPushToken\[abcDEF123_-xyz\]"/);
+  assert.match(js, /"platform":"ios"/);
+  assert.match(appInfoJs('android', 'bad'), /"pushToken":null/);
 });
