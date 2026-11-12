@@ -8,6 +8,8 @@
 *.keystore
 *.jks
 google-services.json
+# 앱 알림용 Firebase 설정(비밀값 아님, 빌드에 필요). 서비스 계정 키(google-service-account*.json)는 계속 제외.
+!/artifacts/iroun-benefits/google-services.json
 google-service-account*.json
 # See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 

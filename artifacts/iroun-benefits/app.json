@@ -29,7 +29,8 @@
       "blockedPermissions": [
         "com.google.android.gms.permission.AD_ID"
       ],
-      "package": "com.irounsaram.app"
+      "package": "com.irounsaram.app",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/images/icon.png"

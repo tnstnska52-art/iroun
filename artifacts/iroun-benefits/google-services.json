@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "774097873682",
+    "project_id": "iroun-app",
+    "storage_bucket": "iroun-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:774097873682:android:2d02104834af92aa14a1cb",
+        "android_client_info": {
+          "package_name": "com.irounsaram.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgRnsXdvJioBmFhLEeYS99trdyN0ADfi8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
