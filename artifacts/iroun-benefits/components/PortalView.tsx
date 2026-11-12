@@ -38,10 +38,13 @@ export function PortalView({ active = true, openUrl, pushToken }: { active?: boo
     return () => sub.remove();
   }, [active]);
 
-  // 알림을 눌러 들어오면 그 화면으로 옮긴다.
+  // 알림을 눌러 들어오면 그 화면으로 옮긴다. 첫 화면이 아직 열리는 중이면 다 열린 뒤에 옮긴다.
+  const pendingUrl = useRef<string | null>(null);
+  const loaded = useRef(false);
+  const go = (url: string) => ref.current?.injectJavaScript(`location.assign(${JSON.stringify(url)}); true;`);
   useEffect(() => {
-    if (!openUrl || !staysInApp(openUrl) || openUrl.startsWith('blob:') || openUrl.startsWith('data:')) return;
-    ref.current?.injectJavaScript(`location.assign(${JSON.stringify(openUrl)}); true;`);
+    if (!openUrl || !staysInApp(openUrl) || !openUrl.startsWith('https://')) return;
+    if (loaded.current) go(openUrl); else pendingUrl.current = openUrl;
   }, [openUrl]);
 
   // 알림 주소가 생기면 창구에 알려 준다(창구는 로그인된 계정에 연결해 둔다).
@@ -104,11 +107,18 @@ export function PortalView({ active = true, openUrl, pushToken }: { active?: boo
         onNavigationStateChange={onNav}
         onMessage={onMessage}
         injectedJavaScriptBeforeContentLoaded={DOWNLOAD_BRIDGE_JS + appInfoJs(Platform.OS, pushToken ?? null)}
-        onLoadEnd={() => setLoading(false)}
+        onLoadEnd={() => {
+          setLoading(false);
+          if (!loaded.current) {
+            loaded.current = true;
+            const u = pendingUrl.current; pendingUrl.current = null;
+            if (u && u !== start) go(u);
+          }
+        }}
         onError={() => setFailed(true)}
         onHttpError={(e) => { if (e.nativeEvent.statusCode >= 500) setFailed(true); }}
         onContentProcessDidTerminate={() => ref.current?.reload()}
-        onRenderProcessGone={() => { setLoading(true); setKey((k) => k + 1); return true; }}
+        onRenderProcessGone={() => { loaded.current = false; setLoading(true); setKey((k) => k + 1); return true; }}
         // 로그인 유지 쿠키를 앱을 껐다 켜도 남긴다.
         sharedCookiesEnabled
         thirdPartyCookiesEnabled={false}
