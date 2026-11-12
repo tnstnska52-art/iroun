@@ -19,8 +19,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#0E6DF1"
+        "foregroundImage": "./assets/images/adaptive-foreground.png",
+        "backgroundImage": "./assets/images/adaptive-background.png",
+        "backgroundColor": "#EAF5FF"
       },
       "permissions": [
         "POST_NOTIFICATIONS",
@@ -38,7 +39,13 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-notifications"
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#0557F0"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -47,7 +54,7 @@
     "splash": {
       "backgroundColor": "#FFFFFF",
       "resizeMode": "contain",
-      "image": "./assets/images/icon.png"
+      "image": "./assets/images/splash-logo.png"
     },
     "locales": {
       "ko": "./assets/locales/ko.json"
