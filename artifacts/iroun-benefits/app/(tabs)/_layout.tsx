@@ -13,11 +13,11 @@ const TABS = [
   { name: 'index', label: '홈', sf: 'house', icon: 'home-outline' },
   { name: 'benefits', label: '지원금', sf: 'banknote', icon: 'cash-multiple' },
   { name: 'funds', label: '정책자금', sf: 'building.columns', icon: 'bank-outline' },
-  { name: 'refunds', label: '환급금', sf: 'gift', icon: 'gift-outline' },
+  { name: 'contract', label: '내 계약', sf: 'doc.text', icon: 'file-document-outline' },
   { name: 'consult', label: '상담', sf: 'bubble.left', icon: 'chat-outline' },
 ] as const;
-/** 탭에는 보이지 않지만 기존 주소(/refunds, /progress) 호환을 위해 남겨 둔 화면 */
-const HIDDEN = ['progress', 'mine', 'account'] as const;
+/** 탭에는 보이지 않지만 기존 주소 호환을 위해 남겨 둔 화면. 환급금은 홈의 '환급금 전체 보기'로 들어간다. */
+const HIDDEN = ['progress', 'mine', 'account', 'refunds'] as const;
 
 function NativeTabLayout() {
   const unread = useUnreadReplies().count;

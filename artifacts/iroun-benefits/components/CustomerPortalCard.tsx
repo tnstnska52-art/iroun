@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Linking, Platform } from 'react-native';
+import { useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { Btn, Card, Notice, T } from '@/components/ui';
 import { useColors } from '@/hooks/useColors';
@@ -8,6 +9,7 @@ import { createCustomerPortalLauncher } from '@/lib/customer-portal';
 /** Accessible before Clerk sign-in: company-issued credentials belong to the CRM. */
 export function CustomerPortalCard() {
   const c = useColors();
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const mounted = useRef(true);
@@ -25,6 +27,8 @@ export function CustomerPortalCard() {
     openWeb: url => window.location.assign(url),
   });
   const open = async (external = false) => {
+    // 설치 앱: 앱 안의 '내 계약' 탭에서 연다. 웹 버전과 '기본 브라우저로 열기'만 바깥으로 연다.
+    if (Platform.OS !== 'web' && !external) { router.push('/contract'); return; }
     if (busyRef.current) return;
     busyRef.current = true;
     setBusy(true); setFailed(false);

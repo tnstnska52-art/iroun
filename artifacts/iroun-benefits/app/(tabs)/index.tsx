@@ -18,7 +18,6 @@ import { remaining, useServiceStateView } from '@/lib/service';
 import { industryGate } from '@/lib/fit';
 import { FREE_COUNT, HEADLINE_STAT, IS_PREVIEW, STORE_SHOTS, customerMoney, customerOrder, estimate, hasConditions, missed, strictMode, useDraftProfile, won } from '@/lib/estimate';
 import { difficulty } from '@/lib/difficulty';
-import { CustomerPortalCard } from '@/components/CustomerPortalCard';
 
 export default function Home() {
   const c = useColors();
@@ -61,7 +60,12 @@ export default function Home() {
   const picks = todayPicks(pool.filter((x) => !refundLike(x.benefit)));
   const used = new Set([...refunds, ...picks].map((x) => x.benefit.id));
   const nowList = pool.filter((x) => !used.has(x.benefit.id)).slice(0, 10);
-  const missBlock = refunds.length > 0 ? <TodayPicks items={refunds} title="놓치기 쉬운 환급금" emoji="🎁" testID="home-refund-picks" note="신청 가능" /> : null;
+  const missBlock = (
+    <>
+      {refunds.length > 0 ? <TodayPicks items={refunds} title="놓치기 쉬운 환급금" emoji="🎁" testID="home-refund-picks" note="신청 가능" /> : null}
+      <Btn kind="ghost" label="환급금 전체 보기" icon="gift" onPress={() => router.push('/refunds')} testID="home-refunds-all" />
+    </>
+  );
   // 지금 신청 가능한 지원금: 최대 10건을 3줄씩 보여주며 천천히 한 줄씩 위로 올린다.
   const nowBlock = nowList.length > 0 ? (
     <>
@@ -100,7 +104,6 @@ export default function Home() {
         <Image source={require('../../assets/images/logo-small.png')} accessibilityIgnoresInvertColors style={{ width: 32, height: 32, borderRadius: 9, marginRight: 8 }} />
         <T v="h2" style={{ flex: 1, fontWeight: '800' }}>이로운사람들</T>
       </>}>
-      <CustomerPortalCard />
 
       {benefits.isLoading ? <Loading rows={2} /> : benefits.error ? <ErrorState message={apiErrorMessage(benefits.error)} onRetry={() => benefits.refetch()} /> : !est ? (
         <>

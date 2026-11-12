@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CUSTOMER_PORTAL_URL, createCustomerPortalLauncher } from './customer-portal.ts';
+import { CUSTOMER_PORTAL_URL, DOWNLOAD_BRIDGE_JS, createCustomerPortalLauncher, safeFileName, staysInApp } from './customer-portal.ts';
 
 const url = 'https://go.irowoon.com/package-conditions';
 function setup(platform = 'ios', type = 'cancel') {
@@ -71,4 +71,25 @@ test('failed external and web navigation can be retried', async () => {
     await assert.rejects(launch(true),/blocked/); await assert.rejects(launch(true),/blocked/);
     assert.equal(calls,2);
   }
+});
+
+test('only the company portal stays inside the app screen', () => {
+  assert.equal(staysInApp(CUSTOMER_PORTAL_URL), true);
+  assert.equal(staysInApp('https://irowoon.com/check'), true);
+  assert.equal(staysInApp('blob:https://go.irowoon.com/123'), true);
+  assert.equal(staysInApp('about:blank'), true);
+  assert.equal(staysInApp('http://go.irowoon.com/x'), false);
+  assert.equal(staysInApp('https://www.gov.kr/portal'), false);
+  assert.equal(staysInApp('https://irowoon.com.evil.example/'), false);
+  assert.equal(staysInApp('https://evilirowoon.com/'), false);
+  assert.equal(staysInApp('tel:0212345678'), false);
+  assert.equal(staysInApp('kakaotalk://open'), false);
+});
+
+test('download bridge only intercepts blob/data downloads and file names are safe', () => {
+  assert.match(DOWNLOAD_BRIDGE_JS, /download/);
+  assert.match(DOWNLOAD_BRIDGE_JS, /blob:\|data:/);
+  assert.equal(safeFileName('../../사업자등록증.pdf'), '_.._사업자등록증.pdf'.replace(/^\.+/, ''));
+  assert.equal(safeFileName('a/b:c.pdf'), 'a_b_c.pdf');
+  assert.equal(safeFileName(''), 'file');
 });
