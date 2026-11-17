@@ -133,7 +133,8 @@ export function PortalView({ active = true, openUrl, pushToken }: { active?: boo
         pullToRefreshEnabled
         setSupportMultipleWindows={false}
         textZoom={100}
-        decelerationRate="normal"
+        // 아이폰 전용 설정. 안드로이드에 글자("normal")로 넘기면 앱이 바로 꺼진다(ClassCastException).
+        decelerationRate={Platform.OS === 'ios' ? 'normal' : undefined}
         bounces={false}
         overScrollMode="never"
         applicationNameForUserAgent="IrounApp/1"
