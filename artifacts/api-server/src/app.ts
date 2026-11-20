@@ -13,6 +13,7 @@ import { fundsRouter } from "./routes/funds";
 import { documentsRouter } from "./routes/documents";
 import healthRouter from "./routes/health";
 import { mountPublicPages } from "./lib/public-pages";
+import { createBizgoRelay } from "./lib/bizgo-relay";
 
 const app: Express = express();
 
@@ -37,6 +38,13 @@ app.use(
 );
 // 서버 상태 확인은 로그인 설정과 상관없이 응답한다(서버 업체의 자동 점검용).
 app.use("/api", healthRouter);
+// CRM-only signed requests use Render's published outbound IP ranges.
+// Mounted before browser/Clerk middleware; no session or CORS access is granted.
+const bizgoRelay = createBizgoRelay({ secret: () => process.env.BIZGO_RELAY_SECRET || "" });
+app.post("/api/internal/bizgo-relay", express.raw({ type: "application/json", limit: "64kb", inflate: false }), async (req, res) => {
+  const result = await bizgoRelay({ raw: req.body, timestamp: req.get("x-iroun-timestamp") || "", nonce: req.get("x-iroun-nonce") || "", signature: req.get("x-iroun-signature") || "" });
+  res.set({ "Cache-Control": "no-store", "X-Iroun-Bizgo-Relay": "1" }).status(result.status).type("application/json").send(result.body);
+});
 // 주소를 브라우저로 직접 열었을 때 보이는 안내(앱 전용 서버라 화면은 없다).
 // 스토어 등록용 공개 안내(개인정보처리방침·약관·계정 삭제·고객 지원).
 mountPublicPages(app);
@@ -61,3 +69,4 @@ app.use("/api", (req,res,next)=>/^\/(service|office)(\/|$)/.test(req.path)?compa
 app.use("/api", benefitsRouter);
 
 export default app;
+
