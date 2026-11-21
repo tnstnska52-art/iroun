@@ -984,6 +984,44 @@ body{padding-bottom:72px}}
 @keyframes c2pickglow{0%,100%{box-shadow:0 6px 18px rgba(36,87,223,.12)}50%{box-shadow:0 8px 26px rgba(36,87,223,.28)}}
 @keyframes c2sweep{0%,55%{left:-40%}100%{left:120%}}
 @media (prefers-reduced-motion:reduce){.doz_sys .c2-total,.doz_sys .c2-total .m,.doz_sys .c2-pick,.doz_sys .c2-pick:after,.doz_sys .c2-list .c2-row{animation:none}.doz_sys .c2-pick:after{display:none}.doz_sys .c2-total:not(.red) .m{background:none;color:#2b5ce6;-webkit-text-fill-color:#2b5ce6}}
+/* 무료 회원(조건을 설정하고 이름·번호를 남긴 고객) 아래쪽 탭·전산 화면 틀·처음 안내. 요소는 스크립트가 body 끝에 만든다. */
+html.c2-free .mbar,html.c2-free #floatCta{display:none!important}
+html.c2-free body{padding-bottom:calc(68px + env(safe-area-inset-bottom,0px))!important}
+#c2-fnav{position:fixed;left:0;right:0;bottom:0;z-index:99998;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));box-sizing:border-box;margin:0;padding:6px max(12px,calc(50% - 250px)) calc(6px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid #e5e8eb;box-shadow:0 -6px 20px rgba(24,35,56,.06);font-family:"Pretendard Variable",Pretendard,"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;animation:c2fnavin .35s ease both}
+#c2-fnav[hidden],#c2-fpane[hidden],#c2-fintro[hidden]{display:none!important}
+#c2-fnav button{-webkit-appearance:none;appearance:none;box-sizing:border-box;min-width:0;min-height:50px;margin:0;padding:4px 6px;border:0;border-radius:12px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:#8b95a1;font-weight:650;font-size:11.5px;line-height:1.2;font-family:inherit;letter-spacing:-.02em;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:color .2s,opacity .2s}
+#c2-fnav button .ic{display:grid;place-items:center;width:26px;height:24px}
+#c2-fnav button svg{display:block;width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s cubic-bezier(.2,.9,.3,1.4)}
+#c2-fnav button[aria-current=page]{color:#1f55c8;font-weight:800}
+#c2-fnav button[aria-current=page] svg{fill:currentColor;fill-opacity:.18;stroke-width:2.2;transform:translateY(-1px) scale(1.08)}
+#c2-fnav button.is-home{color:#1f55c8;font-weight:800}
+#c2-fnav button.is-home .ic{width:46px;height:46px;margin-top:-20px;border-radius:50%;background:linear-gradient(145deg,#3d7bff,#1f55c8);color:#fff;box-shadow:0 6px 16px rgba(31,85,200,.3),0 0 0 4px #fff}
+#c2-fnav button.is-home svg,#c2-fnav button.is-home[aria-current=page] svg{fill:none;stroke-width:2.1;transform:none}
+#c2-fnav button.is-home:active .ic{transform:scale(.94)}
+#c2-fnav button:focus-visible{outline:3px solid #ffb800;outline-offset:1px}
+#c2-fpane{position:fixed;left:0;right:0;top:0;bottom:calc(63px + env(safe-area-inset-bottom,0px));z-index:99998;background:#f7f8fb}
+#c2-fpane iframe{display:block;width:100%;height:100%;border:0;background:#f7f8fb}
+/* 처음 안내: 두 장을 차례로 확인해야 닫힌다. 안내하는 탭만 밝게 남긴다. */
+#c2-fintro{position:fixed;inset:0;z-index:100001;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:20px 20px calc(96px + env(safe-area-inset-bottom,0px));background:rgba(15,23,42,.58);font-family:"Pretendard Variable",Pretendard,"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif}
+#c2-fintro .c2-fi-card{position:relative;outline:0;box-sizing:border-box;width:100%;max-width:340px;padding:26px 22px 20px;border-radius:22px;background:#fff;color:#191f28;text-align:center;box-shadow:0 24px 60px rgba(15,23,42,.35);animation:c2fipop .32s cubic-bezier(.2,.9,.3,1.2) both}
+#c2-fintro .c2-fi-n{position:absolute;top:14px;right:16px;color:#8b95a1;font-weight:650;font-size:12px;line-height:1;font-family:inherit}
+#c2-fintro .c2-fi-ic{display:grid;place-items:center;width:58px;height:58px;margin:0 auto 12px;border-radius:19px;background:#e8efff;font-size:30px;line-height:1}
+#c2-fintro .c2-fi-k{display:inline-block;padding:4px 11px;border-radius:999px;background:#e8efff;color:#1f55c8;font-weight:800;font-size:12.5px;line-height:1.3;font-family:inherit}
+#c2-fintro h3{margin:10px 0 8px;padding:0;color:#191f28;font-weight:850;font-size:22px;line-height:1.36;font-family:inherit;letter-spacing:-.04em;word-break:keep-all}
+#c2-fintro h3 b{color:#1f55c8;font-weight:900}
+#c2-fintro p{margin:0;color:#4e5968;font-weight:500;font-size:14.5px;line-height:1.62;font-family:inherit;letter-spacing:-.02em;word-break:keep-all}
+#c2-fintro p b{color:#191f28;font-weight:800}
+#c2-fintro .c2-fi-ok{-webkit-appearance:none;appearance:none;display:block;width:100%;min-height:52px;margin:18px 0 0;padding:0 16px;border:0;border-radius:15px;background:linear-gradient(145deg,#3d7bff,#1f55c8);color:#fff;font-weight:800;font-size:16.5px;line-height:1;font-family:inherit;cursor:pointer;box-shadow:0 8px 20px rgba(31,85,200,.28)}
+#c2-fintro .c2-fi-ok:focus-visible{outline:3px solid #ffb800;outline-offset:3px}
+#c2-fnav[data-spot]{z-index:100002;pointer-events:none;background:transparent;border-top-color:transparent;box-shadow:none;animation:none}
+#c2-fnav[data-spot] button{opacity:0;position:relative}
+#c2-fnav[data-spot=loans] button[data-fnav=loans]:before,#c2-fnav[data-spot=refunds] button[data-fnav=refunds]:before{content:"";position:absolute;left:50%;top:-30px;width:0;height:0;margin-left:-10px;border:10px solid transparent;border-top:12px solid #fff;border-bottom:0;filter:drop-shadow(0 3px 4px rgba(15,23,42,.35));animation:c2fibob 1.1s ease-in-out infinite}
+#c2-fnav[data-spot=loans] button[data-fnav=loans],#c2-fnav[data-spot=refunds] button[data-fnav=refunds]{opacity:1;color:#1f55c8;font-weight:800;background:#fff;box-shadow:0 0 0 3px #fff,0 0 0 6px rgba(120,165,255,.75),0 10px 26px rgba(15,23,42,.3);animation:c2fispot 1.3s ease-in-out infinite}
+@keyframes c2fnavin{from{transform:translateY(100%)}to{transform:none}}
+@keyframes c2fipop{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes c2fibob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+@keyframes c2fispot{0%,100%{box-shadow:0 0 0 3px #fff,0 0 0 6px rgba(120,165,255,.75),0 10px 26px rgba(15,23,42,.3)}50%{box-shadow:0 0 0 3px #fff,0 0 0 10px rgba(120,165,255,.35),0 10px 26px rgba(15,23,42,.3)}}
+@media (prefers-reduced-motion:reduce){#c2-fnav,#c2-fintro .c2-fi-card,#c2-fnav[data-spot] button,#c2-fnav[data-spot] button:before{animation:none!important}}
 </style>
 <script>
 (function(){
@@ -1312,7 +1350,7 @@ function renderQ(){stopTimers();S.view='q';var st=steps();if(S.idx>=st.length)S.
  if(S.touched)scrollTop();S.touched=true;}
 function Qlabel(key,o){return key==='province'?(SHORT[o]||o):o;}
 /* ===== 찾는 중 게이지 ===== */
-function analyzing(){stopTimers();S.member=null;try{localStorage.removeItem('irw_check_member');}catch(e){}S.ans.done=true;save('irw_c2_ans',S.ans);var n=S.list?S.list.length:0,a=S.ans;
+function analyzing(){stopTimers();freeReset();S.member=null;try{localStorage.removeItem('irw_check_member');}catch(e){}S.ans.done=true;save('irw_c2_ans',S.ans);var n=S.list?S.list.length:0,a=S.ans;
  var msgs=['대표님 조건에 맞는 지원사업을 확인 중이에요',(n?'기업마당·정부24 등 공고 '+n.toLocaleString('ko-KR')+'건을 살펴보는 중이에요':'공식 공고를 살펴보는 중이에요'),esc((SHORT[a.province]||'')+' '+(a.district||''))+' 지역 사업을 고르는 중이에요',esc(a.industry||'')+' 업종에 맞는 사업을 찾는 중이에요','업력·매출·사업장 조건을 비교하는 중이에요','통장에 바로 들어오는 지원금부터 정리하는 중이에요'];
  box.innerHTML='<div class="c2-ana"><h2>🔎 지원사업을<br>찾고 있어요</h2><div class="p"><span id="c2-ap">1</span>%</div><div class="gb"><b id="c2-ab"></b></div><p id="c2-am">'+msgs[0]+'</p><small>공식 공고 원문 기준 · 잠시만 기다려 주세요</small></div>';scrollTop();
  var p=document.getElementById('c2-ap'),b=document.getElementById('c2-ab'),m=document.getElementById('c2-am'),t0=null,D=3200;
@@ -1341,7 +1379,7 @@ function renderR(){stopTimers();S.view='r';if(!S.list||!S.full){box.innerHTML='<
  h+='<div class="c2-small"><span class="c2-wig" aria-hidden="true">✏️</span><button type="button" data-redo>조건 다시 고르기</button></div>';
  if(S.member)h+='<div class="c2-note">'+esc(S.member.name)+'님, 전체 결과가 열려 있어요</div>';
  box.innerHTML=h;countTotals();
- bindPick('c2-p1',picks,'오늘 신청 가능',0);bindPick('c2-p2',refunds,'신청 가능',2500);bindRoll('c2-now',now.length);bindRows();bindCommon();nudge();}
+ bindPick('c2-p1',picks,'오늘 신청 가능',0);bindPick('c2-p2',refunds,'신청 가능',2500);bindRoll('c2-now',now.length);bindRows();bindCommon();nudge();freeIntro();}
 /* 정렬: 추천순(기본) / 금액 큰 순 / 최신순. 조건 일치 공고를 먼저 두고 그 안에서 정렬한다 */
 S.sort=S.sort||'rec';
 function dateOf(b){var t=Date.parse(b.startsAt||'');return isFinite(t)?t:0;}
@@ -1404,7 +1442,7 @@ function revForm(){var b=revBand();if(b&&REVMAP[b])return REVMAP[b];var n=S.ans.
 /* 결과를 본 뒤 4초가 지나면 한 번만 잠긴 지원금 확인 창을 올린다. 닫으면 다시 띄우지 않고 하단 버튼으로만 연다 */
 function nudge(){bar();if(S.member||load('irw_nudge_shown'))return;var t=setTimeout(function(){if(S.member||!modal.hidden||(S.view!=='r'&&S.view!=='list'))return;if(!lockInfo(S.est&&S.est.items).n)return;save('irw_nudge_shown',1);openJoin();},4000);S.timers.push(t);}
 /* 페이지 하단 고정 버튼(모바일)·떠 있는 버튼(PC): 결과 화면에서 가입 전이면 '놓치는 돈' 버튼으로 바꾼다 */
-function bar(){var L=(S.est&&!S.member&&(S.view==='r'||S.view==='list'))?lockInfo(S.est.items):{n:0};[].forEach.call(document.querySelectorAll('.mbar a.main, #floatCta'),function(a){if(a.dataset.c2o===undefined)a.dataset.c2o=a.innerHTML;if(L.n&&L.total){a.innerHTML='<span>⚠ 놓칠 수 있는 '+esc(won(L.total))+' 확인하기</span> <i aria-hidden="true">→</i>';a.onclick=function(e){e.preventDefault();e.stopPropagation();openJoin();};if(a.id==='floatCta')a.hidden=false;}else{a.innerHTML=a.dataset.c2o;a.onclick=null;}});}
+function bar(){freeSync();var L=(S.est&&!S.member&&(S.view==='r'||S.view==='list'))?lockInfo(S.est.items):{n:0};[].forEach.call(document.querySelectorAll('.mbar a.main, #floatCta'),function(a){if(a.dataset.c2o===undefined)a.dataset.c2o=a.innerHTML;if(L.n&&L.total){a.innerHTML='<span>⚠ 놓칠 수 있는 '+esc(won(L.total))+' 확인하기</span> <i aria-hidden="true">→</i>';a.onclick=function(e){e.preventDefault();e.stopPropagation();openJoin();};if(a.id==='floatCta')a.hidden=false;}else{a.innerHTML=a.dataset.c2o;a.onclick=null;}});}
 function toast(html){var t=document.createElement('div');t.className='c2-toast';t.innerHTML=html;document.body.appendChild(t);setTimeout(function(){t.classList.add('out');},2200);setTimeout(function(){t.remove();},2700);}
 /* 가입 창(토스식): 이름 → (다음) 번호 → 번호가 맞으면 동의만 나오고, 동의 버튼을 누르면 바로 등록·결과 공개.
    ctx.id 가 있으면 그 공고의 신청 방법을 보여주는 맥락으로 묻고, 등록 뒤 그 공고 상세를 바로 연다.
@@ -1454,8 +1492,47 @@ async function submitJoin(adOk){var name=sheet.querySelector('#j-name').value.tr
   if(!j||j.msg!=='SUCCESS')throw new Error((j&&j.msg)||'서버 응답 오류');
   S.member={name:name,tel:phone,at:new Date().toISOString()};save('irw_check_member',S.member);bar();
   sendLead(name,phone,mkt);
-  var cid=S.joinCtx,hp=S.joinHelp;S.joinCtx=null;S.joinHelp=false;if(hp&&cid&&findItem(cid)){var hx=findItem(cid);setTimeout(function(){sendHelp(hx).then(function(){var hb=sheet.querySelector('[data-help]');if(hb)hb.outerHTML=helpBtn(hx.benefit);}).catch(function(){});},800);}if(cid&&findItem(cid)){if(hasProfile()&&S.ans.done)renderR();openDetail(cid);}else{closeModal();if(hasProfile()&&S.ans.done){renderR();}else renderHome();scrollTop();}toast(esc(name)+'님, 전체 결과가 열렸어요');
+  var cid=S.joinCtx,hp=S.joinHelp;S.joinCtx=null;S.joinHelp=false;freeReset();closeModal();freeIntro(function(){if(hp&&cid&&findItem(cid)){var hx=findItem(cid);setTimeout(function(){sendHelp(hx).then(function(){var hb=sheet.querySelector('[data-help]');if(hb)hb.outerHTML=helpBtn(hx.benefit);}).catch(function(){});},800);}if(cid&&findItem(cid)){if(hasProfile()&&S.ans.done)renderR();openDetail(cid);}else{closeModal();if(hasProfile()&&S.ans.done){renderR();}else renderHome();scrollTop();}toast(esc(name)+'님, 전체 결과가 열렸어요');});
  }catch(e){go.disabled=false;no.disabled=false;go.textContent=goText;err.textContent='등록에 실패했어요. 잠시 후 다시 시도하거나 tnstnska52@naver.com으로 연락 주세요.';err.hidden=false;}}
+/* ===== 무료 회원 서비스 =====
+   조건을 설정하고 이름·번호를 남긴 고객(무료 회원)에게만 아래쪽 탭(정책자금·홈·환급금)을 보여 준다. 계약자 화면의 탭과 같은 모양이고 홈이 가운데다.
+   정책자금·환급금 화면은 회사 전산(go.irowoon.com/free)을 틀 안에 연다. 설정한 조건과 이름·번호는 창 사이 메시지로만 건넨다(주소에 넣지 않는다).
+   신청은 전산의 무료 회원 신청함에 계약자와 따로 쌓인다. 환급금 가운데 보험환급은 계약자 전용이다. */
+var FREE_TELECOM_MAX='128만원'; /* 전산 통신환급 금액표의 최대 금액과 같아야 한다 */
+var FREE_ICON={loans:'<path d="M10 18v-7"/><path d="M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M3 22h18"/><path d="M6 18v-7"/>',home:'<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',refunds:'<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 7h18"/><path d="M3 11h3.75a2 2 0 0 1 1.6.8l.45.6a4 4 0 0 0 6.4 0l.45-.6a2 2 0 0 1 1.6-.8H21"/>'};
+/* 시험 화면에서만 다른 주소를 쓸 수 있다. 실제 홈페이지에서는 언제나 회사 전산 주소다. */
+function freeOrigin(){var w=typeof window!=='undefined'?window:{};return (!/(^|\.)irowoon\.com$/.test(String(location.hostname||''))&&w.IRW_FREE_ORIGIN)||'https://go.irowoon.com';}
+/* 조건 설정을 마치고 이름·번호를 남긴 고객만. 조건을 다시 고르는 동안에는 탭을 숨긴다 */
+function freeOk(){return !!(S.member&&S.ans.done&&hasProfile()&&S.view!=='q');}
+function freeEls(){if(S.fnav)return true;if(typeof document.createElement!=='function'||!document.body)return false;
+ var nav=document.createElement('nav');nav.id='c2-fnav';nav.hidden=true;nav.setAttribute('aria-label','무료 회원 메뉴');
+ nav.innerHTML=[['loans','정책자금'],['home','홈'],['refunds','환급금']].map(function(t){return '<button type="button" data-fnav="'+t[0]+'"'+(t[0]==='home'?' class="is-home"':'')+'><span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true">'+FREE_ICON[t[0]]+'</svg></span><span>'+t[1]+'</span></button>';}).join('');
+ var pane=document.createElement('div');pane.id='c2-fpane';pane.hidden=true;
+ var intro=document.createElement('div');intro.id='c2-fintro';intro.hidden=true;
+ document.body.appendChild(pane);document.body.appendChild(nav);document.body.appendChild(intro);S.fnav=nav;S.fpane=pane;S.fintro=intro;S.ftab='loans';
+ [].forEach.call(nav.querySelectorAll('button'),function(b){b.onclick=function(){var t=b.getAttribute('data-fnav');if(t==='home')freeHome();else freeOpen(t);};});
+ window.addEventListener('message',function(e){if(e.origin!==freeOrigin()||!S.frame||e.source!==S.frame.contentWindow||!e.data||e.data.type!=='iroun-free-ready'||!freeOk())return;freePost(freeIdentity());});
+ if(typeof MutationObserver==='function')new MutationObserver(freeSync).observe(box,{childList:true});
+ return true;}
+function freeSync(){if(!freeEls())return;var on=freeOk();if(!on&&!S.fpane.hidden)freeClose();S.fnav.hidden=!on;document.documentElement.classList.toggle('c2-free',on);var cur=S.fpane.hidden?'home':S.ftab;[].forEach.call(S.fnav.querySelectorAll('button'),function(b){if(b.getAttribute('data-fnav')===cur)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});}
+function freePost(msg){try{if(S.frame&&S.frame.contentWindow)S.frame.contentWindow.postMessage(msg,freeOrigin());}catch(e){}}
+/* 전산 화면에 건네는 내용: 이름·번호, 설정한 조건, 안내 링크를 보낸 직원 표시(있을 때) */
+function freeIdentity(){var a=S.ans,r=null;try{r=JSON.parse(localStorage.getItem('iroun_staff_ref_v1')||'null');}catch(e){}if(!r||!(r.expires>Date.now()))r={};
+ return {type:'iroun-free-member',tab:S.ftab,name:S.member.name,phone:S.member.tel,answers:{bizName:a.bizName,entity:a.entity,industry:a.industry,province:a.province,district:a.district,openedYear:a.openedYear,revNow:a.revNow,revLast:a.revLast,premises:a.premises,policyFund:a.policyFund,credit:a.credit,currentArrears:a.currentArrears},ref:r.token||'',delivery:r.delivery||''};}
+/* 조건이나 이름·번호가 바뀌면 틀을 버리고, 다음에 열 때 새 내용으로 다시 연다 */
+function freeReset(){if(S.frame){S.frame.remove();S.frame=null;}}
+function freeOpen(tab){if(!freeOk()||S.introOpen)return;var same=!S.fpane.hidden&&S.ftab===tab;S.ftab=tab;
+ if(!S.frame){var f=document.createElement('iframe');f.title='정책자금·환급금';f.src=freeOrigin()+'/free#'+tab;S.fpane.appendChild(f);S.frame=f;}
+ else freePost({type:'iroun-free-tab',tab:tab,reset:same});
+ if(!modal.hidden)closeModal();S.fpane.hidden=false;document.documentElement.style.overflow='hidden';freeSync();}
+function freeClose(){S.fpane.hidden=true;document.documentElement.style.overflow='';}
+function freeHome(){if(S.introOpen)return;var was=!S.fpane.hidden;if(was)freeClose();if(S.view!=='r'&&hasProfile()&&S.ans.done){S.view='r';renderR();}else freeSync();if(!was||S.view==='r')scrollTop();}
+/* 처음 안내 두 장. 둘 다 확인을 눌러야 닫히고, 그 뒤에 결과를 보여 준다. 이 기기에서 한 번만 보인다 */
+function freeIntro(done){done=done||function(){};if(!freeOk()||!freeEls()||load('irw_free_intro')){done();return;}if(S.introOpen){S.introDone=done;return;}S.introOpen=true;S.introDone=done;freeSync();
+ var steps=[{tab:'loans',ic:'🏦',k:'정책자금',t:'저금리 융자지원금<br>예상 한도·금리를 <b>무료</b>로',d:'아래 <b>정책자금</b> 버튼을 누르면 내 조건으로 받을 수 있는 예상 한도와 금리를 무료로 확인할 수 있어요.'},{tab:'refunds',ic:'💸',k:'환급금',t:'통신환급도<br><b>최대 '+FREE_TELECOM_MAX+'</b> 현금으로',d:'아래 <b>환급금</b> 버튼에서 통신환급을 신청하면 최대 '+FREE_TELECOM_MAX+'을 현금으로 받을 수 있어요.'}],i=0;
+ function show(){var s=steps[i];S.fintro.innerHTML='<div class="c2-fi-card" tabindex="-1" role="alertdialog" aria-modal="true" aria-labelledby="c2-fi-t" aria-describedby="c2-fi-d"><span class="c2-fi-n">'+(i+1)+' / '+steps.length+'</span><span class="c2-fi-ic" aria-hidden="true">'+s.ic+'</span><span class="c2-fi-k">'+s.k+'</span><h3 id="c2-fi-t">'+s.t+'</h3><p id="c2-fi-d">'+s.d+'</p><button type="button" class="c2-fi-ok">확인</button></div>';S.fintro.hidden=false;S.fnav.setAttribute('data-spot',s.tab);
+  var ok=S.fintro.querySelector('.c2-fi-ok');ok.onclick=function(){i++;if(i<steps.length){show();return;}save('irw_free_intro',1);S.fintro.hidden=true;S.fintro.innerHTML='';S.fnav.removeAttribute('data-spot');S.introOpen=false;document.documentElement.style.overflow='';var d=S.introDone;S.introDone=null;d();};setTimeout(function(){try{S.fintro.querySelector('.c2-fi-card').focus();}catch(e){}},60);}
+ document.documentElement.style.overflow='hidden';show();}
 /* ===== 공고 불러오기 ===== */
 /* 가벼운 목록(gzip·5분 캐시)을 둘로 나눠 받는다: 지금 신청 가능한 공고 먼저, 마감 공고(놓친 지원금 계산용)는 뒤에서.
    새 주소가 아직 없으면(서버 배포 전) 예전 전체 목록으로 받는다. 브라우저 캐시를 쓰도록 no-store 는 빼고, 예전 8MB 저장분은 지운다 */
@@ -1463,10 +1540,10 @@ var API2=API.replace(/\/benefits$/,'/public/check-benefits');
 try{localStorage.removeItem('irw_check_cache');}catch(e){}
 function getList(u){return fetch(u).then(function(r){if(!r.ok)throw new Error(r.status);return r.json();}).then(function(d){var l=Array.isArray(d)?d:(d.items||d.benefits||[]);if(!Array.isArray(l))throw new Error('list');return l;});}
 function onList(first){if(S.view==='home'&&first)renderHome();else if(S.view==='r'&&S.full&&modal.hidden)renderR();}
-(async function init(){renderHome();var open=null;if(!window.IRW_CHECK_API){try{open=await getList(API2+'?part=open');}catch(e){open=null;}}
- if(!open){try{S.list=await getList(window.IRW_CHECK_API||API);S.full=true;}catch(e){S.list=[];S.full=true;if(S.view==='home'){box.innerHTML='<div class="c2-empty"><b>공고를 불러오지 못했어요</b><span>잠시 후 새로고침해 주세요.</span></div>';}return;}}
+(async function init(){var back=hasProfile()&&S.ans.done;if(back){S.view='r';renderR();}else renderHome();var open=null;if(!window.IRW_CHECK_API){try{open=await getList(API2+'?part=open');}catch(e){open=null;}}
+ if(!open){try{S.list=await getList(window.IRW_CHECK_API||API);S.full=true;}catch(e){S.list=[];S.full=true;if(S.view==='home'||S.view==='r'){box.innerHTML='<div class="c2-empty"><b>공고를 불러오지 못했어요</b><span>잠시 후 새로고침해 주세요.</span></div>';}return;}}
  else{S.list=open;getList(API2+'?part=past').then(function(p){S.list=open.concat(p);}).catch(function(){}).then(function(){S.full=true;onList(false);});}
- if(location.hash==='#result'&&hasProfile()&&S.ans.done&&S.view==='home'){S.view='r';renderR();}else onList(true);})();
+ if(back){if(S.view==='r'&&S.full&&modal.hidden)renderR();}else onList(true);})();
 })();
 </script>
 
