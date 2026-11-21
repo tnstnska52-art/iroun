@@ -16,6 +16,7 @@
 #iru .num:not(.c2x *){width:auto;min-width:0;max-width:none;height:auto;padding:0;border:0;border-radius:0}
 </style>
 <div id="iru">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
 <style>:root{
   --bg:#FFFFFF; --soft:#F2F6FF; --soft2:#FFF8E6; --ink:#191F28; --mute:#6B7684; --line:#E5E8EB;
@@ -919,6 +920,70 @@ body{padding-bottom:72px}}
 .c2-toast.out{opacity:0}
 @media (prefers-reduced-motion:reduce){.doz_sys #chk2 *{animation:none!important;transition:none!important}}
 .c2-fit{margin-bottom:6px}.c2-fit button.on{font-weight:800}
+/* ── 2026-11 결과 화면 다듬기: 계약자 전용 화면(go.irowoon.com)과 같은 글꼴·카드·목록·움직임 ── */
+.doz_sys #chk2,.doz_sys #c2-modal{font-family:"Pretendard Variable",Pretendard,"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;letter-spacing:-.025em}
+.doz_sys #chk2{background:linear-gradient(180deg,#f3f7ff 0,#f8faff 400px,#f8f9fc 100%);padding:12px 10px 16px;gap:10px}
+.doz_sys .c2-total{position:relative;overflow:hidden;border:1px solid #e5eaf2;border-radius:18px;padding:15px 40px 15px 18px;gap:0;box-shadow:0 6px 18px rgba(36,87,223,.06);animation:c2rise .45s cubic-bezier(.2,.8,.3,1) both}
+.doz_sys .c2-total.red{background:#fff6f5;border-color:#f6d5d1;box-shadow:none;animation-delay:.08s}
+.doz_sys .c2-total:after{content:'';position:absolute;right:18px;top:50%;width:8px;height:8px;margin-top:-5px;border-right:2px solid #a9b4c5;border-bottom:2px solid #a9b4c5;transform:rotate(-45deg)}
+.doz_sys .c2-total.red:after{border-color:#e0a39c}
+.doz_sys .c2-total .l{font-size:15px;font-weight:750;color:#33445c;gap:8px}
+.doz_sys .c2-total.red .l{color:#b42318}
+.doz_sys .c2-total .l span{background:#e8efff;color:#2457df;border-radius:8px;padding:2px 8px;font-size:13px;font-weight:800;animation:none}
+.doz_sys .c2-total.red .l span{background:#fde3e0;color:#b42318}
+.doz_sys .c2-total .m{width:fit-content;margin-top:2px;font-size:34px;line-height:1.25;font-weight:850;letter-spacing:-.04em;font-variant-numeric:tabular-nums}
+.doz_sys .c2-total:not(.red) .m{background:linear-gradient(105deg,#2455da 15%,#2455da 34%,#9bc6ff 48%,#4778f1 57%,#2455da 78%) 0 0/250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:c2textglow 6s ease-in-out infinite}
+.doz_sys .c2-total .m small{font-size:19px;font-weight:800;margin-left:2px}
+.doz_sys .c2-total .n{margin-top:2px;font-size:12.5px;line-height:1.5}
+.doz_sys .c2-fine{margin:0 4px;font-size:11.5px}
+.doz_sys .c2-pick{position:relative;overflow:hidden;border:1px solid #b9cdff;border-radius:16px;padding:12px 14px 10px;gap:6px;background:linear-gradient(135deg,#eef4ff,#f8faff);box-shadow:0 6px 18px rgba(36,87,223,.12);animation:c2pickglow 2.6s ease-in-out infinite}
+.doz_sys .c2-pick:after{content:'';position:absolute;top:0;bottom:0;left:-40%;width:34%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.85),transparent);transform:skewX(-18deg);animation:c2sweep 3.2s ease-in-out infinite;pointer-events:none}
+.doz_sys .c2-pick .h{font-size:13.5px;font-weight:800;color:#1f55c8}
+.doz_sys .c2-pick .h span.n{font-size:12px;font-weight:600}
+.doz_sys .c2-pick .b{min-height:44px;gap:8px}
+.doz_sys .c2-pick .t b{font-size:15.5px;font-weight:750;line-height:1.45}
+.doz_sys .c2-pick .t small{margin-top:0;font-size:12.5px}
+.doz_sys .c2-pick .c2-amt{font-size:16px;font-weight:800}
+.doz_sys .c2-sec{min-height:36px;margin-top:6px;font-size:16.5px;font-weight:800;letter-spacing:-.035em}
+.doz_sys .c2-sec .x{font-size:18px;color:#8a98ad}
+.doz_sys .c2-list{display:grid;gap:8px;padding:0;background:none;border-radius:0}
+.doz_sys .c2-list>div:not(.c2-row):not(.c2-lockbox){display:grid;gap:8px}
+.doz_sys .c2-row{display:grid;grid-template-columns:42px auto minmax(0,1fr) 12px;grid-template-rows:auto auto;align-items:center;align-content:center;gap:1px 8px;min-height:0;padding:12px 11px;background:#fff;border:1px solid #e5eaf2;border-radius:16px}
+.doz_sys .c2-row:last-child{border-bottom:1px solid #e5eaf2}
+.doz_sys .c2-row .ic{grid-column:1;grid-row:1/3;width:42px;height:42px;border-radius:13px;transition:transform .2s ease}
+.doz_sys .c2-row .t{display:contents}
+.doz_sys .c2-row .t b,.doz_sys .c2-row.lk .lk-t{grid-column:2/4;grid-row:1;min-width:0;font-size:14.5px;font-weight:750;line-height:1.45;letter-spacing:-.035em}
+.doz_sys .c2-row .c2-amt{grid-column:2;grid-row:2;font-size:16px;font-weight:800;line-height:1.4;letter-spacing:-.03em;white-space:nowrap}
+.doz_sys .c2-row .t small,.doz_sys .c2-row.lk .lk-k{grid-column:3;grid-row:2;justify-self:start;max-width:100%;margin:0;padding:2px 7px;border-radius:6px;background:#edf3ff;color:#46658d;font-size:11.5px;font-weight:600;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.doz_sys .c2-row .t small.u{background:#fdecea;color:#b42318}
+.doz_sys .c2-row.red .t small,.doz_sys .c2-row.lk.red .lk-k{background:#fdecea;color:#b42318}
+.doz_sys .c2-row .t>.c2-sk{grid-column:2/4}
+.doz_sys .c2-row .c2-chev{grid-column:4;grid-row:1/3;margin:0}
+.doz_sys .c2-row>.c2-sk{grid-column:2;grid-row:2}
+.doz_sys .c2-list:not(.c2-roll)>.c2-row{animation:c2rise .3s ease both}
+.doz_sys .c2-list:not(.c2-roll)>.c2-row:nth-child(2){animation-delay:.04s}.doz_sys .c2-list:not(.c2-roll)>.c2-row:nth-child(3){animation-delay:.08s}.doz_sys .c2-list:not(.c2-roll)>.c2-row:nth-child(n+4){animation-delay:.12s}
+@media (hover:hover){.doz_sys button.c2-row:hover{background:#f9fbff}.doz_sys button.c2-row:hover .ic{transform:translateY(-2px) rotate(-4deg)}}
+/* 위로 넘어가는 목록: 줄 높이 65 + 간격 8 = 73 (넘김 계산과 같아야 한다) */
+.doz_sys .c2-roll{height:219px}
+.doz_sys .c2-roll .c2-row{height:65px;padding:9px 11px;border-bottom:1px solid #e5eaf2}
+.doz_sys .c2-roll .c2-row .t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;-webkit-line-clamp:unset}
+.doz_sys .c2-lockbox{padding:14px;border:1px solid #c9d9ff;border-radius:16px;background:linear-gradient(135deg,#eef4ff,#f8faff);gap:8px}
+.doz_sys .c2-lockbox b{font-size:16px;font-weight:800}
+.doz_sys .c2-lockbox .c2-note{font-size:12.5px}
+.doz_sys .c2-empty{border:1px solid #e5eaf2;padding:16px;font-size:13.5px}
+.doz_sys .c2-empty b{font-size:15.5px}
+.doz_sys .c2-link{min-height:40px;font-size:14px}
+.doz_sys #chk2 .c2-sort button{min-height:32px;padding:0 11px;border-color:#e5eaf2;font-size:13px}
+.doz_sys #chk2 .c2-sort button.on{background:#172e4d;border-color:#172e4d}
+.doz_sys #chk2>.c2-note{font-size:12.5px}
+/* 광고 수신을 받지 않는 선택: 큰 버튼 대신 작은 글씨 */
+.doz_sys #c2-modal .c2-skip{align-self:center;min-height:40px;padding:0 10px;border:0;background:none;color:var(--mute);font-size:13.5px;font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.doz_sys #c2-modal .c2-skip:disabled{opacity:.5}
+@keyframes c2rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes c2textglow{0%,100%{background-position:0 0}50%{background-position:100% 0}}
+@keyframes c2pickglow{0%,100%{box-shadow:0 6px 18px rgba(36,87,223,.12)}50%{box-shadow:0 8px 26px rgba(36,87,223,.28)}}
+@keyframes c2sweep{0%,55%{left:-40%}100%{left:120%}}
+@media (prefers-reduced-motion:reduce){.doz_sys .c2-total,.doz_sys .c2-total .m,.doz_sys .c2-pick,.doz_sys .c2-pick:after,.doz_sys .c2-list .c2-row{animation:none}.doz_sys .c2-pick:after{display:none}.doz_sys .c2-total:not(.red) .m{background:none;color:#2b5ce6;-webkit-text-fill-color:#2b5ce6}}
 </style>
 <script>
 (function(){
@@ -1164,8 +1229,10 @@ function lockRow(x,red){if(!x||!x.benefit)return '<div class="c2-row"><span clas
 function lockInfo(items){var list=sorted(items||[]),rest=list.slice(FREE);return {n:rest.length,total:sumOf(rest),soon:rest.filter(function(x){var d=daysLeft(x.benefit.endsAt);return d!==null&&d>=0&&d<=30;}).length,rest:rest};}
 function lockBox(items){var L=lockInfo(items);return '<div class="c2-lockbox"><b>🔒 '+L.n+'건 더'+(L.total?' · 약 '+won(L.total):'')+'</b><span class="c2-note" style="margin-top:-4px">대표님 조건에 맞는 지원금이 잠겨 있어요</span><button type="button" class="c2-btn" data-join>잠긴 지원금 전부 확인하기</button><div class="c2-note">비용 없음 · 카드 등록 없음 · 자동결제 없음</div></div>';}
 /* 맨 위 금액: '신청해볼 만한' 공고 합계(조건 일치 + 조건 확인 필요). 융자·교육·1억 초과는 빼고, 아래에 나눠서 적는다. 전체 합계는 작게 함께 적는다 */
-function totalCard(label,est,red,note,act){var rec=est.recItems||est.items,tot=est.recTotal!=null?est.recTotal:(est.total||0),sureT=est.recSureTotal!=null?est.recSureTotal:(est.sureTotal||0),rest=Math.max(0,tot-sureT),hidden=est.items.length-rec.length;var m=tot>0?'<div class="m">'+(tot>=1e8?Math.floor(tot/1e8)+'<small>억</small> '+(Math.floor(tot%1e8/1e4)?Math.floor(tot%1e8/1e4).toLocaleString('ko-KR')+'<small>만원</small>':''):Math.floor(tot/1e4).toLocaleString('ko-KR')+'<small>만원</small>')+'</div>':'';
+function totalCard(label,est,red,note,act){var rec=est.recItems||est.items,tot=est.recTotal!=null?est.recTotal:(est.total||0),sureT=est.recSureTotal!=null?est.recSureTotal:(est.sureTotal||0),rest=Math.max(0,tot-sureT),hidden=est.items.length-rec.length;var cnt=function(n){return '<span class="c2-cnt" data-n="'+n+'">'+n.toLocaleString('ko-KR')+'</span>';};var m=tot>0?'<div class="m">'+(tot>=1e8?cnt(Math.floor(tot/1e8))+'<small>억</small> '+(Math.floor(tot%1e8/1e4)?cnt(Math.floor(tot%1e8/1e4))+'<small>만원</small>':''):cnt(Math.floor(tot/1e4))+'<small>만원</small>')+'</div>':'';
  return '<button type="button" class="c2-total'+(red?' red':'')+'" '+(act||'')+'><div class="l">'+esc(label)+'<span>'+rec.length+'건</span></div>'+m+(note?'<div class="n">'+esc(note)+'</div>':tot>0?'':'<div class="n">금액은 공고에서 확인</div>')+(!red?mix(est):'')+'</button>';}
+/* 합계 숫자가 0에서 올라간다(계약자 전용 화면과 같은 움직임). 한 번 본 뒤 다시 그릴 때는 바로 보여 준다 */
+function countTotals(){var els=box.querySelectorAll('.c2-cnt');if(!els||!els.length||S.totalsDone)return;S.totalsDone=true;if(typeof requestAnimationFrame!=='function'||(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion:reduce)').matches))return;[].forEach.call(els,function(el){var n=Number(el.getAttribute('data-n'))||0,t0=null,D=900;function f(ts){if(t0===null)t0=ts;var x=Math.min(1,(ts-t0)/D),e=1-Math.pow(1-x,3);el.textContent=Math.round(n*e).toLocaleString('ko-KR');if(x<1)requestAnimationFrame(f);}el.textContent='0';requestAnimationFrame(f);setTimeout(function(){el.textContent=n.toLocaleString('ko-KR');},D+600);});}
 /* 합계 카드 아래 한 줄 안내(카드마다 반복하지 않는다) */
 var FINE='<p class="c2-fine">공고에 적힌 금액의 참고 합계예요 · 실제 금액은 자격·선정에 따라 달라요</p>';
 /* 조건 일치 공고를 돈의 형태별로: 통장 입금 3 · 환급 1 · 바우처 2 */
@@ -1265,7 +1332,7 @@ function renderR(){stopTimers();S.view='r';if(!S.list||!S.full){box.innerHTML='<
   else h+='<div class="c2-sec"><span class="c2-wig" aria-hidden="true">👉</span>받을 수 있는 지원금</div>'+sortBar(est)+lockedList(est.items,false);
   if(past.items.length)h+='<div class="c2-sec"><span class="c2-pulse" aria-hidden="true">⏰</span>'+(YEAR-1)+'년에 놓친 지원금</div>'+fitBar(past)+lockedList(past.items,true);
   h+='<div class="c2-small"><span class="c2-wig" aria-hidden="true">✏️</span><button type="button" data-redo>조건 다시 고르기</button></div>';
-  box.innerHTML=h;bindRows();bindCommon();nudge();return;}
+  box.innerHTML=h;countTotals();bindRows();bindCommon();nudge();return;}
  h+=pickCard('c2-p1','놓치기 쉬운 지원금','🎯',picks)+pickCard('c2-p2','놓치기 쉬운 환급금','🎁',refunds);
  if(now.length)h+='<button type="button" class="c2-sec" data-list="now"><span class="c2-wig" aria-hidden="true">👉</span>지금 신청 가능한 지원금<span class="x">›</span></button>'+rollList('c2-now',now);
  if(!est.items.length)h+='<div class="c2-empty"><b>지금 조건에 맞는 공고가 없어요</b><span>새 공고가 올라오면 다시 확인해 보세요. 조건을 바꿔 보셔도 돼요.</span></div>';
@@ -1273,7 +1340,7 @@ function renderR(){stopTimers();S.view='r';if(!S.list||!S.full){box.innerHTML='<
  h+='<div class="c2-sec"><span class="c2-pulse" aria-hidden="true">🚨</span>30일 안에 마감되는 지원금</div>'+(closing.length?'<div class="c2-list">'+closing.map(function(x){return row(x,false);}).join('')+'</div>':'<div class="c2-empty">30일 안에 마감되는 지원금이 없어요</div>');
  h+='<div class="c2-small"><span class="c2-wig" aria-hidden="true">✏️</span><button type="button" data-redo>조건 다시 고르기</button></div>';
  if(S.member)h+='<div class="c2-note">'+esc(S.member.name)+'님, 전체 결과가 열려 있어요</div>';
- box.innerHTML=h;
+ box.innerHTML=h;countTotals();
  bindPick('c2-p1',picks,'오늘 신청 가능',0);bindPick('c2-p2',refunds,'신청 가능',2500);bindRoll('c2-now',now.length);bindRows();bindCommon();nudge();}
 /* 정렬: 추천순(기본) / 금액 큰 순 / 최신순. 조건 일치 공고를 먼저 두고 그 안에서 정렬한다 */
 S.sort=S.sort||'rec';
@@ -1319,7 +1386,7 @@ function openDetail(id){var x=findItem(id);if(!x)return;if(!S.member&&(S.view===
   if(x.m){if(x.m.reasons.length)h+=boxSec('맞는 조건','<ul>'+x.m.reasons.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ul>');if(x.m.unknowns.length)h+=boxSec('확인할 사항','<ul>'+x.m.unknowns.map(function(s){return '<li>'+esc(s)+'</li>';}).join('')+'</ul>');}}
  else if(!closed){h+=boxSec('이렇게 진행하세요',steps.map(function(s,i){return i===0?'<div class="c2-step"><i>1</i><span><b>'+esc(s[0])+'</b></span></div>':'<div class="c2-step off"><i>'+(i+1)+'</i><span class="sk" style="max-width:'+(120+(i*37)%90)+'px"></span><span style="font-size:13px">🔒</span></div>';}).join('')+'<div class="c2-lockin"><b>이 지원금,<br>신청 순서와 필요 서류를 정리해 뒀어요</b>'+(dd.days!==undefined&&dd.days<=30&&b.endsAt?'<span class="c2-note" style="color:#D92D20;font-weight:700">'+esc(fmtDate(b.endsAt))+' 마감이에요 · 마감 전에 담당자가 챙겨드려요</span>':'')+'<button type="button" class="c2-btn" data-join>받는 방법 보기</button></div>');}
  h+=boxSec('공식 출처',esc(b.agency)+' 공고예요<br>신청과 선정은 기관이 합니다'+(b.checkedAt?'<small style="font-size:14px;color:#6B7684">확인일 '+esc(fmtDate(b.checkedAt))+'</small>':''));
- h+='<div class="c2-acts">'+(!unlocked?'<button type="button" class="c2-btn" data-join>받는 방법 보기</button>':'<a class="c2-btn" href="'+esc(b.sourceUrl)+'" target="_blank" rel="noopener">공식 신청 페이지 ↗</a>')+helpBtn(b)+'</div></div>';
+ h+='<div class="c2-acts">'+(!unlocked?'<button type="button" class="c2-btn" data-join>받는 방법 보기</button>':'<a class="c2-btn" href="'+esc(b.sourceUrl)+'" target="_blank" rel="noopener">공식 신청 페이지 ↗</a>')+'</div></div>';
  openModal(h);[].forEach.call(sheet.querySelectorAll('[data-join]'),function(el){el.onclick=function(){openJoin({id:b.id});};});
  var hb=sheet.querySelector('[data-help]');if(hb)hb.onclick=function(){if(!S.member){openJoin({id:b.id,help:true});return;}hb.disabled=true;hb.textContent='전달하는 중…';sendHelp(x).then(function(){hb.outerHTML=helpBtn(b);}).catch(function(){hb.disabled=false;hb.textContent='이 지원금, 신청 도움 받기';});};}
 /* '신청 도움 받기' → 우리 서버 → 회사 전산(담당 직원 화면에 '지원금 도움 요청'). 예전 상담 페이지로 보내지 않는다 */
@@ -1354,7 +1421,7 @@ function openJoin(ctx){ctx=ctx&&ctx.id?ctx:{};S.joinCtx=ctx.id||null;S.joinHelp=
  h+='<p class="c2-err" id="j-err" hidden></p>';
  h+='<div class="c2-tagree" id="tf-agree" hidden><div class="c2-mkt"><div class="c2-mkt-h"><i class="c2-bell" aria-hidden="true">🔔</i><b>내 조건에 맞는 새 지원사업, 놓치지 않게 알려드릴까요?</b></div><div class="c2-mkt-t"><span>새 공고 알림</span><span>마감 임박 알림</span></div><div class="c2-mkt-l">[선택] 광고성 정보 수신 동의</div><small>(주)이로운사람들이 맞춤 지원사업, 마감 일정, 정책자금·컨설팅 서비스 안내 등 광고성 정보를 카카오톡·문자로 보내드립니다. 입력하신 이름, 연락처, 조건은 동의 철회 시까지 이용하며, 동의하지 않아도 결과를 받을 수 있습니다.</small></div>'
   +'<button type="button" class="c2-btn c2-live" id="j-go">새 지원사업 광고 알림 받고 확인하기</button>'
-  +'<button type="button" class="c2-btn c2-plain" id="j-no">알림 없이 확인하기</button>'
+  +'<button type="button" class="c2-skip" id="j-no">알림은 받지 않고 결과만 볼게요</button>'
   +'<div class="c2-note" style="margin:0">버튼을 누르면 <a href="https://www.irowoon.com/?mode=privacy" target="_blank" rel="noopener" style="text-decoration:underline">개인정보 수집·이용</a> 및 <a href="https://www.irowoon.com/?mode=policy" target="_blank" rel="noopener" style="text-decoration:underline">이용약관</a>에 동의하게 돼요</div>'
   +'<div class="c2-note">비용 없음 · 주민번호·계좌번호는 묻지 않아요 · 원하면 바로 삭제</div></div>';
  h+='</div>';
