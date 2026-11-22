@@ -1,5 +1,5 @@
-// 추천사업(2026-11-22): 「신청 가능」을 「추천사업」으로 바꾸고, 사장님 본인이 받는 제도와 내 지역 지자체 사업을 추천에 넣는다.
-// 마감됐거나 아직 접수 전인 사업은 추천에 보이지 않고, 새로 열리면 NEW 표시와 알림 줄이 뜬다.
+// 사장님 본인 대상 제도(2026-11-22): 공고 서버가 넣는 근로·자녀장려금, 고효율기기 환급, 내일배움카드를 목록에 보여 주되
+// 자격을 모르므로 금액 합계와 놓친 지원금에는 더하지 않는다. 화면의 이름·디자인은 바꾸지 않는다.
 import fs from 'node:fs';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
@@ -11,11 +11,9 @@ const source=script(page);
 new vm.Script(source);
 assert.equal(script(widget),source,'두 파일의 스크립트가 같다');
 assert.equal(css(page),css(widget),'두 파일의 조회 스타일이 같다');
-const style=css(page);
-assert.match(style,/\.doz_sys \.c2-total\.rec\{[^}]*animation:c2rec/,'추천사업 카드를 강조한다');
-assert.match(style,/\.doz_sys \.c2-tag\.new\{background:#E5372B\}/);
-assert.match(style,/prefers-reduced-motion:reduce\)\{\.doz_sys \.c2-total\.rec,\.doz_sys \.c2-star\{animation:none\}/,'움직임 줄이기 설정을 따른다');
-assert.ok(!/font:[^;}]*inherit/.test(style),'font 줄임 속성에 inherit를 쓰지 않는다');
+// 화면 문구와 디자인은 그대로다
+assert.ok(!source.includes('추천사업')&&!css(page).includes('c2-newbar')&&!source.includes('irw_rec_seen'),'홈페이지에는 추천사업 이름·NEW 표시를 넣지 않는다');
+assert.ok(source.includes("totalCard('신청 가능 지원금',est,false,null,'data-list=\"now\"')")&&source.includes('지금 신청 가능한 지원금'));
 
 // ── 실제 함수를 가짜 화면에서 돌린다. 시계는 테스트가 정한다 ──
 let clock=Date.parse('2026-11-22T12:00:00+09:00');
@@ -27,7 +25,7 @@ function boot(answers,member,store=new Map()){
  const context=vm.createContext({document:{getElementById:node,querySelector:()=>null,querySelectorAll:()=>[],addEventListener(){},createElement:()=>node('new'+Math.random()),body:node('body'),documentElement:node('html')},
   localStorage:{getItem:k=>store.has(k)?store.get(k):null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k)},Date:FakeDate,URLSearchParams,location:{search:'',hash:'',hostname:'www.irowoon.com'},
   setTimeout:()=>0,clearTimeout(){},setInterval:()=>0,clearInterval(){},console,fetch:()=>new Promise(()=>{}),navigator:{},window:{addEventListener(){},scrollTo(){}},innerHeight:800,scrollY:0,MutationObserver:class{observe(){}}});
- vm.runInContext(source.slice(0,source.indexOf('(async function init()'))+'globalThis.api={S,box,estimate,missed,profile,compute,renderR,renderList,homePool,customerMoney,recOk,sumOf,amountOf,subOf,row,sorted,pinned,localCare,recTrack,isFresh,freshCount,freshBar,recOpened,openDetail,moneyType,isClosed,notStarted};})();',context);
+ vm.runInContext(source.slice(0,source.indexOf('(async function init()'))+'globalThis.api={S,box,estimate,missed,profile,compute,renderR,renderList,homePool,customerMoney,recOk,sumOf,amountOf,subOf,row,sorted,pinned,moneyType,isClosed,notStarted};})();',context);
  return {api:context.api,store,node};
 }
 const base={kind:'지원금',audience:'사업',category:'경영',region:'전국',agency:'가상기관',sourceUrl:'https://www.example.go.kr',summary:'',support:'',checks:[],documents:[],startsAt:'',endsAt:'',checkedAt:'2026-11-22',budgetStatus:'해당 없음',status:'접수 중',rules:[]};
@@ -54,20 +52,12 @@ const member={name:'검증대표',tel:'010-1234-5678',at:'2026-11-21T00:00:00.00
 const list=()=>structuredClone([...standing,...local]);
 const ids=items=>items.map(x=>x.benefit.id).sort();
 
-// 1. 조건을 설정하기 전의 목록에는 다른 지역의 지자체 컨설팅·마케팅 사업을 끌어오지 않는다
-{
- const t=boot(null,null);t.api.S.list=list();
- const pool=ids(t.api.homePool());
- assert.ok(!pool.includes('t-consult')&&!pool.includes('t-marketing')&&!pool.includes('t-other-region'),'지역을 모르면 지자체 서비스 사업을 넣지 않는다');
- assert.ok(!pool.includes('t-closed')&&!pool.includes('t-upcoming')&&!pool.includes('standing-eitc-2026'),'마감·접수 전 사업은 보이지 않는다');
-}
-
-// 2. 추천사업: 사장님 본인 대상 제도와 내 지역 지자체 사업이 들어가고, 마감·접수 전·다른 지역은 빠진다
+// 1. 사장님 본인 대상 제도가 목록에 들어가고, 마감·접수 전 사업과 교육·컨설팅 종류는 기존처럼 빠진다
 const t=boot(done,member);t.api.S.list=list();t.api.S.full=true;
 t.api.compute();
 const est=t.api.S.est,rec=ids(est.recItems);
-for(const id of ['standing-eitc-late-2025','standing-child-credit-late-2025','standing-efficient-appliance-2026','standing-learning-card','t-consult','t-marketing','t-cash'])assert.ok(rec.includes(id),id+' 추천에 있다');
-for(const id of ['t-other-region','t-national-edu','t-closed','t-upcoming','standing-eitc-2026'])assert.ok(!ids(est.items).includes(id),id+' 목록에 없다');
+for(const id of ['standing-eitc-late-2025','standing-child-credit-late-2025','standing-efficient-appliance-2026','standing-learning-card','t-cash'])assert.ok(rec.includes(id),id+' 목록에 있다');
+for(const id of ['t-consult','t-marketing','t-other-region','t-national-edu','t-closed','t-upcoming','standing-eitc-2026'])assert.ok(!ids(est.items).includes(id),id+' 목록에 없다');
 // 가구 소득·구입 여부를 모르는 제도는 합계에 더하지 않는다. 합계는 카드수수료 50만원뿐이다
 assert.equal(est.recTotal,500000,'추천 합계에는 확인되지 않은 제도의 금액을 더하지 않는다');
 assert.equal(est.total,500000);
@@ -89,55 +79,12 @@ clock+=20*day;
 }
 clock-=20*day;
 
-// 3. 화면 문구: 「추천사업」과 강조, 처음 본 날에는 NEW 가 없다
+// 2. 화면: 이름은 그대로이고, 자격을 모르는 제도에는 조건을 줄에 적는다
 t.api.renderR();
 let html=t.api.box.innerHTML;
-assert.match(html,/class="c2-total rec"[^>]*><div class="l"><i class="c2-star" aria-hidden="true">★<\/i>추천사업<span>7건<\/span>/);
-assert.ok(html.includes('지금 신청할 수 있는 추천사업')&&!html.includes('신청 가능 지원금')&&!html.includes('지금 신청 가능한 지원금'));
-assert.ok(!html.includes('c2-newbar')&&!html.includes('c2-tag new'),'처음 본 날에는 새것 표시가 없다');
-assert.equal(t.api.freshCount(),0);
+assert.match(html,/class="c2-total"[^>]*><div class="l">신청 가능 지원금<span>5건<\/span>/);
 t.api.S.tab='now';t.api.renderList();
 html=t.api.box.innerHTML;
-assert.match(html,/data-tab="now">추천사업 7<\/button>/);assert.match(html,/data-fit="rec" class="on">추천 7<\/button>/);
-assert.ok(html.includes('18세 미만 자녀가 있으면')&&html.includes('시흥시 소상공인 경영컨설팅 지원'));
-
-// 4. 며칠 뒤 접수가 열린 사업은 그때 추천에 들어오고 NEW 와 알림 줄이 뜬다(같은 기기)
-clock+=19*day; // 12월 11일: 화재공제 접수 시작, 근로·자녀장려금 기한 후 신청 마감
-const again=boot(done,member,t.store);again.api.S.list=list();again.api.S.full=true;
-again.api.renderR();
-assert.ok(ids(again.api.S.est.recItems).includes('t-upcoming'),'접수가 열리면 추천에 들어온다');
-assert.equal(again.api.freshCount(),1);assert.ok(again.api.isFresh('t-upcoming'));
-html=again.api.box.innerHTML;
-assert.match(html,/<button type="button" class="c2-newbar" data-list="now">.*새로 나온 추천사업 1건/);
-again.api.S.tab='now';again.api.renderList();
-html=again.api.box.innerHTML;
-assert.match(html,/<span class="c2-tag new">NEW<\/span>\[경기\] 시흥시 소상공인 화재공제 가입 지원/);
-assert.equal((html.match(/c2-tag new/g)||[]).length,1,'새로 들어온 것에만 붙는다');
-assert.ok(html.indexOf('t-upcoming')<html.indexOf('t-cash'),'새로 나온 사업을 맨 위에 둔다');
-// 다시 그려도 그대로이고, 눌러서 열어 보면 사라진다
-again.api.renderR();assert.equal(again.api.freshCount(),1);
-again.api.openDetail('t-upcoming');assert.equal(again.api.freshCount(),0);
-const reopened=boot(done,member,again.store);reopened.api.S.list=list();reopened.api.S.full=true;reopened.api.renderR();
-assert.equal(reopened.api.freshCount(),0,'열어 본 사업은 다음에 와도 새것이 아니다');
-
-// 5. 열어 보지 않아도 7일이 지나면 NEW 가 사라진다
-{
- const store=new Map();clock=Date.parse('2026-11-22T12:00:00+09:00');
- let v=boot(done,member,store);v.api.S.list=list();v.api.S.full=true;v.api.compute();
- clock+=19*day;v=boot(done,member,store);v.api.S.list=list();v.api.S.full=true;v.api.compute();assert.equal(v.api.freshCount(),1);
- clock+=6*day;v=boot(done,member,store);v.api.S.list=list();v.api.S.full=true;v.api.compute();assert.equal(v.api.freshCount(),1,'6일째에는 남아 있다');
- clock+=2*day;v=boot(done,member,store);v.api.S.list=list();v.api.S.full=true;v.api.compute();assert.equal(v.api.freshCount(),0,'7일이 지나면 사라진다');
- // 6. 조건을 바꾸면 처음부터 다시 센다(전부 처음 보는 목록이라 표시하지 않는다)
- v=boot({...done,district:'부천시'},member,store);v.api.S.list=list();v.api.S.full=true;v.api.compute();
- assert.equal(v.api.freshCount(),0);assert.ok(!ids(v.api.S.est.items).includes('t-consult'),'다른 시의 사업은 보이지 않는다');
- assert.ok(ids(v.api.S.est.recItems).includes('t-marketing'),'같은 도의 사업은 보인다');
-}
-
-// 7. 가입 전(잠금) 화면도 같은 이름을 쓴다
-{
- clock=Date.parse('2026-11-22T12:00:00+09:00');
- const guest=boot(done,null);guest.api.S.list=list();guest.api.S.full=true;guest.api.renderR();
- const h=guest.api.box.innerHTML;
- assert.ok(h.includes('</span>추천사업</div>')&&!h.includes('받을 수 있는 지원금'));
-}
-console.log('PASS: recommended programs — owner benefits and local programs included, unknown amounts kept out of totals, closed and upcoming hidden, new arrivals flagged');
+assert.match(html,/data-tab="now">받을 수 있는 5<\/button>/);
+assert.ok(html.includes('18세 미만 자녀가 있으면')&&html.includes('올해 1등급 기기를 샀다면')&&!html.includes('NEW'));
+console.log('PASS: owner benefits listed with their condition, kept out of totals and missed lists, screen wording unchanged');
