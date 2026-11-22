@@ -9,14 +9,23 @@
  * 확인 근거(2026-11-02): 고용노동부 「2026년 고용창출장려금 및 고용안정장려금 사업 공고」,
  * 2026년 청년일자리도약장려금 시행 안내, 소상공인시장진흥공단 2026 지원시책(고용보험료 지원·경영안정 바우처),
  * 두루누리 사회보험료 지원 안내. 금액·요건이 바뀌면 이 파일의 STANDING_VERSION 을 올리면 서버가 켜질 때 갱신된다.
+ *
+ * 추가(2026-11-22): 사장님 본인이 받는 것 — 근로·자녀장려금, 소상공인 고효율기기 지원, 국민내일배움카드.
+ * 확인 근거: 국세청 2025년 귀속 근로·자녀장려금 기한 후 신청 안내(2026.6.2.~12.1., 산정액의 95%),
+ * 조세특례제한법의 정기 신청 기간(매년 5월), 한국전력공사 2026년 소상공인 고효율기기 지원사업 안내
+ * (구매 2026.1.1.~12.31., 신청 2026.2.9.~12.31., 예산 소진 시 조기 종료), 고용24 국민내일배움카드 발급 제외 대상.
+ * 근로·자녀장려금은 가구 소득·재산을, 고효율기기는 올해 1등급 기기를 샀는지를 우리가 알 수 없다.
+ * 그래서 자격 규칙을 넣지 않아 '추가 확인 필요'로 보이게 하고, 합계를 부풀리지 않도록 최대금액(maxAmount)을 넣지 않고 지원 내용에만 적는다.
+ * 2027년 5월 정기 신청 항목은 접수 시작 전까지 목록에 보이지 않는다. 국세청이 2027년 안내를 내면 금액·기간을 다시 확인해 STANDING_VERSION 을 올린다.
  */
 import { pool } from "@workspace/db";
 import { benefitSchema, normalizeSourceKey, publicBenefit, type Benefit } from "./benefit-domain";
 import { audit } from "./benefit-store";
 
 /** 자료를 고치면 이 날짜를 올린다(서버가 켜질 때 더 새로운 것만 덮어쓴다). */
-export const STANDING_VERSION = "2026-11-02T13:30:00+09:00";
+export const STANDING_VERSION = "2026-11-22T14:00:00+09:00";
 const WORK24 = "https://www.work24.go.kr";
+const HOMETAX = "https://www.hometax.go.kr";
 
 const base = {
   kind: "지원금" as const, audience: "사업" as const, region: "전국", startsAt: "", endsAt: "",
@@ -113,6 +122,59 @@ const items: Item[] = [
     rules: [
       { scope: "business", field: "revenue", operator: "lte", value: 103_999_999, label: "2025년 연매출 1억 400만 원 미만" },
       { scope: "business", field: "openedAt", operator: "before", value: "2025-12-31T23:59:59+09:00", label: "2025년 12월 31일 이전 개업" },
+    ],
+  },
+  {
+    id: "standing-eitc-late-2025", selection: "확정형", sourceId: "standing:eitc-late-2025", title: "근로장려금 기한 후 신청(2025년 소득분)",
+    category: "경영", agency: "국세청", sourceUrl: HOMETAX,
+    startsAt: "2026-06-02", endsAt: "2026-12-01", status: "접수 중",
+    summary: "2025년에 사업소득이나 근로소득이 있었는데 5월 신청을 놓쳤다면 12월 1일까지 신청할 수 있어요. 가구 소득과 재산이 기준보다 적으면 받아요.",
+    support: "가구 구성에 따라 최대 330만 원(단독 165만·홑벌이 285만·맞벌이 330만 원, 기한 후 신청은 계산된 금액의 95%). 2025년 부부 합산 총소득이 단독 2,200만 원·홑벌이 3,200만 원·맞벌이 4,400만 원 미만이고, 2025년 6월 1일 기준 가구 재산이 2억 4천만 원 미만이어야 해요(1억 7천만 원 이상이면 절반). 홈택스·손택스에서 신청해요.",
+    documents: [], rules: [],
+  },
+  {
+    id: "standing-child-credit-late-2025", selection: "확정형", sourceId: "standing:child-credit-late-2025", title: "자녀장려금 기한 후 신청(2025년 소득분)",
+    category: "경영", agency: "국세청", sourceUrl: HOMETAX,
+    startsAt: "2026-06-02", endsAt: "2026-12-01", status: "접수 중",
+    summary: "18세 미만 자녀가 있고 2025년 부부 합산 총소득이 7,000만 원 미만이면 자녀 1명당 100만 원까지 받아요. 5월 신청을 놓쳤다면 12월 1일까지 신청할 수 있어요.",
+    support: "자녀 1명당 최대 100만 원(소득에 따라 50만 원부터, 기한 후 신청은 계산된 금액의 95%). 2025년 6월 1일 기준 가구 재산이 2억 4천만 원 미만이어야 해요(1억 7천만 원 이상이면 절반). 근로장려금과 함께 홈택스·손택스에서 신청해요.",
+    documents: [], rules: [],
+  },
+  {
+    id: "standing-eitc-2026", selection: "확정형", sourceId: "standing:eitc-2026", title: "근로장려금 정기 신청(2026년 소득분)",
+    category: "경영", agency: "국세청", sourceUrl: HOMETAX,
+    startsAt: "2027-05-01", endsAt: "2027-05-31", status: "접수 중",
+    summary: "2026년에 사업소득이나 근로소득이 있었고 가구 소득과 재산이 기준보다 적으면 받는 장려금이에요. 매년 5월에 신청해요.",
+    support: "가구 구성(단독·홑벌이·맞벌이)과 소득에 따라 금액이 달라져요. 올해 금액과 소득·재산 기준은 국세청 안내에서 확인해요. 홈택스·손택스에서 신청해요.",
+    documents: [], rules: [],
+  },
+  {
+    id: "standing-child-credit-2026", selection: "확정형", sourceId: "standing:child-credit-2026", title: "자녀장려금 정기 신청(2026년 소득분)",
+    category: "경영", agency: "국세청", sourceUrl: HOMETAX,
+    startsAt: "2027-05-01", endsAt: "2027-05-31", status: "접수 중",
+    summary: "18세 미만 자녀가 있고 가구 소득과 재산이 기준보다 적으면 받는 장려금이에요. 매년 5월에 근로장려금과 함께 신청해요.",
+    support: "자녀 수와 소득에 따라 금액이 달라져요. 올해 금액과 소득·재산 기준은 국세청 안내에서 확인해요. 홈택스·손택스에서 신청해요.",
+    documents: [], rules: [],
+  },
+  {
+    id: "standing-efficient-appliance-2026", selection: "확정형", sourceId: "standing:efficient-appliance-2026", title: "소상공인 고효율기기 지원(냉난방기·냉장고 구입비 환급)",
+    kind: "환급금", category: "경영", agency: "한국전력공사", sourceUrl: "https://en-ter.co.kr/ac/main/main.do",
+    startsAt: "2026-02-09", endsAt: "2026-12-31", status: "접수 중", budgetStatus: "확인 필요",
+    summary: "2026년에 에너지효율 1등급 냉난방기·냉장고·세탁기·건조기를 사업장에 새로 들였다면 구입비(부가세 제외)의 40%를 돌려받아요.",
+    support: "품목별로 최대 160만 원(냉난방기·냉장고 각 160만 원, 세탁기·건조기 각 80만 원). 2026년 1월 1일 이후에 산 제품이면 신청할 수 있어요. 한전 에너지마켓플레이스에서 온라인으로 신청하고, 예산이 끝나면 일찍 마감돼요.",
+    documents: ["중소기업확인서(소상공인)", "사업자등록증", "구매 영수증(부가세 구분)", "에너지소비효율등급 라벨 사진", "기기 명판 사진", "설치 사진"],
+    rules: [],
+  },
+  {
+    id: "standing-learning-card", selection: "확정형", sourceId: "standing:learning-card", title: "국민내일배움카드(사장님 직업훈련비)",
+    category: "경영", agency: "고용노동부", sourceUrl: WORK24,
+    summary: "사업한 지 1년이 넘고 연매출 4억 원 미만인 사장님은 5년 동안 300만 원까지 직업훈련비를 지원받아요.",
+    support: "5년간 최대 300만 원(요건이 맞으면 200만 원 추가). 과정에 따라 훈련비의 45~85%를 지원해요. 고용24에서 카드를 발급받아 원하는 과정에 등록해요.",
+    documents: [],
+    // 발급 제외: 사업 기간 1년 미만 또는 연매출 4억 원 이상. 개업일 기준은 이 파일을 고친 날에서 1년 전이라, 시간이 지나면 조금 더 엄격하게 본다.
+    rules: [
+      { scope: "business", field: "revenue", operator: "lte", value: 399_999_999, label: "연매출 4억 원 미만" },
+      { scope: "business", field: "openedAt", operator: "before", value: "2025-11-22T23:59:59+09:00", label: "사업한 지 1년 이상" },
     ],
   },
 ];
