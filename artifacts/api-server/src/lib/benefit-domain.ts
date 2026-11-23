@@ -93,6 +93,9 @@ export const benefitSchema = z.object({
   selection: z.enum(["확정형", "선정형"]).optional(),
   // 공식 원문이 바뀌어 AI 가 다시 읽어야 하는 공고. 다시 읽으면 지운다.
   stale: z.boolean().optional(),
+  // 마감일이 날짜로 정해지지 않은 공고의 접수 방식. 원문의 신청기간 글에서 읽는다.
+  // budget: 예산 소진 시까지(먼저 끝날 수 있음) · always: 상시 접수 · unknown: 원문에서 기간을 읽지 못함. 마감일이 있으면 비운다.
+  deadlineKind: z.enum(["budget", "always", "unknown"]).optional(),
   // 자동 정리 기록: 원문 어느 문장에서 무엇을 읽었는지. 운영자 검토용이며 고객 판단에는 쓰지 않는다.
   extraction: z.object({
     confidence: z.number().int().min(0).max(100),

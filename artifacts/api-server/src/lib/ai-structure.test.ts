@@ -69,3 +69,14 @@ describe("AI 공고 정리 반영", () => {
     expect(aiReviewStatus(base, b, ai)).toBe("공개");
   });
 });
+
+describe("접수 방식 표시", () => {
+  it("AI 가 마감일을 읽으면 빼고, 못 읽으면 그대로 둔다", () => {
+    const tagged: Benefit = { ...base, deadlineKind: "budget" };
+    expect(applyAi(tagged, ai, "m", now).deadlineKind).toBeUndefined();
+    const kept = applyAi(tagged, { ...ai, starts_at: null, ends_at: null } as AiResult, "m", now);
+    expect(kept.endsAt).toBe("");
+    expect(kept.deadlineKind).toBe("budget");
+    expect(applyAi(base, { ...ai, starts_at: null, ends_at: null } as AiResult, "m", now).deadlineKind).toBeUndefined();
+  });
+});

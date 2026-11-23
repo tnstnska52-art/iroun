@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyExtraction, autoPublishable, extractNotice } from "./notice-extract";
+import { applyExtraction, autoPublishable, deadlineKindOf, extractNotice } from "./notice-extract";
 import { benefitSchema, matchBenefit, type Benefit, type Profile } from "./benefit-domain";
 
 // 시험용 문장: 실제 공고가 아니라 공고에서 흔히 쓰는 표현을 본떠 쓴 것이다.
@@ -90,5 +90,30 @@ describe("기업마당 응답 자동 정리", () => {
     expect(benefit.documents).toEqual(["사업자등록증명", "신청서"]);
     expect(benefit.extraction?.missing).toEqual(["세부 자격"]);
     expect(extraction.confidence).toBe(80);
+  });
+});
+
+describe("마감일이 없는 공고의 접수 방식", () => {
+  it("예산 소진·상시·읽지 못함을 구분한다", () => {
+    // 기업마당 신청기간 칸에 실제로 쓰이는 표현을 본뜬 것
+    expect(deadlineKindOf("예산 소진시까지")).toBe("budget");
+    expect(deadlineKindOf("예산 소진 시 까지")).toBe("budget");
+    expect(deadlineKindOf("선착순 접수")).toBe("budget");
+    expect(deadlineKindOf("상시 접수")).toBe("always");
+    expect(deadlineKindOf("연중 수시")).toBe("always");
+    expect(deadlineKindOf("상시 접수(예산 소진 시 조기 마감)")).toBe("budget");
+    expect(deadlineKindOf("세부사업별 상이")).toBe("unknown");
+    expect(deadlineKindOf("")).toBe("unknown");
+    expect(deadlineKindOf(undefined)).toBe("unknown");
+  });
+  it("본문에서 마감일을 찾으면 접수 방식 표시는 뺀다", () => {
+    const noDate = benefitSchema.parse({ ...base, deadlineKind: "budget" });
+    const found = applyExtraction(noDate, extractNotice({ title: base.title, text: SAMPLE }, NOW));
+    expect(found.endsAt).toBe("2026-10-23");
+    expect(found.deadlineKind).toBeUndefined();
+    const none = applyExtraction(noDate, extractNotice({ title: base.title, text: "○ 지원내용: 컨설팅 지원" }, NOW));
+    expect(none.endsAt).toBe("");
+    expect(none.deadlineKind).toBe("budget");
+    expect(() => benefitSchema.parse(none)).not.toThrow();
   });
 });

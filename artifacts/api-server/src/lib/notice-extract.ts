@@ -89,6 +89,16 @@ function findRegion(title: string, list: string[]) {
   return nation ? { region: "전국", guessedDistrict: false, quote: nation } : undefined;
 }
 
+/**
+ * 마감일이 날짜로 없는 공고의 접수 방식을 신청기간 글에서 읽는다.
+ * "상시 접수(예산 소진 시 조기 마감)"처럼 둘 다 적혀 있으면 먼저 끝날 수 있는 쪽(budget)으로 본다.
+ */
+export function deadlineKindOf(period: string | null | undefined): NonNullable<Benefit["deadlineKind"]> {
+  const s = clean(period ?? "");
+  if (/예산\s*(?:이\s*)?소진|소진\s*시|선착순|조기\s*마감/.test(s)) return "budget";
+  if (/상시|연중|수시/.test(s)) return "always";
+  return "unknown";
+}
 export function extractNotice(input: { title: string; text: string; period?: string; startsAt?: string; endsAt?: string }, now = new Date()): Extraction {
   const title = clean(input.title), list = sentences(input.text);
   const evidence: Evidence[] = [], rules: Rule[] = [], missing: string[] = [], cautions: string[] = [];
@@ -208,6 +218,8 @@ export function applyExtraction(b: Benefit, x: Extraction): Benefit {
     ...(b.maxAmount ? {} : x.maxAmount ? { maxAmount: x.maxAmount } : {}),
     documents: b.documents.length ? b.documents : x.documents,
     startsAt: b.startsAt || x.startsAt || "", endsAt: b.endsAt || x.endsAt || "",
+    // 본문에서 마감일을 찾았으면 접수 방식 표시는 뺀다.
+    deadlineKind: b.endsAt || x.endsAt ? undefined : b.deadlineKind,
     status: b.status === "확인 필요" && x.status ? x.status : b.status,
     budgetStatus: b.budgetStatus === "확인 필요" && x.endsAt ? x.budgetStatus : b.budgetStatus,
     checks: [...b.checks.filter((c) => !generic(c)), ...x.missing.map((m) => `${m}: 공식 원문에서 확인 필요`)].slice(0, 50),

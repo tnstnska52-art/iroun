@@ -19,8 +19,17 @@ export function slimBenefit(b: Record<string, unknown>) {
   return o;
 }
 
+const kstDay = (d: Date) => new Date(d.getTime() + 9 * 3600000).toISOString().slice(0, 10);
+/**
+ * 마감일(한국 날짜)이 지난 공고. 공고 상태는 수집·정리할 때 한 번 정해지고 그 뒤로 날짜가 지나도 '접수 중'으로 남으므로,
+ * 목록을 만들 때 마감일로 다시 본다. 마감일 당일까지는 접수 중이다.
+ */
+export function expired(b: { endsAt?: unknown }, now = new Date()): boolean {
+  return typeof b.endsAt === "string" && /^\d{4}-\d{2}-\d{2}/.test(b.endsAt) && b.endsAt.slice(0, 10) < kstDay(now);
+}
+
 export function partOf(b: { status?: unknown; endsAt?: unknown }, now = new Date()): "open" | "past" | null {
-  if (b.status !== "마감") return "open";
+  if (b.status !== "마감" && !expired(b, now)) return "open";
   // 마감 공고는 '작년·올해 놓친 지원금' 계산에만 쓴다. 그보다 오래된 것은 보내지 않는다.
   const y = typeof b.endsAt === "string" && /^\d{4}/.test(b.endsAt) ? Number(b.endsAt.slice(0, 4)) : null;
   return y !== null && y >= now.getFullYear() - 1 ? "past" : null;
@@ -28,7 +37,9 @@ export function partOf(b: { status?: unknown; endsAt?: unknown }, now = new Date
 
 export function buildCheckList(items: Record<string, unknown>[], part: CheckPart, now = new Date(), contractCatalog = false) {
   return items.filter((b) => contractCatalog || visibleToCustomer(b))
-    .filter((b) => { const p = partOf(b, now); return p !== null && (part === "all" || p === part); }).map(slimBenefit);
+    .filter((b) => { const p = partOf(b, now); return p !== null && (part === "all" || p === part); })
+    // 마감일이 지났는데 상태가 '접수 중'으로 남은 공고는 내보낼 때 '마감'으로 적는다(저장된 자료는 바꾸지 않는다).
+    .map((b) => slimBenefit(b.status !== "마감" && expired(b, now) ? { ...b, status: "마감" } : b));
 }
 
 type Packed = { at: number; etag: string; json: Buffer; gz: Buffer; count: number };

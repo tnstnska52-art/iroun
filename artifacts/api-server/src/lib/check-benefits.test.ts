@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { gunzipSync } from "node:zlib";
-import { buildCheckList, checkList, clearCheckCache, pack, partOf, slimBenefit } from "./check-benefits";
+import { buildCheckList, checkList, clearCheckCache, expired, pack, partOf, slimBenefit } from "./check-benefits";
 
 const now = new Date("2026-10-23T00:00:00Z");
 const b = (id: string, status: string, endsAt: string | null) => ({ id, status, endsAt, title: id, extraction: { big: "x".repeat(1000) }, calculation: {}, sourceId: "s", isTest: false, reviewStatus: "ok", checkedAt: "2026-10-22T21:02:00.936Z", rules: [], fit: { small: 1 } });
@@ -21,6 +21,27 @@ describe("홈페이지 지원금 확인용 가벼운 목록", () => {
     expect(buildCheckList(all, "open", now).map((x) => x.id)).toEqual(["o"]);
     expect(buildCheckList(all, "past", now).map((x) => x.id)).toEqual(["p"]);
     expect(buildCheckList(all, "all", now).map((x) => x.id)).toEqual(["o", "p"]);
+  });
+  it("마감일이 지났는데 '접수 중'으로 남은 공고는 마감으로 내보낸다(마감일 당일까지는 접수 중)", () => {
+    // now = 한국 시각 2026-10-23 09:00
+    expect(expired({ endsAt: "2026-10-22" }, now)).toBe(true);
+    expect(expired({ endsAt: "2026-10-23" }, now)).toBe(false);
+    expect(expired({ endsAt: "2026-10-22T18:00:00+09:00" }, now)).toBe(true);
+    expect(expired({ endsAt: "" }, now)).toBe(false);
+    expect(expired({ endsAt: null }, now)).toBe(false);
+    expect(expired({ endsAt: "예산 소진시까지" }, now)).toBe(false);
+    // 한국 날짜로 센다: UTC 로는 아직 22일이어도 한국이 23일이면 22일 마감은 지난 것이다.
+    expect(expired({ endsAt: "2026-10-22" }, new Date("2026-10-22T15:00:00Z"))).toBe(true);
+    expect(expired({ endsAt: "2026-10-22" }, new Date("2026-10-22T14:59:59Z"))).toBe(false);
+    expect(partOf(b("a", "접수 중", "2026-10-22"), now)).toBe("past");
+    expect(partOf(b("a", "확인 필요", "2026-10-22"), now)).toBe("past");
+    expect(partOf(b("a", "접수 중", "2026-10-23"), now)).toBe("open");
+    expect(partOf(b("a", "접수 중", "2024-06-30"), now)).toBeNull();
+    const all = [b("stale", "접수 중", "2026-10-01"), b("today", "접수 중", "2026-10-23"), b("always", "상시 조회", null), b("closed", "마감", "2026-01-05")];
+    expect(buildCheckList(all, "open", now).map((x) => x.id)).toEqual(["today", "always"]);
+    const past = buildCheckList(all, "past", now);
+    expect(past.map((x) => [x.id, x.status])).toEqual([["stale", "마감"], ["closed", "마감"]]);
+    expect(all[0]!.status).toBe("접수 중"); // 저장된 자료는 바꾸지 않는다
   });
   it("gzip 으로 줄어들고 풀면 원래 JSON 이다", () => {
     const list = Array.from({ length: 200 }, (_, i) => slimBenefit(b("id" + i, "접수 중", null)));
