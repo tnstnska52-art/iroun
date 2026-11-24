@@ -152,7 +152,7 @@ export async function runGov24Bulk(fetcher: typeof fetch = fetch, force = false)
       const fingerprint = hash(sourceRecord);
       const snap = await sameSnapshot(b.sourceId, fingerprint);
       const old = snap.exists;
-      if (snap.same) { await refreshOfficialCheck(b.sourceId, b.checkedAt, b.sourceUrl, false); state.unchanged = Number(state.unchanged) + 1; continue; }
+      if (snap.same) { await refreshOfficialCheck(b.sourceId, b.checkedAt, b.sourceUrl, false, b.endsAt ? undefined : b.deadlineKind); state.unchanged = Number(state.unchanged) + 1; continue; }
       try {
         const result = await stageOfficialNotice(b, "official-gov24-bulk", { sourceRecord, baselineOnly: !old, contentHash: fingerprint });
         if (result.reused) state.updated = Number(state.updated) + 1; else state.created = Number(state.created) + 1;

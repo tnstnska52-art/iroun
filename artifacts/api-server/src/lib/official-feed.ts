@@ -4,7 +4,7 @@ import { z } from "zod";
 import { benefitSchema,excludedCategory,type Benefit } from "./benefit-domain";
 import {storedFeedState,storeFeedState,reserveFeedCall} from "./public-feeds";
 import { refreshOfficialCheck,sameSnapshot,stableRecord,stageOfficialNotice } from "./official-ingestion";
-import { applyExtraction,autoPublishable,extractNotice } from "./notice-extract";
+import { applyExtraction,autoPublishable,deadlineKindOf,extractNotice } from "./notice-extract";
 
 export const BIZINFO_DOCUMENTATION="https://www.bizinfo.go.kr/apiDetail.do?id=bizinfoApi";
 export const feedState:{
@@ -72,6 +72,8 @@ export function parseBizinfoRecord(value:unknown,checkedAt=new Date().toISOStrin
     checks:["관할 지역·업종·지원대상·중복수혜·접수 여부를 원문에서 검토해야 합니다."],
     documents:[],agency:plain(agency),sourceId,sourceUrl:url.href,
     startsAt:dates[0]??"",endsAt:dates[1]??"",checkedAt,budgetStatus:"확인 필요",reviewStatus:"검토대기",isTest,rules:[],
+    // 마감일이 없는 공고: "예산 소진시까지"·"상시 접수"를 구분해 둔다(둘 다 아니면 unknown).
+    ...(dates[1]?{}:{deadlineKind:deadlineKindOf(period)}),
   });
 }
 /** 기업마당 응답의 본문 항목을 모아 자동 정리한다. 첨부 공고문(HWP·PDF)은 읽지 못한다. */
@@ -128,7 +130,8 @@ export async function runBizinfoFeed(fetcher:typeof fetch=fetch,testMode=false){
         const snap=await sameSnapshot(b.sourceId,fingerprint);
         const prior=snap.exists?{}:undefined;
         if(snap.same){
-          await refreshOfficialCheck(b.sourceId,b.checkedAt);
+          // 원문이 그대로여도 접수 방식 표시는 채워 둔다(이 표시가 생기기 전에 저장된 공고를 고친다).
+          await refreshOfficialCheck(b.sourceId,b.checkedAt,undefined,undefined,b.endsAt?undefined:parsed.deadlineKind);
           unchanged++;continue;
         }
         const result=await stageOfficialNotice(b,"official-bizinfo-worker",{

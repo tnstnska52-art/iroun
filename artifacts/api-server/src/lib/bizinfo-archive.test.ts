@@ -36,6 +36,13 @@ describe("기업마당 지난 공고 상세 페이지", () => {
     expect(b.endsAt).toBe("2025-06-04");
     expect(b.sourceUrl).toContain("PBLN_000000000110000");
   });
+  it("마감일이 없는 공고는 신청기간 글에서 접수 방식을 읽어 둔다", () => {
+    const r = parseBizinfoDetail(html, "PBLN_000000000110000")!;
+    expect(parseBizinfoRecord(r).deadlineKind).toBeUndefined(); // 마감일이 있으면 비운다
+    expect(parseBizinfoRecord({ ...r, reqstBeginEndDe: "예산 소진시까지" })).toMatchObject({ endsAt: "", deadlineKind: "budget" });
+    expect(parseBizinfoRecord({ ...r, reqstBeginEndDe: "상시 접수" })).toMatchObject({ endsAt: "", deadlineKind: "always" });
+    expect(parseBizinfoRecord({ ...r, reqstBeginEndDe: "세부사업별 상이" })).toMatchObject({ endsAt: "", deadlineKind: "unknown" });
+  });
   it("없는 공고는 null", () => expect(parseBizinfoDetail("<html>없음</html>", "PBLN_1")).toBeNull());
   it.each([
     ["[충북] 충주시 2025년 청년소상공인 창업점포임차료 지원사업 공고", true],

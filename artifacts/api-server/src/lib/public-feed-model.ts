@@ -1,5 +1,6 @@
 import {XMLParser} from "fast-xml-parser";
 import {benefitSchema,officialUrl,type Benefit} from "./benefit-domain";
+import {deadlineKindOf} from "./notice-extract";
 export const catalog={
   gov24:{name:"정부24 공공서비스",doc:"https://www.data.go.kr/data/15113968/openapi.do",key:"GOV24_API_KEY",limit:10000,base:"https://api.odcloud.kr/api/gov24/v3/"},
   welfareCentral:{name:"복지로 중앙부처",doc:"https://www.data.go.kr/data/15090532/openapi.do",key:"WELFARE_CENTRAL_API_KEY",limit:100,base:"https://apis.data.go.kr/B554287/NationalWelfareInformationsV001/"},
@@ -47,5 +48,6 @@ export function mapPublicBenefit(source:PublicFeed,list:Row,detail:Row,condition
     support:(support||"지원내용 원문 확인 필요").slice(0,5000),
     calculation:"기관의 선정·예산·중복수혜 확인이 필요합니다. 실제 지급액·환급액이 아닙니다.",
     checks:[...(childTarget?["아동·자녀 대상 나이는 가입자 본인 나이와 비교하지 않습니다. 자녀의 당시 나이·출생일·보호자 자격 확인 필요."]:[]),...(!gov&&docs?[`기관 제공 서식·참고자료: ${docs}. 실제 제출 필요 여부 확인 필요.`]:[]),`지원대상: ${target||"확인 필요"}`,`선정기준: ${criteria||"확인 필요"}`,`신청기간: ${period||"확인 필요"}`,`신청방법: ${method||"확인 필요"}`].map(s=>s.slice(0,500)),
-    documents:gov&&docs?[docs.slice(0,200)]:[],startsAt:dates[0]??"",endsAt:dates[1]??"",checkedAt,budgetStatus:"확인 필요",status:"확인 필요",reviewStatus:"검토대기",isTest,rules});
+    documents:gov&&docs?[docs.slice(0,200)]:[],startsAt:dates[0]??"",endsAt:dates[1]??"",checkedAt,budgetStatus:"확인 필요",status:"확인 필요",reviewStatus:"검토대기",isTest,rules,
+    ...(gov&&!dates[1]?{deadlineKind:deadlineKindOf(period)}:{})});
 }

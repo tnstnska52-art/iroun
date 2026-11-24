@@ -231,6 +231,8 @@ export function applyAi(b: Benefit, x: AiResult, model: string, now = new Date()
     ...(amount && amount > 0 && amount <= 100_000_000_000 ? { maxAmount: amount } : {}),
     documents: (x.documents ?? []).filter((d) => typeof d === "string" && d.trim()).slice(0, 12).map((d) => d.trim().slice(0, 200)),
     startsAt: starts, endsAt: ends,
+    // 마감일을 읽었으면 접수 방식 표시는 뺀다(마감일이 없을 때만 의미가 있다).
+    deadlineKind: ends ? undefined : b.deadlineKind,
     status,
     budgetStatus: status === "마감" ? b.budgetStatus : "해당 없음",
     checks: checks.slice(0, 50),

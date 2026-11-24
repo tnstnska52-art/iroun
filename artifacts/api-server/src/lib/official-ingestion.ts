@@ -1,6 +1,6 @@
 import { pool } from "@workspace/db";
 import { audit } from "./benefit-store";
-import { benefitSchema, excludedCategory, normalizeSourceKey, officialUrl, publicBenefit } from "./benefit-domain";
+import { benefitSchema, excludedCategory, normalizeSourceKey, officialUrl, publicBenefit, type Benefit } from "./benefit-domain";
 
 /** 공고 내용과 무관하게 매번 바뀌는 값(전체 건수·조회수·순번). 변경 판단 지문에서 뺀다. */
 const VOLATILE=/^(totCnt|totalCount|inqireCo|inqCnt|inq_cnt|rnum|rn|rowNum|조회수|viewCnt|view_cnt|hit|hits)$/i;
@@ -68,7 +68,7 @@ export async function stageOfficialNotice(
       // AI 가 관리하는 공고는 다시 읽을 때까지 지금 상태(공개 등)를 유지하고 stale 표시만 한다.
       // 사람이 직접 관리하는 공고는 예전처럼 운영자 검토 전까지 내린다.
       const reviewCopy: typeof b=prior.extraction?.ai
-        ?{...prior,checkedAt:b.checkedAt,stale:true}
+        ?{...prior,checkedAt:b.checkedAt,stale:true,...(!prior.endsAt&&b.deadlineKind?{deadlineKind:b.deadlineKind}:{})}
         :{
         ...prior,
         checkedAt:b.checkedAt,
@@ -97,16 +97,22 @@ export async function stageOfficialNotice(
   }catch(e){await client.query("ROLLBACK");throw e;}finally{client.release();}
 }
 
-/** Refresh only verification time when the official payload is unchanged. */
-export async function refreshOfficialCheck(sourceId: string, checkedAt: string, sourceUrl?: string, isTest?: boolean) {
+/**
+ * Refresh only verification time when the official payload is unchanged.
+ * deadlineKind 를 주면 마감일이 비어 있는 공고에만 접수 방식 표시를 채운다(다른 값은 건드리지 않는다).
+ */
+export async function refreshOfficialCheck(sourceId: string, checkedAt: string, sourceUrl?: string, isTest?: boolean, deadlineKind?: Benefit["deadlineKind"]) {
+  const kind=sourceUrl?"$5":"$3";
   const sourceClause=sourceUrl
     ? " AND data->>'sourceUrl'=$3 AND (data->>'isTest')::boolean=$4"
     : " AND data->>'sourceUrl' LIKE 'https://www.bizinfo.go.kr/%'";
+  const checked="jsonb_set(data,'{checkedAt}',to_jsonb($2::text),true)";
   await pool.query(
     `UPDATE iroun_benefits
-     SET data=jsonb_set(data,'{checkedAt}',to_jsonb($2::text),true)
+     SET data=CASE WHEN ${kind}::text IS NOT NULL AND COALESCE(data->>'endsAt','')=''
+       THEN jsonb_set(${checked},'{deadlineKind}',to_jsonb(${kind}::text),true) ELSE ${checked} END
      WHERE data->>'sourceId'=$1${sourceClause}`,
-    sourceUrl?[sourceId,checkedAt,sourceUrl,isTest===true]:[sourceId,checkedAt],
+    sourceUrl?[sourceId,checkedAt,sourceUrl,isTest===true,deadlineKind??null]:[sourceId,checkedAt,deadlineKind??null],
   );
   await pool.query("UPDATE iroun_feed_snapshots SET checked_at=$2 WHERE source_id=$1",[sourceId,checkedAt]);
 }
