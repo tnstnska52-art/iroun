@@ -1,7 +1,7 @@
 """지원금 꿀팁 글 생성기: 글 원본(JSON) -> 아임웹 게시글 본문 HTML.
 
 아임웹 글쓰기 창은 <style> 블록을 쓰지 못해서 모든 스타일을 요소마다 직접 넣는다.
-사용법: python3 tips/build.py tips/posts/<slug>.json   -> tips/out/<slug>.html 생성
+사용법: python3 tips/build.py tips/posts/<slug>.json   -> tips/html/<slug>.html 생성
 """
 import json, os, sys, html as H
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     spec = json.load(open(path, encoding="utf-8"))
     out = render(spec)
     check(spec, out)
-    od = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
+    od = os.path.join(os.path.dirname(os.path.abspath(__file__)), "html")
     os.makedirs(od, exist_ok=True)
     name = os.path.splitext(os.path.basename(path))[0]
     open(os.path.join(od, name + ".html"), "w", encoding="utf-8").write(out)
