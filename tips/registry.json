@@ -150,7 +150,7 @@
       "program": "출산육아기 고용안정장려금 (육아휴직 지원금·육아기 근로시간 단축 지원금·대체인력지원금·업무분담 지원금)",
       "agency": "고용노동부",
       "year": 2026,
-      "status": "draft_not_published",
+      "status": "active",
       "notice": {
         "title": "고용24 「육아휴직 지원금」「육아기 근로시간 단축 지원금」「대체인력지원금」「업무분담 지원금」 제도 안내",
         "date": "상시",
@@ -176,11 +176,10 @@
       },
       "post": {
         "title": "육아휴직 지원금 사업주 신청방법, 직원이 육아휴직 쓰면 회사는 얼마 받을까? 2026 정리",
-        "idx": null,
-        "url": null,
-        "published": null,
-        "updated": "2026-11-25",
-        "note": "2026-11-25 아임웹 로그인 풀림으로 미발행. 다음 실행에서 이 글부터 발행하고 idx 기록"
+        "idx": 175940054,
+        "url": "https://www.irowoon.com/tips/?bmode=view&idx=175940054&t=board",
+        "published": "2026-11-25",
+        "updated": "2026-11-25"
       },
       "spec": "tips/posts/2026-11-25-yukahyujik.json",
       "main_keyword": "육아휴직 지원금",
@@ -191,7 +190,7 @@
       "program": "고용유지지원금 (유급·무급)",
       "agency": "고용노동부",
       "year": 2026,
-      "status": "draft_not_published",
+      "status": "active",
       "notice": {
         "title": "고용24 「고용유지지원금」 제도 안내",
         "date": "상시",
@@ -215,11 +214,10 @@
       },
       "post": {
         "title": "고용유지지원금 조건과 신청방법, 매출 15% 줄었다면 휴업수당 3분의 2 돌려받기",
-        "idx": null,
-        "url": null,
-        "published": null,
-        "updated": "2026-11-25",
-        "note": "2026-11-25 아임웹 로그인 풀림으로 미발행. 다음 실행에서 이 글부터 발행하고 idx 기록"
+        "idx": 175940089,
+        "url": "https://www.irowoon.com/tips/?bmode=view&idx=175940089&t=board",
+        "published": "2026-11-25",
+        "updated": "2026-11-25"
       },
       "spec": "tips/posts/2026-11-25-goyongyuji.json",
       "main_keyword": "고용유지지원금",
@@ -230,7 +228,7 @@
       "program": "유연근무 장려금 · 일생활 균형 시스템 지원금",
       "agency": "고용노동부",
       "year": 2026,
-      "status": "draft_not_published",
+      "status": "active",
       "notice": {
         "title": "고용24 「유연근무 장려금·일생활 균형 시스템 지원금」 제도 안내",
         "date": "상시",
@@ -251,11 +249,10 @@
       },
       "post": {
         "title": "유연근무 장려금 신청방법, 재택근무 지원금 직원 1명당 월 최대 30만 원 조건 정리",
-        "idx": null,
-        "url": null,
-        "published": null,
-        "updated": "2026-11-25",
-        "note": "2026-11-25 아임웹 로그인 풀림으로 미발행. 다음 실행에서 이 글부터 발행하고 idx 기록"
+        "idx": 175940113,
+        "url": "https://www.irowoon.com/tips/?bmode=view&idx=175940113&t=board",
+        "published": "2026-11-25",
+        "updated": "2026-11-25"
       },
       "spec": "tips/posts/2026-11-25-yuyeongeunmu.json",
       "main_keyword": "유연근무 장려금",
