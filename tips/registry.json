@@ -1,0 +1,41 @@
+{
+  "board": {
+    "name": "지원금 꿀팁",
+    "list_url": "https://www.irowoon.com/tips",
+    "admin_posts_url": "https://irowoon.com/admin/contents/post"
+  },
+  "posts": [
+    {
+      "key": "2026-희망리턴패키지-원스톱폐업지원-점포철거비",
+      "program": "희망리턴패키지 원스톱폐업지원 (점포철거비·사업정리컨설팅·법률자문·채무조정)",
+      "agency": "중소벤처기업부 · 소상공인시장진흥공단",
+      "year": 2026,
+      "status": "active",
+      "notice": {
+        "title": "2026년 희망리턴패키지 원스톱폐업지원 소상공인 모집 공고",
+        "date": "2026-01-19",
+        "official_pages": ["https://www.sbiz24.kr", "https://hope.sbiz.or.kr"],
+        "verified_from": "공고 재게시 글로 확인. 다음 점검 때 공고 원문(소상공인24·기업마당)과 대조할 것"
+      },
+      "key_facts": {
+        "대상": "폐업(예정) 소상공인, 영업 60일 이상, 기폐업자는 2023.1.1 이후 폐업",
+        "철거비 한도": "2025.7.11 이후 폐업 600만 원 / 2025.7.10 이전 폐업 400만 원(3.3㎡당 20만 원)",
+        "부가세": "제외(공급가액만 지원)",
+        "신청기간": "철거비·컨설팅 2026.1월~예산 소진 시, 법률자문·채무조정 2026.3월~예산 소진 시",
+        "신청처": "철거비 소상공인24(sbiz24.kr), 그 외 희망리턴패키지(hope.sbiz.or.kr)",
+        "문의": "1533-0100 (4번)"
+      },
+      "post": {
+        "title": "폐업지원금 신청방법, 이미 폐업했어도 될까? 철거비 최대 600만 원 조건 정리",
+        "idx": 175915612,
+        "url": "https://www.irowoon.com/tips/?bmode=view&idx=175915612&t=board",
+        "published": "2026-11-24",
+        "updated": "2026-11-24"
+      },
+      "spec": "tips/posts/2026-11-24-pyeup.json",
+      "main_keyword": "폐업지원금 신청방법",
+      "last_checked": "2026-11-24"
+    }
+  ],
+  "skipped": []
+}
