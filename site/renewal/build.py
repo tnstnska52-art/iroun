@@ -61,6 +61,10 @@ def convert(name):
         s = s.replace(f'https://claude.ai/artifact/{k}#top', START)
         s = s.replace(f'https://claude.ai/artifact/{k}', v)
     assert 'claude.ai' not in s, name
+    # 상단 바·모바일 메뉴: '사례' 다음에 지원금 꿀팁 게시판(/tips) 링크 추가
+    s, n_tips = re.subn(r'^([ \t]*)(<a (?:class="on" )?href="[^"]*"(?: aria-current="page")?>사례</a>)\n',
+                        lambda m: f'{m.group(1)}{m.group(2)}\n{m.group(1)}<a href="{W}/tips">지원금 꿀팁</a>\n', s, flags=re.M)
+    assert n_tips == 2, (name, n_tips)
     s = s.replace('href="#" aria-current="page"', f'href="{here}" aria-current="page"')
     s = re.sub(r'(<a class="logo" )href="#\w+"', rf'\1href="{W}/"', s)
     s = re.sub(r'(<a )href="#top"( aria-label="\(주\)이로운사람들 처음으로")', rf'\1href="{W}/"\2', s)
