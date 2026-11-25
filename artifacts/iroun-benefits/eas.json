@@ -39,6 +39,9 @@
     "production": {
       "autoIncrement": true,
       "env": {
+        "EXPO_PUBLIC_APP_RELEASE": "production",
+        "EXPO_PUBLIC_APP_MODE": "portal",
+        "EXPO_PUBLIC_PREVIEW": "0",
         "EXPO_PUBLIC_API_URL": "https://iroun-api.onrender.com",
         "EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuaXJvd29vbi5jb20k"
       },
