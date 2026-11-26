@@ -1,0 +1,11 @@
+name: Submit iOS 1.2.0 build 5
+
+# Manual run only. Submit this completed build using the existing production profile.
+# No automatic triggers and no new build are configured here.
+jobs:
+  submit_ios:
+    name: Upload iOS 1.2.0 build 5 to App Store Connect
+    type: submit
+    params:
+      build_id: 33d7cdf7-b938-4c08-83bc-7c2f764be99d
+      profile: production
