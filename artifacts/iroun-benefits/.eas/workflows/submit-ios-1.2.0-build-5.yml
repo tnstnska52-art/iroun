@@ -1,5 +1,11 @@
 name: Submit iOS 1.2.0 build 5
 
+# Match the tool versions used by the successful production builds in eas.json.
+defaults:
+  tools:
+    node: '22.22.0'
+    pnpm: '10.28.0'
+
 # Manual run only. Submit this completed build using the existing production profile.
 # No automatic triggers and no new build are configured here.
 jobs:
