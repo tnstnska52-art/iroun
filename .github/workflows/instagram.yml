@@ -20,9 +20,9 @@ permissions:
 
 jobs:
   post:
-    # 승인 단계: 저장소 Settings → Environments → instagram 에 Required reviewers 를 넣으면
+    # 승인 단계: 저장소 Settings → Environments → instagramirowoon 에 Required reviewers 를 넣으면
     # 게시 전에 승인 버튼을 눌러야 진행된다.
-    environment: instagram
+    environment: instagramirowoon
     runs-on: ubuntu-latest
     timeout-minutes: 360
     steps:

@@ -19,7 +19,7 @@ node tips/cards/render.mjs tips/cards/sets/<날짜>/<slug>/card.json
 
 ## 올리기
 `queue.json` 의 `items` 에 `{"set": "sets/<날짜>/<slug>", "status": "pending"}` 을 추가해 `tips-content` 에 push 하면
-GitHub Actions(`.github/workflows/instagram.yml`)가 승인 후 2시간 30분 간격으로 최대 3개를 올리고 결과(permalink)를 queue.json 에 적는다.
+GitHub Actions(`.github/workflows/instagram.yml`)가 승인(Environment `instagramirowoon`) 후 2시간 30분 간격으로 최대 3개를 올리고 결과(permalink)를 queue.json 에 적는다.
 
 - 토큰: GitHub Secret `IG_ACCESS_TOKEN` (시스템 사용자 tips-poster, 만료 없음). 저장소에 쓰지 않는다.
 - 계정 ID: `config.json` 의 `ig_user_id`
