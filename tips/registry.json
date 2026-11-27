@@ -480,7 +480,11 @@
       },
       "spec": "tips/posts/2026-11-27-jayeongeopsil.json",
       "main_keyword": "자영업자 실업급여",
-      "last_checked": "2026-11-27"
+      "last_checked": "2026-11-27",
+      "insta": {
+        "set": "sets/2026-11-27/jayeongeopsil",
+        "queued": "2026-11-27"
+      }
     },
     {
       "key": "2026-고용촉진장려금",
@@ -517,7 +521,11 @@
       },
       "spec": "tips/posts/2026-11-27-goyongchokjin.json",
       "main_keyword": "고용촉진장려금",
-      "last_checked": "2026-11-27"
+      "last_checked": "2026-11-27",
+      "insta": {
+        "set": "sets/2026-11-27/goyongchokjin",
+        "queued": "2026-11-27"
+      }
     },
     {
       "key": "2026-고령자-계속고용장려금",
