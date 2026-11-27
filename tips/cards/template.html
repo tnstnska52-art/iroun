@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<link rel="stylesheet" href="node_modules/@fontsource/jua/index.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--navy:#0b1b3a;--blue:#1f5fe0;--yel:#ffd84a;--muted:#4d5b70}
+body{background:#777;font-family:'Noto Sans CJK KR',sans-serif;word-break:keep-all}
+section{width:1080px;height:1350px;position:relative;overflow:hidden;isolation:isolate;display:flex;flex-direction:column}
+.light{background:radial-gradient(circle at 12% 8%,#fff 0 14%,transparent 15%),radial-gradient(circle at 92% 92%,#d6e6ff 0 20%,transparent 21%),linear-gradient(180deg,#eef5ff,#d3e4ff)}
+.dark{background:radial-gradient(circle at 85% 8%,#2f6bff55 0 22%,transparent 23%),linear-gradient(180deg,#0d2a6b,#071a45)}
+.pill{position:absolute;top:56px;right:56px;background:rgba(0,0,0,.45);color:#fff;font-size:34px;padding:12px 28px;border-radius:40px}
+.brand{position:absolute;top:50px;left:56px;display:flex;align-items:center;gap:16px;font-weight:700;font-size:34px;color:#123b8f}
+.dark .brand{color:#fff}
+.brand img{width:72px;height:72px;border-radius:50%;border:4px solid #fff}
+/* outlined headline (shared) */
+.line{font-family:'Jua';line-height:1.18;letter-spacing:-1px;color:#111;position:relative;white-space:nowrap;display:block;text-align:center}
+.line .lay{position:absolute;inset:0}
+.line .l3{position:relative}
+.dark .line{color:#fff}
+.line .l1{color:var(--navy)} .line .l2{color:#fff}
+.dark .line .l1{color:#fff} .dark .line .l2{color:var(--navy)}
+.b{color:var(--blue)} .dark .b{color:var(--yel)}
+em{font-style:normal}
+.line.hl::before{content:"";position:absolute;left:50%;transform:translateX(-50%) rotate(-1.5deg);width:var(--w,80%);bottom:4px;height:58%;background:var(--blue);border-radius:18px;z-index:-1;box-shadow:0 0 0 7px var(--navy)}
+.dark .line.hl::before{box-shadow:0 0 0 7px #fff}
+.line.hl em{color:#111} .dark .line.hl em{color:var(--yel)}
+/* cover */
+.cover{align-items:center;justify-content:center}
+.cover .line{font-size:var(--fs,150px);line-height:1.14;letter-spacing:-2px}
+.cover .line .l1{-webkit-text-stroke:44px var(--navy)} .cover .line .l2{-webkit-text-stroke:26px #fff}
+.dark.cover .line .l1{-webkit-text-stroke:44px #fff} .dark.cover .line .l2{-webkit-text-stroke:26px var(--navy)}
+.kick{font-family:'Jua';font-size:58px;color:var(--blue);background:#fff;border:6px solid var(--navy);border-radius:60px;padding:10px 40px;margin-bottom:40px;transform:rotate(-2deg)}
+.small{font-weight:700;font-size:40px;color:#123b8f;margin-top:56px;background:#fff;padding:18px 34px;border-radius:20px;border:4px solid var(--navy)}
+/* inner */
+.inner{justify-content:center;padding:150px 70px 120px}
+.hd{text-align:center;margin-bottom:44px}
+.inner .line{font-size:var(--fs,104px)}
+.inner .line .l1{-webkit-text-stroke:34px var(--navy)} .inner .line .l2{-webkit-text-stroke:20px #fff}
+.dark.inner .line .l1{-webkit-text-stroke:34px #fff} .dark.inner .line .l2{-webkit-text-stroke:20px var(--navy)}
+.box{background:#fff;border:6px solid var(--navy);border-radius:30px;box-shadow:0 10px 0 var(--navy);padding:30px 36px;margin-bottom:30px;display:flex;gap:28px;align-items:center}
+.num{flex:0 0 92px;height:92px;border-radius:50%;background:var(--blue);border:6px solid var(--navy);color:#fff;font-family:'Jua';font-size:58px;display:flex;align-items:center;justify-content:center}
+.box b{display:block;font-family:'Jua';font-size:54px;color:#111;line-height:1.25}
+.box b .b{color:var(--blue)}
+.box p{font-size:32px;line-height:1.5;color:var(--muted);margin-top:6px}
+.money{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:28px}
+.m{background:#fff;border:6px solid var(--navy);border-radius:26px;box-shadow:0 8px 0 var(--navy);padding:22px 28px;text-align:center}
+.m small{display:block;font-size:30px;color:var(--muted);font-weight:700}
+.m strong{font-family:'Jua';font-size:62px;color:var(--blue)}
+.big{background:var(--yel);border:6px solid var(--navy);border-radius:30px;box-shadow:0 10px 0 var(--navy);padding:30px 36px;text-align:center}
+.big small{display:block;font-size:32px;font-weight:700;color:var(--navy)}
+.big strong{display:block;font-family:'Jua';font-size:92px;color:var(--navy);line-height:1.2}
+.big p{font-size:28px;color:#3b3b3b}
+.x{display:flex;gap:24px;align-items:center;background:#fff;border:6px solid var(--navy);border-radius:28px;box-shadow:0 10px 0 #000;padding:26px 32px;margin-bottom:28px}
+.x i{font-style:normal;flex:0 0 84px;height:84px;border-radius:22px;background:#e03131;border:6px solid var(--navy);color:#fff;font-family:'Jua';font-size:56px;display:flex;align-items:center;justify-content:center}
+.x b{display:block;font-family:'Jua';font-size:50px;color:#111;line-height:1.25}
+.x p{font-size:31px;color:var(--muted);line-height:1.45;margin-top:4px}
+.st{display:flex;gap:24px;align-items:center;margin-bottom:24px}
+.st .num{flex-basis:84px;height:84px;font-size:50px}
+.st b{font-family:'Jua';font-size:52px;color:#111}
+.st span{display:block;font-size:31px;color:var(--muted)}
+.cta{background:var(--blue);border:6px solid var(--navy);border-radius:30px;box-shadow:0 10px 0 var(--navy);padding:30px 36px;color:#fff;margin-top:30px}
+.cta b{display:block;font-family:'Jua';font-size:52px}
+.cta p{font-size:26px;line-height:1.5;opacity:.95;margin-top:6px}
+/* follow card */
+.follow{background:radial-gradient(circle at 15% 10%,#2f6bff66 0 22%,transparent 23%),radial-gradient(circle at 90% 95%,#2f6bff44 0 25%,transparent 26%),linear-gradient(180deg,#0d2a6b,#071a45)}
+.f6{background:#fff;border:6px solid var(--navy);border-radius:34px;box-shadow:0 12px 0 #000;padding:34px 40px;margin-bottom:34px;display:flex;align-items:center;gap:30px}
+.f6 .ic{flex:0 0 130px;height:130px;border-radius:32px;border:6px solid var(--navy);display:flex;align-items:center;justify-content:center;font-size:70px}
+.f6 .ic.y{background:var(--yel)} .f6 .ic.bl{background:var(--blue)}
+.f6 b{display:block;font-family:'Jua';font-size:58px;line-height:1.2;color:#111}
+.f6 b .b{color:var(--blue)}
+.f6 p{font-size:30px;color:var(--muted);margin-top:6px;line-height:1.45}
+.btn{display:inline-block;margin-top:14px;background:var(--blue);color:#fff;font-family:'Jua';font-size:40px;padding:10px 34px;border-radius:16px;border:5px solid var(--navy)}
+</style></head><body>
+<script>
+/* window.SPEC 은 render.mjs 가 주입한다. 구조는 README.md 참고. */
+const S=window.SPEC, N=2+S.cards.length;
+const esc=s=>s; // 카드 문구는 작성자가 쓴 HTML 조각(<span class="b"> 등)을 그대로 쓴다
+const brand='<div class="brand"><img src="../assets/irowoon-profile.jpg">이로운사람들</div>';
+const pill=i=>`<div class="pill">${i}/${N}</div>`;
+const lines=(arr)=>arr.map(l=>l.startsWith('*')?`<div class="line hl"><em>${l.slice(1)}</em></div>`:`<div class="line">${l}</div>`).join('');
+let h='';
+const c=S.cover;
+h+=`<section class="cover ${c.dark?'dark':'light'}" style="${c.fs?`--fs:${c.fs}px`:''}">${brand}${pill(1)}<div class="kick">${c.kick}</div>${lines(c.lines)}${c.small?`<div class="small">${c.small}</div>`:''}</section>`;
+S.cards.forEach((k,i)=>{
+  let body='';
+  if(k.type==='list') body=k.items.map((it,j)=>`<div class="box"><div class="num">${j+1}</div><div><b>${it[0]}</b>${it[1]?`<p>${it[1]}</p>`:''}</div></div>`).join('');
+  if(k.type==='grid') body=`<div class="money">${k.grid.map(g=>`<div class="m"><small>${g[0]}</small><strong>${g[1]}</strong></div>`).join('')}</div>`+(k.big?`<div class="big"><small>${k.big[0]}</small><strong>${k.big[1]}</strong>${k.big[2]?`<p>${k.big[2]}</p>`:''}</div>`:'');
+  if(k.type==='x') body=k.items.map(it=>`<div class="x"><i>✕</i><div><b>${it[0]}</b>${it[1]?`<p>${it[1]}</p>`:''}</div></div>`).join('');
+  if(k.type==='steps') body=k.items.map((it,j)=>`<div class="st"><div class="num">${j+1}</div><div><b>${it[0]}</b>${it[1]?`<span>${it[1]}</span>`:''}</div></div>`).join('')+(k.cta?`<div class="cta"><b>${k.cta[0]}</b>${k.cta[1]?`<p>${k.cta[1]}</p>`:''}</div>`:'');
+  h+=`<section class="inner ${k.dark?'dark':'light'}" style="${k.fs?`--fs:${k.fs}px`:''}">${brand}${pill(i+2)}<div class="hd">${lines(k.head)}</div>${body}</section>`;
+});
+h+=`<section class="inner dark follow">${brand}${pill(N)}<div class="hd">${lines(['사장님 지원금,','*놓치지 마세요'])}</div>
+<div class="f6"><div class="ic y">🔔</div><div><b><span class="b">팔로우</span>하고<br>매일 지원금 소식 받기</b><p>새로 나온 지원금 정보를 매일 올려드려요</p><span class="btn">+ 팔로우</span></div></div>
+<div class="f6"><div class="ic bl">👆</div><div><b>내 <span class="b">예상 지원금</span><br>프로필 링크에서 확인</b><p>우리 가게가 받을 수 있는 지원금을 무료로 확인하세요</p></div></div></section>`;
+document.body.innerHTML=h;
+document.querySelectorAll('.line').forEach(l=>{const c=l.innerHTML;l.innerHTML=`<div class="lay l1">${c}</div><div class="lay l2">${c}</div><div class="l3">${c}</div>`;
+ l.querySelectorAll('.l1 *,.l2 *').forEach(e=>e.style.color='inherit');
+ if(l.classList.contains('hl')){const r=document.createRange();r.selectNodeContents(l.querySelector('.l3'));l.style.setProperty('--w',(r.getBoundingClientRect().width+80)+'px')}});
+</script>
+</body></html>

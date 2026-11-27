@@ -1,0 +1,40 @@
+name: 인스타 카드뉴스 게시
+
+# tips-content 브랜치에 queue.json 이 바뀌어 올라오면 실행된다 (main 에는 두지 않는다).
+on:
+  push:
+    branches: [tips-content]
+    paths: [tips/cards/queue.json]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "1 이면 실제로 올리지 않고 점검만"
+        default: "0"
+
+concurrency:
+  group: instagram-post
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  post:
+    # 승인 단계: 저장소 Settings → Environments → instagram 에 Required reviewers 를 넣으면
+    # 게시 전에 승인 버튼을 눌러야 진행된다.
+    environment: instagram
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: tips-content
+      - name: git 사용자
+        run: |
+          git config user.name "iroun-tips-bot"
+          git config user.email "iroun-tips-bot@users.noreply.github.com"
+      - name: 게시
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || '0' }}
+        run: python3 tips/cards/post_instagram.py

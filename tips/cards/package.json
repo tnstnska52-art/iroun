@@ -1,0 +1,7 @@
+{
+  "name": "iroun-tips-cards",
+  "private": true,
+  "type": "module",
+  "description": "지원금 꿀팁 인스타 카드뉴스 생성기",
+  "dependencies": { "@fontsource/jua": "^5.0.0" }
+}
