@@ -88,14 +88,14 @@ def check():
 def main():
     if DRY:
         check()
-    if not DRY and (not TOKEN or not IG_USER):
-        sys.exit("IG_ACCESS_TOKEN(Secret) 또는 config.json 의 ig_user_id 가 비어 있습니다.")
-    sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
     q = json.load(open(QUEUE, encoding="utf-8"))
     todo = [it for it in q["items"] if it.get("status") == "pending"][:MAX_POSTS]
     if not todo:
         print("게시할 항목 없음")
         return
+    if not DRY and (not TOKEN or not IG_USER):
+        sys.exit("IG_ACCESS_TOKEN(Secret) 또는 config.json 의 ig_user_id 가 비어 있습니다.")
+    sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
     for n, it in enumerate(todo):
         if n:
             print(f"{GAP}분 대기")
