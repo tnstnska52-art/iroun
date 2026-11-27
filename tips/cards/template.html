@@ -75,7 +75,7 @@ em{font-style:normal}
 /* window.SPEC 은 render.mjs 가 주입한다. 구조는 README.md 참고. */
 const S=window.SPEC, N=2+S.cards.length;
 const esc=s=>s; // 카드 문구는 작성자가 쓴 HTML 조각(<span class="b"> 등)을 그대로 쓴다
-const brand='<div class="brand"><img src="../assets/irowoon-profile.jpg">이로운사람들</div>';
+const brand='<div class="brand"><img src="../assets/insta-logo.jpg">이로운사람들</div>';
 const pill=i=>`<div class="pill">${i}/${N}</div>`;
 const lines=(arr)=>arr.map(l=>l.startsWith('*')?`<div class="line hl"><em>${l.slice(1)}</em></div>`:`<div class="line">${l}</div>`).join('');
 let h='';
