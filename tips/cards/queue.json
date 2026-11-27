@@ -1,5 +1,12 @@
 {
   "items": [
-    {"set": "sets/sample/voucher", "status": "pending", "note": "첫 게시 시험: 소상공인 경영안정 바우처"}
+    {
+      "set": "sets/sample/voucher",
+      "status": "posted",
+      "note": "첫 게시 시험: 소상공인 경영안정 바우처",
+      "posted_at": "2026-11-27T15:55+09:00",
+      "media_id": "18145128049715621",
+      "permalink": "https://www.instagram.com/p/DgPFZbEDPHM/"
+    }
   ]
 }
