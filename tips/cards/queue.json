@@ -1,3 +1,5 @@
 {
-  "items": []
+  "items": [
+    {"set": "sets/sample/voucher", "status": "pending", "note": "첫 게시 시험: 소상공인 경영안정 바우처"}
+  ]
 }
