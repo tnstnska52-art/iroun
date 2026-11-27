@@ -77,7 +77,17 @@ def save_and_push(q, msg):
     subprocess.run(["git", "push"], check=True)
 
 
+def check():
+    """게시 없이 토큰·계정 연결만 확인한다 (읽기 전용 호출 1번)."""
+    print("토큰 있음:", bool(TOKEN), "/ 계정 ID:", IG_USER or "(비어 있음)")
+    if TOKEN and IG_USER:
+        info = call("GET", IG_USER, fields="username,media_count")
+        print("연결 확인:", "@" + info.get("username", "?"), "게시물", info.get("media_count"))
+
+
 def main():
+    if DRY:
+        check()
     if not DRY and (not TOKEN or not IG_USER):
         sys.exit("IG_ACCESS_TOKEN(Secret) 또는 config.json 의 ig_user_id 가 비어 있습니다.")
     sha = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
